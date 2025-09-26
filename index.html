@@ -53,27 +53,244 @@
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <div class="complexity-diagram">
-                        <div class="complex-side">
-                            <h3>Before</h3>
-                            <div class="complexity-boxes">
-                                <div class="box">Docker</div>
-                                <div class="box">Kubernetes</div>
-                                <div class="box">Terraform</div>
-                                <div class="box">AWS/GCP</div>
-                                <div class="box">Monitoring</div>
-                                <div class="box">Security</div>
-                                <div class="box">Networking</div>
-                                <div class="box">CI/CD</div>
+                    <div class="deployment-flow">
+                        <div class="flow-step" id="local-dev">
+                            <div class="step-icon">💻</div>
+                            <div class="step-content">
+                                <h3>Local Development</h3>
+                                <div class="terminal">
+                                    <div class="terminal-header">
+                                        <div class="terminal-dots">
+                                            <span></span><span></span><span></span>
+                                        </div>
+                                        <span class="terminal-title">Terminal</span>
+                                    </div>
+                                    <div class="terminal-body">
+                                        <div class="command-line">
+                                            <span class="prompt">$</span>
+                                            <span class="command" id="git-command">git push origin main</span>
+                                            <span class="cursor">|</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="arrow">→</div>
-                        <div class="simple-side">
-                            <h3>After</h3>
-                            <div class="simple-box">
-                                <span class="logo-small">unhazzle</span>
-                                <p>One platform, minimal complexity</p>
+
+                        <div class="flow-connector">
+                            <div class="data-packet" id="packet1"></div>
+                            <div class="connection-line"></div>
+                        </div>
+
+                        <div class="flow-step" id="git-repo">
+                            <div class="step-icon">🌐</div>
+                            <div class="step-content">
+                                <h3>Git Repository</h3>
+                                <div class="git-visual">
+                                    <div class="commit-indicator" id="commit-pulse"></div>
+                                    <div class="repo-name">your-app.git</div>
+                                </div>
                             </div>
+                        </div>
+
+                        <div class="flow-connector">
+                            <div class="data-packet" id="packet2"></div>
+                            <div class="connection-line"></div>
+                        </div>
+
+                        <div class="flow-step" id="unhazzle-platform">
+                            <div class="step-icon">⚡</div>
+                            <div class="step-content">
+                                <!-- <h3>Unhazzle Platform</h3> -->
+                                <div class="platform-visual">
+                                    <div class="logo-container">
+                                        <span class="logo-text">unhazzle</span>
+                                    </div>
+                                    <div class="deployment-status">
+                                        <div class="status-item">
+                                            <div class="status-dot building" id="build-status"></div>
+                                            <span>Building...</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <div class="status-dot deploying" id="deploy-status"></div>
+                                            <span>Deploying...</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <div class="status-dot live" id="live-status"></div>
+                                            <span>Live!</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-connector final">
+                            <div class="data-packet" id="packet3"></div>
+                            <div class="connection-line"></div>
+                        </div>
+
+                        <div class="flow-step" id="production">
+                            <div class="step-icon">🚀</div>
+                            <div class="step-content">
+                                <h3>Production</h3>
+                                <div class="production-visual">
+                                    <div class="url-bar">
+                                        <div class="url-content">
+                                            <span class="protocol">https://</span>
+                                            <span class="domain">your-app.com</span>
+                                            <div class="ssl-indicator">🔒</div>
+                                        </div>
+                                    </div>
+                                    <div class="global-indicators">
+                                        <div class="region-dot active" title="Europe"></div>
+                                        <div class="region-dot active" title="US East"></div>
+                                        <div class="region-dot active" title="Asia"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Infrastructure Canvas Section -->
+        <section class="infrastructure-canvas">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Visual Infrastructure Canvas</h2>
+                    <p>Design your infrastructure visually and see the code update in real-time. Changes sync automatically between canvas and YAML.</p>
+                </div>
+                <div class="canvas-demo">
+                    <div class="canvas-container">
+                        <div class="canvas-header">
+                            <h3>Infrastructure Canvas</h3>
+                            <div class="canvas-controls">
+                                <button class="canvas-btn add-resource">+ Add Resource</button>
+                                <button class="canvas-btn apply-changes">Apply Changes</button>
+                            </div>
+                        </div>
+                        <div class="canvas-workspace">
+                            <div class="resource-node app-node" id="app-resource">
+                                <div class="resource-icon">🚀</div>
+                                <div class="resource-info">
+                                    <h4>web-app</h4>
+                                    <p>Next.js Application</p>
+                                </div>
+                                <div class="resource-status">Ready</div>
+                            </div>
+                            
+                            <div class="connection-line horizontal"></div>
+                            
+                            <div class="resource-node db-node" id="db-resource">
+                                <div class="resource-icon">🗄️</div>
+                                <div class="resource-info">
+                                    <h4>postgres-db</h4>
+                                    <p>PostgreSQL Database</p>
+                                </div>
+                                <div class="resource-status">Ready</div>
+                            </div>
+                            
+                            <div class="connection-line vertical"></div>
+                            
+                            <div class="resource-node cache-node" id="cache-resource">
+                                <div class="resource-icon">⚡</div>
+                                <div class="resource-info">
+                                    <h4>redis-cache</h4>
+                                    <p>Redis Cache</p>
+                                </div>
+                                <div class="resource-status">Ready</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="yaml-editor-container">
+                        <div class="editor-header">
+                            <h3>unhazzle.yaml</h3>
+                            <div class="editor-controls">
+                                <span class="sync-indicator">
+                                    <div class="sync-dot"></div>
+                                    Auto-sync enabled
+                                </span>
+                                <button class="editor-btn export">Export</button>
+                            </div>
+                        </div>
+                        <div class="yaml-editor">
+                            <div class="line-numbers">
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                                <span>5</span>
+                                <span>6</span>
+                                <span>7</span>
+                                <span>8</span>
+                                <span>9</span>
+                                <span>10</span>
+                                <span>11</span>
+                                <span>12</span>
+                                <span>13</span>
+                                <span>14</span>
+                                <span>15</span>
+                                <span>16</span>
+                                <span>17</span>
+                                <span>18</span>
+                                <span>19</span>
+                                <span>20</span>
+                            </div>
+                            <div class="yaml-content">
+<pre><code><span class="yaml-key">project:</span> <span class="yaml-value">tavo-portfolio</span>
+<span class="yaml-key">environment:</span> <span class="yaml-value">dev</span>
+
+<span class="yaml-key">resources:</span>
+  <span class="yaml-key">applications:</span>
+    - <span class="yaml-key">name:</span> <span class="yaml-value">web-app</span>
+      <span class="yaml-key">type:</span> <span class="yaml-value">nextjs</span>
+      <span class="yaml-key">repo:</span> <span class="yaml-value">github.com/tavo/portfolio</span>
+      <span class="yaml-key">cpu:</span> <span class="yaml-value">0.5</span>
+      <span class="yaml-key">memory:</span> <span class="yaml-value">512Mi</span>
+      <span class="yaml-key">public:</span> <span class="yaml-value">true</span>
+
+  <span class="yaml-key">databases:</span>
+    - <span class="yaml-key">name:</span> <span class="yaml-value">postgres-db</span>
+      <span class="yaml-key">engine:</span> <span class="yaml-value">postgresql</span>
+      <span class="yaml-key">size:</span> <span class="yaml-value">small</span>
+
+  <span class="yaml-key">cache:</span>
+    - <span class="yaml-key">name:</span> <span class="yaml-value">redis-cache</span>
+      <span class="yaml-key">engine:</span> <span class="yaml-value">redis</span>
+      <span class="yaml-key">size:</span> <span class="yaml-value">small</span></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="canvas-features">
+                    <div class="feature-highlight">
+                        <div class="highlight-icon">🔄</div>
+                        <div class="highlight-content">
+                            <h4>Bidirectional Sync</h4>
+                            <p>Changes in the visual canvas automatically update the YAML code, and vice versa. No manual syncing required.</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <div class="highlight-icon">🎯</div>
+                        <div class="highlight-content">
+                            <h4>Drag & Drop Resources</h4>
+                            <p>Simply drag resources onto the canvas and configure them visually. Perfect for developers who prefer visual tools.</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <div class="highlight-icon">📝</div>
+                        <div class="highlight-content">
+                            <h4>Code-First Flexibility</h4>
+                            <p>Prefer writing YAML? Edit the code directly and watch your infrastructure update in the visual canvas in real-time.</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <div class="highlight-icon">💰</div>
+                        <div class="highlight-content">
+                            <h4>Cost Preview</h4>
+                            <p>See estimated costs before deploying. No surprise bills - complete transparency in resource pricing.</p>
                         </div>
                     </div>
                 </div>
