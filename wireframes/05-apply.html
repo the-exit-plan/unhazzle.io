@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Changes - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+</head>
+<body>
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>💰 Deployment Cost Estimation</h2>
+            </div>
+            
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: var(--space-6); line-height: 1.6;">
+                    You are about to provision the following resources in the <strong>dev</strong> environment. 
+                    Review the estimated costs before deploying.
+                </p>
+
+                <div style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); padding: var(--space-6); border-radius: var(--radius-xl); color: white; text-align: center; margin-bottom: var(--space-6);">
+                    <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--space-2);">
+                        €25.00<span style="font-size: var(--font-size-lg); font-weight: 500; opacity: 0.9;">/month</span>
+                    </div>
+                    <div style="opacity: 0.9; font-size: var(--font-size-sm);">
+                        ≈ €0.035/hour • Estimated costs for dev environment
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: var(--space-4); color: var(--text-primary);">Resource Breakdown</h3>
+                
+                <table class="cost-table">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>Configuration</th>
+                            <th>Monthly Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>my-awesome-app</strong><br>
+                                <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">Application</span>
+                            </td>
+                            <td style="font-size: var(--font-size-sm);">
+                                1 vCPU, 512MB Memory
+                            </td>
+                            <td style="font-weight: 600; color: var(--primary-color);">
+                                €10.00
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>my-app-db</strong><br>
+                                <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">PostgreSQL 14</span>
+                            </td>
+                            <td style="font-size: var(--font-size-sm);">
+                                1GB Storage, Daily Backups
+                            </td>
+                            <td style="font-weight: 600; color: var(--primary-color);">
+                                €15.00
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><strong>Total Estimated Monthly Cost</strong></td>
+                            <td><strong>€25.00</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background: var(--bg-secondary); padding: var(--space-4); border-radius: var(--radius-lg); margin-top: var(--space-6); border-left: 3px solid var(--primary-color);">
+                    <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3); align-items: flex-start;">
+                        <span style="font-size: 1.25rem;">ℹ️</span>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                            Costs shown are estimates for the <strong>dev</strong> environment. Production resources may vary.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3); align-items: flex-start;">
+                        <span style="font-size: 1.25rem;">🇪🇺</span>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                            All resources deployed in EU regions. GDPR compliant by default.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                        <span style="font-size: 1.25rem;">⏱️</span>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                            You only pay for actual usage. Stop resources anytime to reduce costs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="history.back()">
+                    Cancel
+                </button>
+                <button class="btn btn-success btn-large" id="provision-btn">
+                    Apply & Provision Resources
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('provision-btn').addEventListener('click', function() {
+            // Get the config from sessionStorage
+            const configStr = sessionStorage.getItem('unhazzleConfig');
+            let config = null;
+            
+            if (configStr) {
+                config = JSON.parse(configStr);
+            }
+
+            // Create project data
+            const project = {
+                id: 'silent-wind-1234',
+                name: config?.application?.name || 'my-awesome-app',
+                environment: 'dev',
+                status: 'active',
+                resources: [],
+                createdAt: new Date().toISOString(),
+                monthlyCost: 25.00
+            };
+
+            // Add resources
+            if (config?.application) {
+                project.resources.push({
+                    type: 'application',
+                    name: config.application.name,
+                    status: 'running',
+                    config: {
+                        cpu: config.application.cpu,
+                        memory: config.application.memory,
+                        repo: config.application.repo
+                    }
+                });
+            }
+
+            if (config?.database) {
+                project.resources.push({
+                    type: 'database',
+                    name: config.database.name,
+                    status: 'running',
+                    config: {
+                        engine: config.database.engine,
+                        version: config.database.version,
+                        storage: config.database.storage
+                    }
+                });
+            }
+
+            if (config?.cache) {
+                project.resources.push({
+                    type: 'cache',
+                    name: config.cache.name,
+                    status: 'running',
+                    config: {
+                        engine: config.cache.engine,
+                        version: config.cache.version,
+                        memory: config.cache.memory
+                    }
+                });
+            }
+
+            // Save to sessionStorage for dashboard
+            sessionStorage.setItem('provisionedProject', JSON.stringify(project));
+            sessionStorage.setItem('projectProvisioned', 'true');
+
+            // Redirect to dashboard with projects
+            window.location.href = '02-dashboard-with-projects.html';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Canvas - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+                <span class="project-info">Project: silent-wind-1234 (dev)</span>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div class="avatar">T</div>
+                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="02-dashboard.html" class="header-link">← Dashboard</a>
+                <a href="01-signin.html" class="header-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div style="margin-bottom: var(--space-6);">
+            <h1 style="font-size: var(--font-size-3xl); margin-bottom: var(--space-2);">
+                Infrastructure Canvas
+            </h1>
+            <p style="color: var(--text-secondary); font-size: var(--font-size-lg);">
+                Design your infrastructure visually. Changes sync automatically with the YAML manifest.
+            </p>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-workspace" style="border-style: solid; border-color: var(--primary-color);">
+                <div class="resource-node" id="app-node">
+                    <button class="resource-remove-btn" onclick="removeResource('application')" title="Remove resource">×</button>
+                    <div class="resource-node-header">
+                        <div>
+                            <div class="resource-node-title" contenteditable="true" id="app-name-title" data-resource-type="application">🚀 my-awesome-app</div>
+                            <div class="resource-badge">Application</div>
+                        </div>
+                    </div>
+                    <div class="resource-node-content">
+                        <div style="margin-bottom: var(--space-3);">
+                            <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                Repository:
+                            </label>
+                            <input id="app-repository" type="text" value="github.com/tavo/my-awesome-app" 
+                                style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary); font-family: 'Monaco', 'Menlo', monospace;">
+                        </div>
+                        <p><strong>Public URL:</strong><br>
+                            <a href="#" style="color: var(--primary-color); text-decoration: none;">
+                                my-awesome-app.unhazzle.dev ↗
+                            </a>
+                        </p>
+                        <details style="margin-top: var(--space-3);">
+                            <summary style="cursor: pointer; color: var(--primary-color); font-weight: 500;">
+                                Configuration
+                            </summary>
+                            <div style="margin-top: var(--space-3); padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                                <div style="margin-bottom: var(--space-3);">
+                                    <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        CPU:
+                                    </label>
+                                    <input id="app-cpu" type="number" value="1" step="0.5" min="0.5" max="8" 
+                                        style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary);">
+                                    <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">vCPU cores (0.5 - 8)</small>
+                                </div>
+                                <div style="margin-bottom: var(--space-3);">
+                                    <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        Memory:
+                                    </label>
+                                    <input id="app-memory" type="text" value="512M" 
+                                        style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary);">
+                                    <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">e.g., 512M, 1G, 2G</small>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        Environment Variables:
+                                    </label>
+                                    <textarea id="app-env-vars"
+                                        style="width: 100%; padding: var(--space-2); background: var(--gray-900); color: var(--gray-200); border: 1px solid var(--gray-700); border-radius: var(--radius-md); font-size: var(--font-size-xs); font-family: 'Monaco', 'Menlo', monospace; resize: vertical; min-height: 60px;"
+                                        placeholder="KEY=value">DB_CONNECTION_STRING=postgres://...</textarea>
+                                    <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">One variable per line (KEY=value)</small>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="resource-node" id="db-node">
+                    <button class="resource-remove-btn" onclick="removeResource('database')" title="Remove resource">×</button>
+                    <div class="resource-node-header">
+                        <div>
+                            <div class="resource-node-title" contenteditable="true" id="db-name-title" data-resource-type="database">🗄️ my-app-db</div>
+                            <div class="resource-badge">Database</div>
+                        </div>
+                    </div>
+                    <div class="resource-node-content">
+                        <div style="margin-bottom: var(--space-3);">
+                            <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                Engine:
+                            </label>
+                            <select id="db-engine"
+                                style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary); cursor: pointer;">
+                                <option value="postgres:14">PostgreSQL 14</option>
+                                <option value="postgres:15">PostgreSQL 15</option>
+                                <option value="postgres:16">PostgreSQL 16</option>
+                                <option value="mysql:8.0">MySQL 8.0</option>
+                                <option value="mysql:8.4">MySQL 8.4</option>
+                                <option value="mariadb:10.11">MariaDB 10.11</option>
+                                <option value="mariadb:11.4">MariaDB 11.4</option>
+                                <option value="redis:7">Redis 7</option>
+                                <option value="mongodb:7.0">MongoDB 7.0</option>
+                            </select>
+                        </div>
+                        <p><strong>Connection:</strong> Private (internal only)</p>
+                        <details style="margin-top: var(--space-3);">
+                            <summary style="cursor: pointer; color: var(--primary-color); font-weight: 500;">
+                                Configuration
+                            </summary>
+                            <div style="margin-top: var(--space-3); padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                                <div style="margin-bottom: var(--space-3);">
+                                    <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        Storage:
+                                    </label>
+                                    <input id="db-storage" type="text" value="1G" 
+                                        style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary);">
+                                    <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">e.g., 1G, 10G, 100G</small>
+                                </div>
+                                <div style="margin-bottom: var(--space-3);">
+                                    <label style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-weight: 500; color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        <input id="db-backups" type="checkbox" checked 
+                                            style="width: 16px; height: 16px; cursor: pointer;">
+                                        Daily automatic backups
+                                    </label>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                        Retention:
+                                    </label>
+                                    <select id="db-retention"
+                                        style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary); cursor: pointer;">
+                                        <option value="3">3 days</option>
+                                        <option value="7" selected>7 days</option>
+                                        <option value="14">14 days</option>
+                                        <option value="30">30 days</option>
+                                    </select>
+                                    <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">Backup retention period</small>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <button id="add-resource-btn" class="btn btn-secondary btn-icon" style="align-self: flex-start;">
+                    + Add Resource
+                </button>
+            </div>
+
+            <div class="code-editor-container">
+                <div class="editor-header">
+                    <div class="editor-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span>unhazzle.yaml</span>
+                    <span style="margin-left: auto; opacity: 0.6;">
+                        <span style="display: inline-block; width: 6px; height: 6px; background: var(--success-color); border-radius: 50%; margin-right: 6px;"></span>
+                        <span id="sync-status">Auto-sync enabled</span>
+                    </span>
+                </div>
+                <textarea id="yaml-input" spellcheck="false" style="
+                    flex: 1;
+                    width: 100%;
+                    min-height: 0;
+                    padding: var(--space-4);
+                    margin: 0;
+                    border: none;
+                    background: var(--gray-900);
+                    color: var(--gray-200);
+                    font-family: 'Monaco', 'Menlo', monospace;
+                    font-size: var(--font-size-sm);
+                    line-height: 1.5;
+                    resize: none;
+                    outline: none;
+                ">version: '1.0'
+project: silent-wind-1234
+environment: dev
+
+resources:
+  - name: my-awesome-app
+    type: application
+    source:
+      repo: github.com/tavo/my-awesome-app
+      dockerfile: ./Dockerfile
+    resources:
+      cpu: 1
+      memory: 512M
+    env:
+      - name: DB_CONNECTION_STRING
+        value: postgres://...
+
+  - name: my-app-db
+    type: database
+    engine: postgres
+    version: '14'
+    size: 1G</textarea>
+            </div>
+        </div>
+
+        <div class="actions-bar">
+            <div class="actions-left">
+                <span style="color: var(--text-tertiary); font-size: var(--font-size-sm);">
+                    ⚠️ Resources not yet deployed
+                </span>
+            </div>
+            <div class="actions-right">
+                <button class="btn btn-secondary" onclick="location.href='06-export.html'">
+                    Export YAML
+                </button>
+                <button class="btn btn-primary" onclick="location.href='05-apply.html'">
+                    Apply Changes
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration state
+        const config = {
+            application: {
+                name: 'my-awesome-app',
+                type: 'application',
+                repo: 'github.com/tavo/my-awesome-app',
+                dockerfile: './Dockerfile',
+                cpu: 1,
+                memory: '512M',
+                envVars: 'DB_CONNECTION_STRING=postgres://...'
+            },
+            database: {
+                name: 'my-app-db',
+                type: 'database',
+                engine: 'postgres',
+                version: '14',
+                storage: '1G',
+                backups: true,
+                retention: 7
+            },
+            cache: null // Will be populated when user adds cache resource
+        };
+
+        // Generate YAML from config
+        function generateYAML() {
+            let resources = [];
+
+            // Add application resource if it exists
+            if (config.application) {
+                const envVarsArray = config.application.envVars
+                    .split('\n')
+                    .filter(line => line.trim())
+                    .map(line => {
+                        const [key, ...valueParts] = line.split('=');
+                        const value = valueParts.join('=');
+                        return `      - <span class="yaml-key">name:</span> <span class="yaml-value">${key.trim()}</span>
+        <span class="yaml-key">value:</span> <span class="yaml-value">${value.trim()}</span>`;
+                    })
+                    .join('\n');
+
+                resources.push(`  - <span class="yaml-key">name:</span> <span class="yaml-value">${config.application.name}</span>
+    <span class="yaml-key">type:</span> <span class="yaml-value">${config.application.type}</span>
+    <span class="yaml-key">source:</span>
+      <span class="yaml-key">repo:</span> <span class="yaml-value">${config.application.repo}</span>
+      <span class="yaml-key">dockerfile:</span> <span class="yaml-value">${config.application.dockerfile}</span>
+    <span class="yaml-key">resources:</span>
+      <span class="yaml-key">cpu:</span> <span class="yaml-value">${config.application.cpu}</span>
+      <span class="yaml-key">memory:</span> <span class="yaml-value">${config.application.memory}</span>
+    <span class="yaml-key">env:</span>
+${envVarsArray}`);
+            }
+
+            // Add database resource if it exists
+            if (config.database) {
+                resources.push(`  - <span class="yaml-key">name:</span> <span class="yaml-value">${config.database.name}</span>
+    <span class="yaml-key">type:</span> <span class="yaml-value">${config.database.type}</span>
+    <span class="yaml-key">engine:</span> <span class="yaml-value">${config.database.engine}</span>
+    <span class="yaml-key">version:</span> <span class="yaml-value">'${config.database.version}'</span>
+    <span class="yaml-key">size:</span> <span class="yaml-value">${config.database.storage}</span>
+    <span class="yaml-key">backups:</span> <span class="yaml-value">${config.database.backups}</span>
+    <span class="yaml-key">retention:</span> <span class="yaml-value">${config.database.retention}d</span>`);
+            }
+
+            // Add cache resource if it exists
+            if (config.cache) {
+                resources.push(`  - <span class="yaml-key">name:</span> <span class="yaml-value">${config.cache.name}</span>
+    <span class="yaml-key">type:</span> <span class="yaml-value">${config.cache.type}</span>
+    <span class="yaml-key">engine:</span> <span class="yaml-value">${config.cache.engine}</span>
+    <span class="yaml-key">version:</span> <span class="yaml-value">'${config.cache.version}'</span>
+    <span class="yaml-key">memory:</span> <span class="yaml-value">${config.cache.memory}</span>`);
+            }
+
+            const resourcesYAML = resources.length > 0 ? resources.join('\n\n') : '  <span class="yaml-comment"># No resources configured</span>';
+
+            return `<span class="yaml-key">version:</span> <span class="yaml-value">'1.0'</span>
+<span class="yaml-key">project:</span> <span class="yaml-value">silent-wind-1234</span>
+<span class="yaml-key">environment:</span> <span class="yaml-value">dev</span>
+
+<span class="yaml-key">resources:</span>
+${resourcesYAML}`;
+        }
+
+        // Update YAML editor
+        function updateYAMLEditor(skipTextarea = false) {
+            const textarea = document.getElementById('yaml-input');
+            
+            // Update textarea with plain YAML if not triggered by textarea change
+            if (!skipTextarea && textarea) {
+                textarea.value = generatePlainYAML();
+            }
+            
+            // Save config to sessionStorage for export page
+            sessionStorage.setItem('unhazzleConfig', JSON.stringify(config));
+        }
+
+        // Generate plain YAML (without HTML tags)
+        function generatePlainYAML() {
+            let resources = [];
+
+            if (config.application) {
+                const envVarsArray = config.application.envVars
+                    .split('\n')
+                    .filter(line => line.trim())
+                    .map(line => {
+                        const [key, ...valueParts] = line.split('=');
+                        const value = valueParts.join('=');
+                        return `      - name: ${key.trim()}
+        value: ${value.trim()}`;
+                    })
+                    .join('\n');
+
+                resources.push(`  - name: ${config.application.name}
+    type: ${config.application.type}
+    source:
+      repo: ${config.application.repo}
+      dockerfile: ${config.application.dockerfile}
+    resources:
+      cpu: ${config.application.cpu}
+      memory: ${config.application.memory}
+    env:
+${envVarsArray}`);
+            }
+
+            if (config.database) {
+                resources.push(`  - name: ${config.database.name}
+    type: ${config.database.type}
+    engine: ${config.database.engine}
+    version: '${config.database.version}'
+    size: ${config.database.storage}
+    backups: ${config.database.backups}
+    retention: ${config.database.retention}d`);
+            }
+
+            if (config.cache) {
+                resources.push(`  - name: ${config.cache.name}
+    type: ${config.cache.type}
+    engine: ${config.cache.engine}
+    version: '${config.cache.version}'
+    memory: ${config.cache.memory}`);
+            }
+
+            const resourcesYAML = resources.length > 0 ? resources.join('\n\n') : '  # No resources configured';
+
+            return `version: '1.0'
+project: silent-wind-1234
+environment: dev
+
+resources:
+${resourcesYAML}`;
+        }
+
+        // Parse YAML and update config
+        function parseYAMLAndUpdateCanvas(yamlText) {
+            try {
+                // Simple YAML parser for our specific structure
+                const lines = yamlText.split('\n');
+                let currentResource = null;
+                let currentSection = null;
+                let envVars = [];
+                const parsedResources = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const trimmed = line.trim();
+
+                    // Skip empty lines and version/project/environment
+                    if (!trimmed || trimmed.startsWith('version:') || trimmed.startsWith('project:') || 
+                        trimmed.startsWith('environment:') || trimmed.startsWith('resources:') || 
+                        trimmed.startsWith('#')) {
+                        continue;
+                    }
+
+                    // New resource
+                    if (trimmed.startsWith('- name:') || (line.startsWith('  - ') && trimmed.includes('name:'))) {
+                        if (currentResource) {
+                            if (currentResource.type === 'application' && envVars.length > 0) {
+                                currentResource.envVars = envVars.map(ev => `${ev.name}=${ev.value}`).join('\n');
+                            }
+                            parsedResources.push(currentResource);
+                        }
+                        currentResource = {};
+                        envVars = [];
+                        currentSection = null;
+                        const nameMatch = trimmed.match(/name:\s*(.+)/);
+                        if (nameMatch) currentResource.name = nameMatch[1].replace(/['"]/g, '');
+                    }
+                    // Resource properties
+                    else if (currentResource) {
+                        if (trimmed.startsWith('type:')) {
+                            currentResource.type = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('engine:')) {
+                            currentResource.engine = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('version:')) {
+                            currentResource.version = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('repo:')) {
+                            currentResource.repo = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('dockerfile:')) {
+                            currentResource.dockerfile = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('cpu:')) {
+                            currentResource.cpu = parseFloat(trimmed.split(':')[1].trim());
+                        }
+                        else if (trimmed.startsWith('memory:')) {
+                            currentResource.memory = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('size:')) {
+                            currentResource.storage = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                        }
+                        else if (trimmed.startsWith('backups:')) {
+                            currentResource.backups = trimmed.split(':')[1].trim() === 'true';
+                        }
+                        else if (trimmed.startsWith('retention:')) {
+                            const retMatch = trimmed.match(/(\d+)/);
+                            if (retMatch) currentResource.retention = parseInt(retMatch[1]);
+                        }
+                        // Handle env section
+                        else if (trimmed.startsWith('env:')) {
+                            currentSection = 'env';
+                        }
+                        else if (currentSection === 'env' && trimmed.startsWith('- name:')) {
+                            const envName = trimmed.split(':')[1].trim().replace(/['"]/g, '');
+                            // Look ahead for value
+                            if (i + 1 < lines.length) {
+                                const nextLine = lines[i + 1].trim();
+                                if (nextLine.startsWith('value:')) {
+                                    const envValue = nextLine.split(':')[1].trim().replace(/['"]/g, '');
+                                    envVars.push({ name: envName, value: envValue });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Add last resource
+                if (currentResource) {
+                    if (currentResource.type === 'application' && envVars.length > 0) {
+                        currentResource.envVars = envVars.map(ev => `${ev.name}=${ev.value}`).join('\n');
+                    }
+                    parsedResources.push(currentResource);
+                }
+
+                // Update config and canvas
+                updateConfigFromParsedYAML(parsedResources);
+                
+            } catch (error) {
+                console.error('YAML parsing error:', error);
+                document.getElementById('sync-status').textContent = 'Parse error';
+                setTimeout(() => {
+                    document.getElementById('sync-status').textContent = 'Auto-sync enabled';
+                }, 2000);
+            }
+        }
+
+        // Update config and rebuild canvas from parsed YAML
+        function updateConfigFromParsedYAML(parsedResources) {
+            // Update config based on parsed resources
+            config.application = null;
+            config.database = null;
+            config.cache = null;
+
+            parsedResources.forEach(resource => {
+                if (resource.type === 'application') {
+                    config.application = {
+                        name: resource.name || 'my-awesome-app',
+                        type: 'application',
+                        repo: resource.repo || 'github.com/tavo/my-awesome-app',
+                        dockerfile: resource.dockerfile || './Dockerfile',
+                        cpu: resource.cpu || 1,
+                        memory: resource.memory || '512M',
+                        envVars: resource.envVars || ''
+                    };
+                } else if (resource.type === 'database') {
+                    config.database = {
+                        name: resource.name || 'my-app-db',
+                        type: 'database',
+                        engine: resource.engine || 'postgres',
+                        version: resource.version || '14',
+                        storage: resource.storage || '1G',
+                        backups: resource.backups !== undefined ? resource.backups : true,
+                        retention: resource.retention || 7
+                    };
+                } else if (resource.type === 'cache') {
+                    config.cache = {
+                        name: resource.name || 'my-cache',
+                        type: 'cache',
+                        engine: resource.engine || 'redis',
+                        version: resource.version || '7',
+                        memory: resource.memory || '256M'
+                    };
+                }
+            });
+
+            // Rebuild canvas to reflect changes
+            rebuildCanvas();
+        }
+
+        // Rebuild canvas from config
+        function rebuildCanvas() {
+            // This will be called after parsing YAML
+            // For now, we'll just update the form inputs
+            updateCanvasFromConfig();
+            updateYAMLEditor(true); // Skip textarea update to avoid loop
+        }
+
+        // Update canvas inputs from config
+        function updateCanvasFromConfig() {
+            if (config.application) {
+                const repoInput = document.getElementById('app-repository');
+                const cpuInput = document.getElementById('app-cpu');
+                const memoryInput = document.getElementById('app-memory');
+                const envVarsInput = document.getElementById('app-env-vars');
+
+                if (repoInput) repoInput.value = config.application.repo;
+                if (cpuInput) cpuInput.value = config.application.cpu;
+                if (memoryInput) memoryInput.value = config.application.memory;
+                if (envVarsInput) envVarsInput.value = config.application.envVars;
+            }
+
+            if (config.database) {
+                const engineSelect = document.getElementById('db-engine');
+                const storageInput = document.getElementById('db-storage');
+                const backupsCheckbox = document.getElementById('db-backups');
+                const retentionSelect = document.getElementById('db-retention');
+
+                if (engineSelect) engineSelect.value = `${config.database.engine}:${config.database.version}`;
+                if (storageInput) storageInput.value = config.database.storage;
+                if (backupsCheckbox) backupsCheckbox.checked = config.database.backups;
+                if (retentionSelect) retentionSelect.value = config.database.retention;
+            }
+
+            if (config.cache) {
+                const cacheEngineSelect = document.getElementById('cache-engine');
+                const cacheMemoryInput = document.getElementById('cache-memory');
+
+                if (cacheEngineSelect) cacheEngineSelect.value = `${config.cache.engine}:${config.cache.version}`;
+                if (cacheMemoryInput) cacheMemoryInput.value = config.cache.memory;
+            }
+        }
+
+        // Application configuration listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Repository input
+            const repositoryInput = document.getElementById('app-repository');
+            if (repositoryInput) {
+                repositoryInput.addEventListener('input', function(e) {
+                    config.application.repo = e.target.value;
+                    updateYAMLEditor();
+                });
+            }
+
+            // CPU input
+            const cpuInput = document.getElementById('app-cpu');
+            if (cpuInput) {
+                cpuInput.addEventListener('input', function(e) {
+                    config.application.cpu = parseFloat(e.target.value);
+                    updateYAMLEditor();
+                });
+            }
+
+            // Memory input
+            const memoryInput = document.getElementById('app-memory');
+            if (memoryInput) {
+                memoryInput.addEventListener('input', function(e) {
+                    config.application.memory = e.target.value;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Environment variables
+            const envVarsInput = document.getElementById('app-env-vars');
+            if (envVarsInput) {
+                envVarsInput.addEventListener('input', function(e) {
+                    config.application.envVars = e.target.value;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Database engine
+            const engineSelect = document.getElementById('db-engine');
+            if (engineSelect) {
+                engineSelect.addEventListener('change', function(e) {
+                    const [engine, version] = e.target.value.split(':');
+                    config.database.engine = engine;
+                    config.database.version = version;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Database storage
+            const storageInput = document.getElementById('db-storage');
+            if (storageInput) {
+                storageInput.addEventListener('input', function(e) {
+                    config.database.storage = e.target.value;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Database backups checkbox
+            const backupsCheckbox = document.getElementById('db-backups');
+            if (backupsCheckbox) {
+                backupsCheckbox.addEventListener('change', function(e) {
+                    config.database.backups = e.target.checked;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Database retention
+            const retentionSelect = document.getElementById('db-retention');
+            if (retentionSelect) {
+                retentionSelect.addEventListener('change', function(e) {
+                    config.database.retention = parseInt(e.target.value);
+                    updateYAMLEditor();
+                });
+            }
+
+            // Add Resource button
+            const addResourceBtn = document.getElementById('add-resource-btn');
+            if (addResourceBtn) {
+                addResourceBtn.addEventListener('click', function() {
+                    if (!config.cache) {
+                        addCacheResource();
+                    }
+                });
+            }
+
+            // YAML textarea input listener
+            const yamlInput = document.getElementById('yaml-input');
+            if (yamlInput) {
+                let debounceTimer;
+                yamlInput.addEventListener('input', function(e) {
+                    // Clear previous timer
+                    clearTimeout(debounceTimer);
+                    
+                    // Debounce parsing (wait 500ms after user stops typing)
+                    debounceTimer = setTimeout(() => {
+                        parseYAMLAndUpdateCanvas(e.target.value);
+                    }, 500);
+                });
+            }
+
+            // Resource name title listeners
+            setupResourceNameListeners();
+
+            // Initial YAML generation
+            updateYAMLEditor();
+        });
+
+        // Setup listeners for editable resource names
+        function setupResourceNameListeners() {
+            const appTitle = document.getElementById('app-name-title');
+            const dbTitle = document.getElementById('db-name-title');
+            const cacheTitle = document.getElementById('cache-name-title');
+
+            if (appTitle) {
+                addNameEditListener(appTitle, 'application');
+            }
+            if (dbTitle) {
+                addNameEditListener(dbTitle, 'database');
+            }
+            if (cacheTitle) {
+                addNameEditListener(cacheTitle, 'cache');
+            }
+        }
+
+        // Add edit listener to a resource name title
+        function addNameEditListener(element, resourceType) {
+            // Handle input changes
+            element.addEventListener('input', function(e) {
+                const fullText = e.target.textContent.trim();
+                // Extract name (remove emoji)
+                const name = fullText.replace(/^[^\w\s]+\s*/, '').trim();
+                
+                if (resourceType === 'application' && config.application) {
+                    config.application.name = name;
+                } else if (resourceType === 'database' && config.database) {
+                    config.database.name = name;
+                } else if (resourceType === 'cache' && config.cache) {
+                    config.cache.name = name;
+                }
+                
+                updateYAMLEditor();
+            });
+
+            // Prevent line breaks
+            element.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    element.blur();
+                }
+            });
+
+            // Select text on focus for easy editing
+            element.addEventListener('focus', function() {
+                // Select only the text part (after emoji)
+                const range = document.createRange();
+                const sel = window.getSelection();
+                const textNode = this.childNodes[0];
+                
+                if (textNode) {
+                    const text = textNode.textContent;
+                    const match = text.match(/^[^\w\s]+\s*/);
+                    const offset = match ? match[0].length : 0;
+                    
+                    try {
+                        range.setStart(textNode, offset);
+                        range.setEnd(textNode, text.length);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } catch (e) {
+                        // If selection fails, select all
+                        const range = document.createRange();
+                        range.selectNodeContents(this);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                }
+            });
+        }
+
+        // Function to add cache resource to the canvas
+        function addCacheResource() {
+            // Initialize cache config
+            config.cache = {
+                name: 'my-cache',
+                type: 'cache',
+                engine: 'redis',
+                version: '7',
+                memory: '256M'
+            };
+
+            // Create the cache resource node HTML
+            const cacheNode = document.createElement('div');
+            cacheNode.className = 'resource-node';
+            cacheNode.id = 'cache-node';
+            cacheNode.innerHTML = `
+                <button class="resource-remove-btn" onclick="removeResource('cache')" title="Remove resource">×</button>
+                <div class="resource-node-header">
+                    <div>
+                        <div class="resource-node-title" contenteditable="true" id="cache-name-title" data-resource-type="cache">⚡ my-cache</div>
+                        <div class="resource-badge">Cache</div>
+                    </div>
+                </div>
+                <div class="resource-node-content">
+                    <div style="margin-bottom: var(--space-3);">
+                        <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                            Engine:
+                        </label>
+                        <select id="cache-engine"
+                            style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary); cursor: pointer;">
+                            <option value="redis:7" selected>Redis OSS 7</option>
+                            <option value="valkey:7.2">Valkey 7.2</option>
+                            <option value="memcached:1.6">Memcached 1.6</option>
+                        </select>
+                    </div>
+                    <p><strong>Connection:</strong> Private (internal only)</p>
+                    <details style="margin-top: var(--space-3);">
+                        <summary style="cursor: pointer; color: var(--primary-color); font-weight: 500;">
+                            Configuration
+                        </summary>
+                        <div style="margin-top: var(--space-3); padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                            <div style="margin-bottom: var(--space-3);">
+                                <label style="display: block; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-size-sm);">
+                                    Memory:
+                                </label>
+                                <input id="cache-memory" type="text" value="256M" 
+                                    style="width: 100%; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-primary);">
+                                <small style="color: var(--text-tertiary); font-size: var(--font-size-xs);">e.g., 256M, 512M, 1G</small>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            `;
+
+            // Insert the cache node before the Add Resource button
+            const canvas = document.querySelector('.canvas-workspace');
+            const addBtn = document.getElementById('add-resource-btn');
+            canvas.insertBefore(cacheNode, addBtn);
+
+            // Hide the Add Resource button after adding cache
+            addBtn.style.display = 'none';
+
+            // Add event listeners for cache configuration
+            const cacheEngineSelect = document.getElementById('cache-engine');
+            if (cacheEngineSelect) {
+                cacheEngineSelect.addEventListener('change', function(e) {
+                    const [engine, version] = e.target.value.split(':');
+                    config.cache.engine = engine;
+                    config.cache.version = version;
+                    updateYAMLEditor();
+                });
+            }
+
+            const cacheMemoryInput = document.getElementById('cache-memory');
+            if (cacheMemoryInput) {
+                cacheMemoryInput.addEventListener('input', function(e) {
+                    config.cache.memory = e.target.value;
+                    updateYAMLEditor();
+                });
+            }
+
+            // Add name edit listener for cache title
+            const cacheTitle = document.getElementById('cache-name-title');
+            if (cacheTitle) {
+                addNameEditListener(cacheTitle, 'cache');
+            }
+
+            // Update YAML to include the new cache resource
+            updateYAMLEditor();
+        }
+
+        // Function to remove a resource from the canvas
+        function removeResource(resourceType) {
+            let nodeId, confirmMessage;
+            
+            switch(resourceType) {
+                case 'application':
+                    nodeId = 'app-node';
+                    confirmMessage = 'Are you sure you want to remove the application resource? This cannot be undone.';
+                    break;
+                case 'database':
+                    nodeId = 'db-node';
+                    confirmMessage = 'Are you sure you want to remove the database resource? This cannot be undone.';
+                    break;
+                case 'cache':
+                    nodeId = 'cache-node';
+                    confirmMessage = 'Are you sure you want to remove the cache resource?';
+                    break;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // Remove the node from the DOM
+                const node = document.getElementById(nodeId);
+                if (node) {
+                    node.remove();
+                }
+                
+                // Update the config
+                if (resourceType === 'application') {
+                    config.application = null;
+                } else if (resourceType === 'database') {
+                    config.database = null;
+                } else if (resourceType === 'cache') {
+                    config.cache = null;
+                    // Show the Add Resource button again
+                    const addBtn = document.getElementById('add-resource-btn');
+                    if (addBtn) {
+                        addBtn.style.display = '';
+                    }
+                }
+                
+                // Update YAML editor
+                updateYAMLEditor();
+            }
+        }
+    </script>
+</body>
+</html>

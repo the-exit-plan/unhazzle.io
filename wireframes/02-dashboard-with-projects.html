@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div class="avatar">T</div>
+                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="01-signin.html" class="header-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="welcome-section">
+            <h1>Welcome back, Tavo! 👋</h1>
+            <p id="welcome-text">
+                🎉 <strong>Success!</strong> Your project has been provisioned and is now running. 
+                Manage your resources below or <a href="#">view deployment logs</a>.
+            </p>
+        </div>
+
+        <!-- Projects Section -->
+        <section style="margin-bottom: var(--space-8);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                <h2 style="font-size: var(--font-size-2xl); color: var(--text-primary); margin: 0;">
+                    Your Projects
+                </h2>
+                <button class="btn btn-primary btn-icon" onclick="location.href='03-canvas.html'">
+                    + New Project
+                </button>
+            </div>
+            <div id="projects-container"></div>
+        </section>
+
+        <section style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); padding: var(--space-8); border-radius: var(--radius-2xl); color: white;">
+            <h3 style="font-size: var(--font-size-2xl); margin-bottom: var(--space-3);">
+                📊 Need more resources?
+            </h3>
+            <p style="margin-bottom: var(--space-4); opacity: 0.9; font-size: var(--font-size-lg);">
+                Scale your infrastructure by adding databases, caches, or additional services.
+            </p>
+            <button class="btn btn-large" style="background: white; color: var(--primary-color);" onclick="location.href='04-canvas-with-resources.html'">
+                Add Resources
+            </button>
+        </section>
+    </main>
+
+    <script>
+        // Load project data from sessionStorage
+        const projectData = sessionStorage.getItem('provisionedProject');
+
+        if (projectData) {
+            const project = JSON.parse(projectData);
+            
+            // Get status colors
+            const getStatusColor = (status) => {
+                return status === 'running' ? 'var(--success-color)' : 
+                       status === 'stopped' ? 'var(--gray-400)' : 
+                       'var(--warning-color)';
+            };
+
+            const getResourceIcon = (type) => {
+                return type === 'application' ? '🚀' :
+                       type === 'database' ? '🗄️' :
+                       type === 'cache' ? '⚡' :
+                       '📦';
+            };
+
+            // Build resources list
+            const resourcesHTML = project.resources.map(resource => `
+                <div style="display: flex; align-items: center; padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
+                    <span style="font-size: 1.5rem; margin-right: var(--space-3);">${getResourceIcon(resource.type)}</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--text-primary);">${resource.name}</div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); text-transform: capitalize;">${resource.type}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <span style="display: inline-block; width: 8px; height: 8px; background: ${getStatusColor(resource.status)}; border-radius: 50%;"></span>
+                        <span style="font-size: var(--font-size-sm); color: var(--text-secondary); text-transform: capitalize;">${resource.status}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Create project card
+            const projectCard = `
+                <div class="card" style="cursor: pointer; transition: all var(--transition-normal);" onclick="location.href='04-canvas-with-resources.html'">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4);">
+                        <div>
+                            <h3 style="font-size: var(--font-size-xl); margin-bottom: var(--space-1);">${project.id}</h3>
+                            <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2);">
+                                <span style="padding: var(--space-1) var(--space-2); background: var(--success-color); color: white; border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: 500;">
+                                    ${project.status}
+                                </span>
+                                <span style="font-size: var(--font-size-sm); color: var(--text-tertiary);">
+                                    ${project.environment}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: var(--font-size-xl); font-weight: 700; color: var(--primary-color);">
+                                €${project.monthlyCost.toFixed(2)}
+                            </div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                /month
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: var(--space-4);">
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2); font-size: var(--font-size-sm);">
+                            Resources (${project.resources.length})
+                        </div>
+                        ${resourcesHTML}
+                    </div>
+
+                    <div style="display: flex; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); location.href='04-canvas-with-resources.html'">
+                            Manage Resources
+                        </button>
+                        <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); location.href='06-export.html'">
+                            Export YAML
+                        </button>
+                        <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); alert('View logs functionality')">
+                            View Logs
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('projects-container').innerHTML = projectCard;
+        } else {
+            // No project data, redirect to empty dashboard
+            window.location.href = '02-dashboard.html';
+        }
+    </script>
+</body>
+</html>

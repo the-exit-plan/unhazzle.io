@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+    <style>
+        .docs-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: var(--space-8);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-8);
+        }
+
+        .docs-sidebar {
+            position: sticky;
+            top: var(--space-4);
+            height: fit-content;
+        }
+
+        .docs-nav {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+        }
+
+        .docs-nav-section {
+            margin-bottom: var(--space-4);
+        }
+
+        .docs-nav-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .docs-nav-title {
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: var(--space-2);
+            letter-spacing: 0.05em;
+        }
+
+        .docs-nav-link {
+            display: block;
+            padding: var(--space-2);
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .docs-nav-link:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .docs-nav-link.active {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        .docs-content {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-8);
+        }
+
+        .docs-content h1 {
+            font-size: var(--font-size-3xl);
+            margin-bottom: var(--space-2);
+            color: var(--text-primary);
+        }
+
+        .docs-content h2 {
+            font-size: var(--font-size-2xl);
+            margin-top: var(--space-8);
+            margin-bottom: var(--space-4);
+            color: var(--text-primary);
+            padding-bottom: var(--space-2);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .docs-content h3 {
+            font-size: var(--font-size-xl);
+            margin-top: var(--space-6);
+            margin-bottom: var(--space-3);
+            color: var(--text-primary);
+        }
+
+        .docs-content p {
+            margin-bottom: var(--space-4);
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .docs-content ul, .docs-content ol {
+            margin-bottom: var(--space-4);
+            padding-left: var(--space-6);
+            color: var(--text-secondary);
+        }
+
+        .docs-content li {
+            margin-bottom: var(--space-2);
+            line-height: 1.7;
+        }
+
+        .docs-content code {
+            background: var(--gray-900);
+            color: var(--gray-200);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+
+        .docs-content pre {
+            background: var(--gray-900);
+            color: var(--gray-200);
+            padding: var(--space-4);
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin-bottom: var(--space-4);
+        }
+
+        .docs-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .docs-callout {
+            padding: var(--space-4);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-4);
+            border-left: 3px solid;
+        }
+
+        .docs-callout.info {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .docs-callout.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--warning-color);
+        }
+
+        .docs-callout.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success-color);
+        }
+
+        .docs-breadcrumb {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--space-6);
+        }
+
+        .docs-breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .docs-breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .docs-container {
+                grid-template-columns: 1fr;
+            }
+
+            .docs-sidebar {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div class="avatar">T</div>
+                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="02-dashboard.html" class="header-link">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-nav-section">
+                    <div class="docs-nav-title">Getting Started</div>
+                    <a href="#overview" class="docs-nav-link active">Overview</a>
+                    <a href="#quick-start" class="docs-nav-link">Quick Start</a>
+                    <a href="#authentication" class="docs-nav-link">Authentication</a>
+                </div>
+
+                <div class="docs-nav-section">
+                    <div class="docs-nav-title">Resources</div>
+                    <a href="#applications" class="docs-nav-link">Applications</a>
+                    <a href="#databases" class="docs-nav-link">Databases</a>
+                    <a href="#caches" class="docs-nav-link">Caches</a>
+                    <a href="#queues" class="docs-nav-link">Queues</a>
+                </div>
+
+                <div class="docs-nav-section">
+                    <div class="docs-nav-title">Configuration</div>
+                    <a href="#yaml-manifest" class="docs-nav-link">YAML Manifest</a>
+                    <a href="#environment-vars" class="docs-nav-link">Environment Variables</a>
+                    <a href="#networking" class="docs-nav-link">Networking</a>
+                </div>
+
+                <div class="docs-nav-section">
+                    <div class="docs-nav-title">CLI Reference</div>
+                    <a href="#cli-install" class="docs-nav-link">Installation</a>
+                    <a href="#cli-commands" class="docs-nav-link">Commands</a>
+                </div>
+
+                <div class="docs-nav-section">
+                    <div class="docs-nav-title">Advanced</div>
+                    <a href="#scaling" class="docs-nav-link">Scaling</a>
+                    <a href="#monitoring" class="docs-nav-link">Monitoring</a>
+                    <a href="#ci-cd" class="docs-nav-link">CI/CD Integration</a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <div class="docs-breadcrumb">
+                <a href="02-dashboard.html">Home</a> / <a href="docs.html">Documentation</a> / Getting Started
+            </div>
+
+            <h1 id="overview">📚 unhazzle Documentation</h1>
+            <p style="font-size: var(--font-size-lg); color: var(--text-primary);">
+                Welcome to unhazzle! Deploy and manage your cloud infrastructure with a visual-first approach.
+            </p>
+
+            <div class="docs-callout info">
+                <strong>💡 New to unhazzle?</strong> Start with our <a href="#quick-start" style="color: var(--primary-color);">Quick Start Guide</a> to deploy your first application in under 5 minutes.
+            </div>
+
+            <h2 id="quick-start">Quick Start</h2>
+            <p>
+                Get started with unhazzle in three simple steps:
+            </p>
+
+            <h3>1. Connect Your Repository</h3>
+            <p>
+                Link your GitHub, GitLab, or Bitbucket repository. unhazzle automatically detects your application type and suggests optimal configurations.
+            </p>
+
+            <pre><code># Example repository URL
+https://github.com/your-username/my-awesome-app</code></pre>
+
+            <h3>2. Configure Resources</h3>
+            <p>
+                Use the visual canvas to drag and drop resources, or edit the YAML manifest directly. Both approaches are synced in real-time.
+            </p>
+
+            <pre><code>version: '1.0'
+project: my-project
+environment: dev
+
+resources:
+  - name: my-app
+    type: application
+    source:
+      repo: github.com/your-username/my-awesome-app
+      dockerfile: ./Dockerfile
+    resources:
+      cpu: 1
+      memory: 512M
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          resource: my-db
+          key: connectionString
+
+  - name: my-db
+    type: database
+    engine: postgres
+    version: '16'
+    size: 1G
+    backups: true
+    retention: 7d</code></pre>
+
+            <h3>3. Deploy</h3>
+            <p>
+                Review your cost estimation and click "Apply Changes". Your infrastructure will be provisioned in under 2 minutes.
+            </p>
+
+            <div class="docs-callout success">
+                <strong>✅ Deployment Complete!</strong> Your application is now live at <code>my-app.unhazzle.dev</code>
+            </div>
+
+            <h2 id="authentication">Authentication</h2>
+            <p>
+                unhazzle uses OAuth 2.0 for secure authentication. Currently supported providers:
+            </p>
+            <ul>
+                <li><strong>GitHub</strong> - Sign in with your GitHub account</li>
+                <li><strong>GitLab</strong> - Use your GitLab credentials</li>
+                <li><strong>Google</strong> - Sign in with Google (coming soon)</li>
+            </ul>
+
+            <h2 id="applications">Applications</h2>
+            <p>
+                Deploy containerized applications from any Git repository. unhazzle supports:
+            </p>
+            <ul>
+                <li>Automatic builds from <code>Dockerfile</code></li>
+                <li>Buildpack detection for popular frameworks (Node.js, Python, Ruby, Go, etc.)</li>
+                <li>Zero-downtime deployments with automatic rollback</li>
+                <li>Horizontal scaling with load balancing</li>
+                <li>Custom domains with automatic SSL certificates</li>
+            </ul>
+
+            <h3>Configuration Options</h3>
+            <p>
+                Applications support the following configuration parameters:
+            </p>
+
+            <pre><code>- name: my-app
+  type: application
+  source:
+    repo: github.com/user/repo
+    branch: main              # Optional, defaults to main
+    dockerfile: ./Dockerfile  # Optional, auto-detected
+  resources:
+    cpu: 1                    # vCPU cores (0.5 - 8)
+    memory: 512M              # RAM allocation
+    instances: 1              # Number of replicas (1 - 10)
+  ports:
+    - port: 8080              # Internal port
+      public: true            # Expose to internet
+  env:
+    - name: NODE_ENV
+      value: production
+  healthCheck:
+    path: /health             # Health check endpoint
+    interval: 30s             # Check frequency</code></pre>
+
+            <h2 id="databases">Databases</h2>
+            <p>
+                Provision fully managed databases with automatic backups, point-in-time recovery, and high availability.
+            </p>
+
+            <h3>Supported Engines</h3>
+            <ul>
+                <li><strong>PostgreSQL</strong> - Versions 12, 13, 14, 15, 16</li>
+                <li><strong>MySQL</strong> - Versions 5.7, 8.0, 8.4</li>
+                <li><strong>MariaDB</strong> - Versions 10.6, 10.11, 11.4</li>
+                <li><strong>MongoDB</strong> - Versions 5.0, 6.0, 7.0</li>
+            </ul>
+
+            <div class="docs-callout warning">
+                <strong>⚠️ Important:</strong> Database instances cannot be downgraded after creation. Choose your storage size carefully or contact support for migrations.
+            </div>
+
+            <h3>Backup Strategy</h3>
+            <p>
+                All databases include automatic backups:
+            </p>
+            <ul>
+                <li><strong>Frequency:</strong> Daily automated backups</li>
+                <li><strong>Retention:</strong> Configurable from 3 to 30 days</li>
+                <li><strong>Point-in-Time Recovery:</strong> Restore to any second within retention period</li>
+                <li><strong>On-Demand Backups:</strong> Create manual backups anytime</li>
+            </ul>
+
+            <h2 id="caches">Caches</h2>
+            <p>
+                Deploy high-performance in-memory caches to accelerate your applications.
+            </p>
+
+            <h3>Supported Engines</h3>
+            <ul>
+                <li><strong>Redis OSS</strong> - Open-source Redis (latest stable)</li>
+                <li><strong>Valkey</strong> - Redis fork with enhanced features</li>
+                <li><strong>Memcached</strong> - Distributed memory caching</li>
+            </ul>
+
+            <h3>Use Cases</h3>
+            <ul>
+                <li>Session storage</li>
+                <li>API response caching</li>
+                <li>Real-time leaderboards</li>
+                <li>Pub/sub messaging</li>
+                <li>Rate limiting</li>
+            </ul>
+
+            <h2 id="yaml-manifest">YAML Manifest</h2>
+            <p>
+                The <code>unhazzle.yaml</code> file is your infrastructure as code. Commit it to your repository for GitOps workflows.
+            </p>
+
+            <h3>File Structure</h3>
+            <pre><code>version: '1.0'           # Manifest version
+project: project-name    # Unique project identifier
+environment: dev         # Environment name (dev, staging, prod)
+
+resources:               # List of infrastructure resources
+  - name: resource-1
+    type: application
+    # ... configuration
+
+  - name: resource-2
+    type: database
+    # ... configuration</code></pre>
+
+            <div class="docs-callout info">
+                <strong>💡 Pro Tip:</strong> Use environment variables in your YAML with <code>${ENV_VAR}</code> syntax for dynamic configuration across environments.
+            </div>
+
+            <h2 id="cli-install">CLI Installation</h2>
+            <p>
+                Install the unhazzle CLI to manage your infrastructure from the terminal.
+            </p>
+
+            <h3>macOS / Linux</h3>
+            <pre><code>curl -sSL https://get.unhazzle.io | bash</code></pre>
+
+            <h3>Windows</h3>
+            <pre><code>iwr https://get.unhazzle.io/install.ps1 -useb | iex</code></pre>
+
+            <h3>Verify Installation</h3>
+            <pre><code>unhazzle --version
+# Output: unhazzle CLI v1.2.3</code></pre>
+
+            <h2 id="cli-commands">CLI Commands</h2>
+            <p>
+                Essential commands for managing your infrastructure:
+            </p>
+
+            <h3>Authentication</h3>
+            <pre><code># Log in to your account
+unhazzle login
+
+# Log out
+unhazzle logout
+
+# Check authentication status
+unhazzle whoami</code></pre>
+
+            <h3>Project Management</h3>
+            <pre><code># List all projects
+unhazzle projects list
+
+# Create a new project
+unhazzle projects create my-project
+
+# View project details
+unhazzle projects info my-project</code></pre>
+
+            <h3>Deployment</h3>
+            <pre><code># Apply changes from unhazzle.yaml
+unhazzle apply
+
+# Apply with automatic approval
+unhazzle apply --auto-approve
+
+# View deployment plan without applying
+unhazzle plan
+
+# Rollback to previous version
+unhazzle rollback</code></pre>
+
+            <h3>Resource Management</h3>
+            <pre><code># List all resources
+unhazzle resources list
+
+# Get resource details
+unhazzle resources get my-app
+
+# View logs
+unhazzle logs my-app --follow
+
+# Scale application
+unhazzle scale my-app --instances 3</code></pre>
+
+            <h2 id="scaling">Scaling</h2>
+            <p>
+                unhazzle supports both vertical and horizontal scaling for your applications.
+            </p>
+
+            <h3>Horizontal Scaling</h3>
+            <p>
+                Increase the number of application instances to handle more traffic:
+            </p>
+            <pre><code>resources:
+  - name: my-app
+    type: application
+    resources:
+      instances: 3        # Run 3 replicas
+      cpu: 1
+      memory: 512M
+    autoscaling:
+      enabled: true
+      minInstances: 2
+      maxInstances: 10
+      targetCPU: 70       # Scale when CPU > 70%</code></pre>
+
+            <h3>Vertical Scaling</h3>
+            <p>
+                Increase CPU and memory resources for individual instances:
+            </p>
+            <pre><code>resources:
+  - name: my-app
+    type: application
+    resources:
+      cpu: 4              # Increase to 4 vCPUs
+      memory: 8G          # Increase to 8GB RAM</code></pre>
+
+            <h2 id="monitoring">Monitoring & Observability</h2>
+            <p>
+                Built-in monitoring and alerting for all your resources:
+            </p>
+
+            <h3>Metrics Available</h3>
+            <ul>
+                <li><strong>Applications:</strong> Request rate, response time, error rate, CPU, memory</li>
+                <li><strong>Databases:</strong> Connection count, query performance, storage usage</li>
+                <li><strong>Caches:</strong> Hit rate, memory usage, evictions, command latency</li>
+            </ul>
+
+            <h3>Alerting</h3>
+            <p>
+                Configure alerts for critical events:
+            </p>
+            <pre><code>alerts:
+  - name: high-error-rate
+    condition: error_rate > 5%
+    duration: 5m
+    channels:
+      - email
+      - slack</code></pre>
+
+            <h2 id="ci-cd">CI/CD Integration</h2>
+            <p>
+                Integrate unhazzle with your CI/CD pipeline for automated deployments.
+            </p>
+
+            <h3>GitHub Actions</h3>
+            <pre><code>name: Deploy to unhazzle
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to unhazzle
+        uses: unhazzle/deploy-action@v1
+        with:
+          api-token: ${{ secrets.UNHAZZLE_TOKEN }}
+          project: my-project
+          environment: production</code></pre>
+
+            <div class="docs-callout success">
+                <strong>🎉 You're all set!</strong> Check out our <a href="#" style="color: var(--success-color);">example projects</a> or join our <a href="#" style="color: var(--success-color);">community Discord</a> for help.
+            </div>
+
+            <div style="margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--border-color);">
+                <p style="color: var(--text-tertiary); font-size: var(--font-size-sm);">
+                    Last updated: October 11, 2025 • <a href="#" style="color: var(--primary-color);">Edit on GitHub</a>
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
