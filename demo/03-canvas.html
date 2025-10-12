@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Canvas - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+    <style>
+        .resource-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .resource-modal.active {
+            display: flex;
+        }
+
+        .resource-modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow: visible;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .resource-modal-header {
+            padding: var(--space-6);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-primary);
+            z-index: 50;
+        }
+
+        .resource-modal-header h2 {
+            margin: 0 0 var(--space-2) 0;
+            font-size: var(--font-size-2xl);
+            color: var(--text-primary);
+        }
+
+        .resource-modal-header p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        .resource-modal-body {
+            padding: var(--space-6);
+            padding-top: calc(var(--space-6) + 60px);
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .resource-option {
+            padding: var(--space-5);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg-primary);
+        }
+
+        .resource-option:hover {
+            border-color: var(--primary-color);
+            background: var(--bg-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .resource-option.highlighted {
+            border-color: var(--primary-color);
+            background: var(--bg-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .resource-option-icon {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-3);
+        }
+
+        .resource-option h3 {
+            margin: 0 0 var(--space-2) 0;
+            font-size: var(--font-size-lg);
+            color: var(--text-primary);
+        }
+
+        .resource-option p {
+            margin: 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: var(--space-4);
+            right: var(--space-4);
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tour-tooltip {
+            position: absolute;
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: tooltipBounce 2s ease-in-out infinite;
+            z-index: 100;
+        }
+
+        .tour-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: var(--primary-color);
+        }
+
+        @keyframes tooltipBounce {
+            0%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            50% {
+                transform: translateX(-50%) translateY(-4px);
+            }
+        }
+
+        .resource-option {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+                <span class="project-info">Project: silent-wind-1234 (dev)</span>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div class="avatar">T</div>
+                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="02-dashboard.html" class="header-link">← Dashboard</a>
+                <a href="01-signin.html" class="header-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div style="margin-bottom: var(--space-6);">
+            <h1 style="font-size: var(--font-size-3xl); margin-bottom: var(--space-2);">
+                Infrastructure Canvas
+            </h1>
+            <p style="color: var(--text-secondary); font-size: var(--font-size-lg);">
+                Design your infrastructure visually. Changes sync automatically with the YAML manifest.
+            </p>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-workspace">
+                <div class="canvas-empty">
+                    <div class="canvas-empty-icon">📦</div>
+                    <h3 style="color: var(--text-primary); margin-bottom: var(--space-3);">
+                        Ready to build something amazing?
+                    </h3>
+                    <p style="margin-bottom: var(--space-6); max-width: 400px; color: var(--text-tertiary);">
+                        Start by adding your first resource. Connect a repository or create a database to begin.
+                    </p>
+                    <button class="btn btn-primary btn-large" onclick="showResourceModal()">
+                        + Add Resource
+                    </button>
+                    <p style="margin-top: var(--space-4); font-size: var(--font-size-sm); color: var(--text-tertiary);">
+                        or <a href="#" style="color: var(--primary-color); text-decoration: none;">import existing unhazzle.yaml</a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="code-editor-container">
+                <div class="editor-header">
+                    <div class="editor-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span>unhazzle.yaml</span>
+                    <span style="margin-left: auto; opacity: 0.6;">Auto-sync enabled</span>
+                </div>
+                <div class="code-editor"></div>
+            </div>
+        </div>
+
+        <div class="actions-bar">
+            <div class="actions-left">
+                <span style="color: var(--text-tertiary); font-size: var(--font-size-sm);">
+                    💡 No resources created yet
+                </span>
+            </div>
+            <div class="actions-right">
+                <button class="btn btn-secondary" disabled>Apply Changes</button>
+                <button class="btn btn-secondary" disabled>Export YAML</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Resource Selection Modal -->
+    <div id="resourceModal" class="resource-modal">
+        <div class="resource-modal-content">
+            <div class="resource-modal-header">
+                <button class="modal-close" onclick="hideResourceModal()" aria-label="Close modal">×</button>
+                <h2>Add a Resource</h2>
+                <p>Choose the type of infrastructure resource you want to create</p>
+            </div>
+            <div class="resource-modal-body">
+                <div class="resource-grid">
+                    <div class="resource-option highlighted" onclick="selectResource('application')">
+                        <div class="tour-tooltip">👆 Start here! Create your first application</div>
+                        <div class="resource-option-icon">🚀</div>
+                        <h3>Application</h3>
+                        <p>Deploy containerized applications with automatic CI/CD from your Git repository.</p>
+                    </div>
+
+                    <div class="resource-option" onclick="selectResource('function')">
+                        <div class="resource-option-icon">⚡</div>
+                        <h3>Function / Task</h3>
+                        <p>Run serverless functions or background tasks on-demand without managing servers.</p>
+                    </div>
+
+                    <div class="resource-option" onclick="selectResource('database')">
+                        <div class="resource-option-icon">🗄️</div>
+                        <h3>Database</h3>
+                        <p>Provision a managed database with PostgreSQL, MySQL, or MongoDB.</p>
+                    </div>
+
+                    <div class="resource-option" onclick="selectResource('cache')">
+                        <div class="resource-option-icon">💨</div>
+                        <h3>Cache</h3>
+                        <p>Set up a Redis or Valkey cache to boost your application performance.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showResourceModal() {
+            document.getElementById('resourceModal').classList.add('active');
+        }
+
+        function hideResourceModal() {
+            document.getElementById('resourceModal').classList.remove('active');
+        }
+
+        function selectResource(type) {
+            // For the demo, any selection takes the user to the canvas with resources
+            // In a real app, this would create the specific resource type
+            setTimeout(() => {
+                location.href = '04-canvas-with-resources.html';
+            }, 200);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('resourceModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideResourceModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideResourceModal();
+            }
+        });
+    </script>
+</body>
+</html>
