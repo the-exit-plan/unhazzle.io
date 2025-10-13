@@ -17,8 +17,8 @@
             </div>
             <nav class="header-nav">
                 <div class="user-info">
-                    <div class="avatar">T</div>
-                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                    <div id="userAvatar" class="avatar">T</div>
+                    <span id="userNameDisplay" style="color: var(--text-primary); font-weight: 500;">Tavo</span>
                 </div>
                 <a href="docs.html" class="header-link">📖 Docs</a>
                 <a href="01-signin.html" class="header-link">Logout</a>
@@ -28,7 +28,7 @@
 
     <main class="main-content">
         <div class="welcome-section">
-            <h1>Welcome back, Tavo! 👋</h1>
+            <h1 id="welcomeMessage">Welcome back, Tavo! 👋</h1>
             <p id="welcome-text">
                 🎉 <strong>Success!</strong> Your project has been provisioned and is now running. 
                 Manage your resources below or <a href="#">view deployment logs</a>.
@@ -55,7 +55,7 @@
             <p style="margin-bottom: var(--space-4); opacity: 0.9; font-size: var(--font-size-lg);">
                 Scale your infrastructure by adding databases, caches, or additional services.
             </p>
-            <button class="btn btn-large" style="background: white; color: var(--primary-color);" onclick="location.href='04-canvas-with-resources.html'">
+            <button class="btn btn-large" style="background: white; color: var(--primary-color);" onclick="sessionStorage.setItem('loadAllResources', 'true'); location.href='04-canvas-with-resources.html'">
                 Add Resources
             </button>
         </section>
@@ -99,7 +99,7 @@
 
             // Create project card
             const projectCard = `
-                <div class="card" style="cursor: pointer; transition: all var(--transition-normal);" onclick="location.href='04-canvas-with-resources.html'">
+                <div class="card" style="cursor: pointer; transition: all var(--transition-normal);" onclick="sessionStorage.setItem('loadAllResources', 'true'); location.href='04-canvas-with-resources.html'">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4);">
                         <div>
                             <h3 style="font-size: var(--font-size-xl); margin-bottom: var(--space-1);">${project.id}</h3>
@@ -130,7 +130,7 @@
                     </div>
 
                     <div style="display: flex; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--border-color);">
-                        <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); location.href='04-canvas-with-resources.html'">
+                        <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); sessionStorage.setItem('loadAllResources', 'true'); location.href='04-canvas-with-resources.html'">
                             Manage Resources
                         </button>
                         <button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); location.href='06-export.html'">
@@ -148,6 +148,12 @@
             // No project data, redirect to empty dashboard
             window.location.href = '02-dashboard.html';
         }
+
+        // Load and display user name
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        document.getElementById('userNameDisplay').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+        document.getElementById('welcomeMessage').textContent = `Welcome back, ${userName}! 👋`;
     </script>
 </body>
 </html>

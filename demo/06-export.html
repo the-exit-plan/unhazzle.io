@@ -74,11 +74,15 @@
 
     <script>
         // Load configuration from sessionStorage
+        // Get user name for repo URL
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        const githubUsername = userName.toLowerCase().replace(/\s+/g, '-');
+        
         let config = {
             application: {
                 name: 'my-awesome-app',
                 type: 'application',
-                repo: 'github.com/tavo/my-awesome-app',
+                repo: `github.com/${githubUsername}/my-awesome-app`,
                 dockerfile: './Dockerfile',
                 cpu: 1,
                 memory: '512M',

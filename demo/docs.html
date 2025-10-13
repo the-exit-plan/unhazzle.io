@@ -194,8 +194,8 @@
             </div>
             <nav class="header-nav">
                 <div class="user-info">
-                    <div class="avatar">T</div>
-                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                    <div id="userAvatar" class="avatar">T</div>
+                    <span id="userNameDisplay" style="color: var(--text-primary); font-weight: 500;">Tavo</span>
                 </div>
                 <a href="docs.html" class="header-link">📖 Docs</a>
                 <a href="02-dashboard.html" class="header-link">Dashboard</a>
@@ -589,5 +589,12 @@ jobs:
             </div>
         </main>
     </div>
+
+    <script>
+        // Load and display user name
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        document.getElementById('userNameDisplay').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+    </script>
 </body>
 </html>

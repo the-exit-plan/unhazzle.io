@@ -17,8 +17,8 @@
             </div>
             <nav class="header-nav">
                 <div class="user-info">
-                    <div class="avatar">T</div>
-                    <span style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                    <div class="avatar" id="userAvatar">T</div>
+                    <span style="color: var(--text-primary); font-weight: 500;" id="userNameDisplay">Tavo</span>
                 </div>
                 <a href="docs.html" class="header-link">📖 Docs</a>
                 <a href="../index.html" class="header-link">← Back to Website</a>
@@ -28,7 +28,7 @@
 
     <main class="main-content">
         <div class="welcome-section">
-            <h1>Welcome to unhazzle, Tavo! 👋</h1>
+            <h1 id="welcomeMessage">Welcome to unhazzle, Tavo! 👋</h1>
             <p>
                 Let's get you started with an interactive product tour. You'll deploy a complete infrastructure stack and see how unhazzle simplifies the entire process. Choose your preferred workflow below.
             </p>
@@ -125,5 +125,13 @@
             </div>
         </section>
     </main>
+    <script>
+        // Load user name from sessionStorage
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        document.getElementById('userNameDisplay').textContent = userName;
+        document.getElementById('welcomeMessage').textContent = `Welcome to unhazzle, ${userName}! 👋`;
+        // Update avatar with first letter of name
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+    </script>
 </body>
 </html>
