@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let commandHistory = [];
     let historyIndex = -1;
     let currentCommand = '';
+    let hasApplied = false; // Track if apply has been run
 
     // Predefined commands
     const commands = {
@@ -14,33 +15,151 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Show available commands',
             execute: function() {
                 return `Available commands:
-  help     - Show this help message
-  ls       - List directory contents
-  pwd      - Print working directory
-  echo     - Display a line of text
-  clear    - Clear the terminal screen
-  date     - Display the current date and time
-  whoami   - Display current user
-  uname    - Display system information
-  history  - Show command history`;
+  unhazzle help          - Show this help message
+  unhazzle login         - Sign in with Github
+  unhazzle init          - Initialize unhazzle project
+  unhazzle application   - Manage applications
+  unhazzle database      - Manage databases
+  unhazzle cache         - Manage cache services
+  unhazzle apply         - Apply infrastructure changes
+  unhazzle status        - Show deployment status
+  clear                  - Clear the terminal screen
+  history                - Show command history`;
             }
         },
-        ls: {
-            description: 'List directory contents',
+        login: {
+            description: 'Sign in with Github',
             execute: function() {
-                return `applications/  databases/  cache/  config/`;
+                return `🔐 Logged in with Github successfully!
+Welcome back, Tavo! Your repositories are now accessible.`;
             }
         },
-        pwd: {
-            description: 'Print working directory',
+        init: {
+            description: 'Initialize unhazzle project',
             execute: function() {
-                return '/home/user/unhazzle-project';
+                return `🚀 Initialized unhazzle project 'tavo-portfolio'
+Created default environment: dev
+Generated unhazzle.yaml manifest
+Ready to configure resources!`;
             }
         },
-        echo: {
-            description: 'Display a line of text',
+        application: {
+            description: 'Manage applications',
             execute: function(args) {
-                return args.join(' ') || '';
+                if (args[0] === 'create') {
+                    const name = args[2] || 'my-app';
+                    return `📦 Created application '${name}'
+Public endpoint: https://${name}.unhazzle.dev
+Environment variables injected automatically
+Application is ready for deployment!`;
+                } else if (args[0] === 'list') {
+                    if (!hasApplied) {
+                        return `No applications found. Run 'unhazzle apply' to deploy resources.`;
+                    }
+                    return `Applications:
+  - my-app (Next.js, dev, https://my-app.unhazzle.dev)`;
+                }
+                return `Usage: unhazzle application create --name APP_NAME [--image IMAGE]
+       unhazzle application list`;
+            }
+        },
+        database: {
+            description: 'Manage databases',
+            execute: function(args) {
+                if (args[0] === 'create') {
+                    const name = args[2] || 'my-db';
+                    const engine = args.includes('--engine') ? args[args.indexOf('--engine') + 1] : 'postgres';
+                    return `🗄️ Created database '${name}' (${engine})
+Connection string injected to application environment
+Endpoint: ${name}.internal.unhazzle.dev (internal only)
+Backups: Daily with 7-day retention`;
+                } else if (args[0] === 'list') {
+                    if (!hasApplied) {
+                        return `No databases found. Run 'unhazzle apply' to deploy resources.`;
+                    }
+                    return `Databases:
+  - my-db (PostgreSQL, small, dev)`;
+                }
+                return `Usage: unhazzle database create --name DB_NAME [--engine postgres|mysql|mongodb]
+       unhazzle database list`;
+            }
+        },
+        cache: {
+            description: 'Manage cache services',
+            execute: function(args) {
+                if (args[0] === 'create') {
+                    const name = args[2] || 'my-cache';
+                    return `⚡ Created cache '${name}' (Redis)
+Connection string injected to application environment
+Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
+                } else if (args[0] === 'list') {
+                    if (!hasApplied) {
+                        return `No cache services found. Run 'unhazzle apply' to deploy resources.`;
+                    }
+                    return `Cache services:
+  - my-cache (Redis, small, dev)`;
+                }
+                return `Usage: unhazzle cache create --name CACHE_NAME
+       unhazzle cache list`;
+            }
+        },
+        apply: {
+            description: 'Apply infrastructure changes',
+            execute: function() {
+                hasApplied = true; // Mark as applied
+                return `🔄 Applying infrastructure changes...
+Estimated monthly cost: €12.50
+Resources to provision:
+  - 1 Application (0.5 CPU, 512Mi RAM)
+  - 1 Database (PostgreSQL, small)
+  - 1 Cache (Redis, small)
+
+✅ Infrastructure deployed successfully!
+Your application is live at: https://my-app.unhazzle.dev`;
+            }
+        },
+        status: {
+            description: 'Show deployment status',
+            execute: function() {
+                if (!hasApplied) {
+                    return `No deployment found. Run 'unhazzle apply' to deploy your infrastructure.`;
+                }
+                return `📊 Deployment Status:
+Environment: dev
+Applications: 1 running
+Databases: 1 running
+Cache: 1 running
+Last deployment: 2 minutes ago
+Health: All systems operational`;
+            }
+        },
+        cat: {
+            description: 'Display deployment manifest',
+            execute: function(args) {
+                if (args[0] === 'unhazzle.yaml' || args.length === 0) {
+                    return `project: tavo-portfolio
+environment: dev
+
+resources:
+  applications:
+    - name: my-app
+      type: nextjs
+      repo: github.com/tavo/portfolio
+      cpu: 0.5
+      memory: 512Mi
+      public: true
+
+  databases:
+    - name: my-db
+      engine: postgresql
+      size: small
+
+  cache:
+    - name: my-cache
+      engine: redis
+      size: small`;
+                }
+                return `Usage: unhazzle cat [unhazzle.yaml]`;
             }
         },
         clear: {
@@ -48,24 +167,6 @@ document.addEventListener('DOMContentLoaded', function() {
             execute: function() {
                 terminalOutput.innerHTML = '';
                 return '';
-            }
-        },
-        date: {
-            description: 'Display the current date and time',
-            execute: function() {
-                return new Date().toString();
-            }
-        },
-        whoami: {
-            description: 'Display current user',
-            execute: function() {
-                return 'unhazzle-user';
-            }
-        },
-        uname: {
-            description: 'Display system information',
-            execute: function() {
-                return 'Unhazzle Infrastructure Platform v1.0.0';
             }
         },
         history: {
@@ -93,17 +194,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to display welcome message
     function displayWelcome() {
         const welcomeMessage = `
-   ____  __  __  ____  _     _____ _   _ _____
-  / __ \\|  \\/  |/ __ \\| |   | ____| \\ | | ____|
- | |  | | \\  / | |  | | |   |  _| |  \\| |  _|
- | |  | | |\\/| | |  | | |___| |___| |\\  | |___|
- | |__| | |  | | |__| |_____|_____|_| \\_|_____|
-  \\____/|_|  |_|\\____/|_____|_____|_|  |_|_____|
+    ____  __  __  ____  _     _____ _   _ _____
+   / __ \\|  \\/  |/ __ \\| |   | ____| \\ | | ____|
+  | |  | | \\  / | |  | | |   |  _| |  \\| |  _|
+  | |  | | |\\/| | |  | | |___| |___| |\\  | |___|
+  | |__| | |  | | |__| |_____|_____|_| \\_|_____|
+   \\____/|_|  |_|\\____/|_____|_____|_|  |_|_____|
 
 Welcome to Unhazzle Terminal v1.0.0
 Infrastructure management made simple.
 
-Type 'help' to see available commands.
+Type 'unhazzle help' to see available commands.
+Type 'unhazzle login' to get started with your Github account.
 Type 'clear' to clear the screen.
 
 `;
@@ -113,8 +215,13 @@ Type 'clear' to clear the screen.
     // Function to execute command
     function executeCommand(command) {
         const parts = command.trim().split(/\s+/);
-        const cmd = parts[0].toLowerCase();
-        const args = parts.slice(1);
+        let cmd = parts[0].toLowerCase();
+        let args = parts.slice(1);
+
+        if (cmd === 'unhazzle') {
+            cmd = args[0].toLowerCase();
+            args = args.slice(1);
+        }
 
         if (commands[cmd]) {
             try {
@@ -124,7 +231,7 @@ Type 'clear' to clear the screen.
                 addOutput(`Error executing command: ${error.message}`);
             }
         } else if (cmd) {
-            addOutput(`Command not found: ${cmd}. Type 'help' for available commands.`);
+            addOutput(`Command not found: ${cmd}. Type 'unhazzle help' for available commands.`);
         }
     }
 
@@ -171,9 +278,9 @@ Type 'clear' to clear the screen.
             e.preventDefault();
             // Tab completion
             const currentValue = terminalInput.value.toLowerCase();
-            const matchingCommands = Object.keys(commands).filter(cmd => cmd.startsWith(currentValue));
+            const matchingCommands = Object.keys(commands).filter(cmd => cmd.startsWith(currentValue) || `unhazzle ${cmd}`.startsWith(currentValue));
             if (matchingCommands.length === 1) {
-                terminalInput.value = matchingCommands[0];
+                terminalInput.value = `unhazzle ${matchingCommands[0]}`;
             }
         }
     });
