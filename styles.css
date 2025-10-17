@@ -1531,8 +1531,7 @@ h4 { font-size: var(--font-size-xl); }
 }
 
 .terminal-container {
-    max-width: 800px;
-    margin: 0 auto;
+    height: 100%;
 }
 
 .terminal-window {
@@ -1541,6 +1540,7 @@ h4 { font-size: var(--font-size-xl); }
     box-shadow: var(--shadow-xl);
     overflow: hidden;
     border: 1px solid var(--border-color);
+    height: 100%;
 }
 
 .terminal-header {
@@ -1919,15 +1919,200 @@ a:focus {
     .contact {
         display: none;
     }
-    
+
     .hero,
     .features,
     .about {
         padding: var(--space-8) 0;
     }
-    
+
     body {
         font-size: 12pt;
         line-height: 1.5;
     }
+}
+
+/* Terminal Input Styling */
+.terminal-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--gray-200);
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: var(--font-size-sm);
+    width: 100%;
+    caret-color: var(--gray-200);
+}
+
+/* CLI Guide Styles */
+.cli-guide-container {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    padding: var(--space-8);
+    font-family: var(--font-family);
+}
+
+.guide-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.guide-header h1 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.guide-header p {
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-6);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--space-4);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.step-counter {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.guide-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: var(--space-8);
+    margin-bottom: var(--space-8);
+    height: 500px;
+}
+
+.instruction-panel {
+    background: var(--bg-secondary);
+    padding: var(--space-6);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    height: 100%;
+    overflow-y: auto;
+}
+
+.instruction-panel h2 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.steps-list {
+    margin-bottom: var(--space-4);
+}
+
+.step-item {
+    margin-bottom: var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    overflow: visible;
+    transition: all var(--transition-fast);
+}
+
+.step-header {
+    padding: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.step-item.active .step-header {
+    background: var(--primary-color);
+    color: var(--white);
+    font-weight: 600;
+}
+
+.step-item.completed .step-header {
+    background: var(--success-color);
+    color: var(--white);
+}
+
+.step-details {
+    padding: var(--space-3);
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    display: none;
+}
+
+.step-details p {
+    margin: 0 0 var(--space-2) 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.step-details code {
+    display: block;
+    background: var(--gray-800);
+    color: var(--accent-color);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.9em;
+    font-weight: 500;
+    margin: var(--space-2) 0;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.step-details code:hover {
+    background: var(--gray-700);
+    transform: translateY(-1px);
+}
+
+.step-details small {
+    color: var(--text-tertiary);
+    font-size: 0.85em;
+    display: block;
+    margin-top: var(--space-1);
+}
+
+.guide-controls {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+}
+
+@media (max-width: 1024px) {
+    .guide-content {
+        grid-template-columns: 1fr;
+    }
+
+    .cli-guide-container {
+        padding: var(--space-4);
+    }
+}
+
+[data-theme="dark"] .cli-guide-container {
+    background: var(--bg-primary);
+}
+
+[data-theme="dark"] .instruction-panel {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .progress-bar {
+    background: var(--border-color);
+}
+
+[data-theme="dark"] .progress-fill {
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
 }

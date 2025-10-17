@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const terminalOutput = document.getElementById('terminal-output');
     const cursor = document.querySelector('.cursor');
 
+    // Add null checks for critical elements
+    if (!terminalInput || !terminalOutput) {
+        console.error('Terminal elements not found. Terminal functionality disabled.');
+        return;
+    }
+
     let commandHistory = [];
     let historyIndex = -1;
     let currentCommand = '';
@@ -238,6 +244,7 @@ Type 'clear' to clear the screen.
     // Handle input submission
     function handleCommand() {
         const command = terminalInput.value.trim();
+        console.log('Handling command:', command); // Debug logging
         if (command) {
             // Add command to history
             commandHistory.push(command);
@@ -255,6 +262,7 @@ Type 'clear' to clear the screen.
     }
 
     // Event listeners
+    console.log('Setting up terminal event listeners'); // Debug logging
     terminalInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -290,9 +298,13 @@ Type 'clear' to clear the screen.
 
     // Focus input when clicking on terminal
     document.querySelector('.terminal-body').addEventListener('click', function() {
-        terminalInput.focus();
+        if (terminalInput) {
+            terminalInput.focus();
+        }
     });
 
     // Auto-focus input
-    terminalInput.focus();
+    if (terminalInput) {
+        terminalInput.focus();
+    }
 });

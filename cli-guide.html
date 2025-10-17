@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unhazzle CLI Guide - Experience the Flow</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="cli-guide-container">
+        <header class="guide-header">
+            <h1>Experience Unhazzle CLI Flow</h1>
+            <p>Follow this guided walkthrough to see how easy infrastructure management can be</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">6</span></div>
+        </header>
+        
+        <div class="guide-content">
+            <div class="instruction-panel" id="instruction-panel">
+                <h2>CLI User Journey</h2>
+                <div class="steps-list">
+                    <div class="step-item active" id="step-0">
+                        <div class="step-header">Welcome to Unhazzle CLI</div>
+                        <div class="step-details">
+                            <p>Type the command: <code>unhazzle help</code></p>
+                            <small>This will show you all available commands to get started.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-1">
+                        <div class="step-header">Step 1: Login with GitHub</div>
+                        <div class="step-details">
+                            <p>Authenticate with your GitHub account:</p>
+                            <code>unhazzle login</code>
+                            <small>This connects your GitHub repositories for deployment.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-2">
+                        <div class="step-header">Step 2: Initialize Project</div>
+                        <div class="step-details">
+                            <p>Create a new Unhazzle project:</p>
+                            <code>unhazzle init</code>
+                            <small>This sets up your project configuration and environment.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-3">
+                        <div class="step-header">Step 3: Create Application</div>
+                        <div class="step-details">
+                            <p>Deploy your application:</p>
+                            <code>unhazzle application create --name my-app</code>
+                            <small>This creates a new application instance with automatic scaling.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-4">
+                        <div class="step-header">Step 4: Add Database</div>
+                        <div class="step-details">
+                            <p>Add a PostgreSQL database:</p>
+                            <code>unhazzle database create --name my-db --engine postgres</code>
+                            <small>This provisions a managed database with backups.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-5">
+                        <div class="step-header">Step 5: Deploy Infrastructure</div>
+                        <div class="step-details">
+                            <p>Apply all infrastructure changes:</p>
+                            <code>unhazzle apply</code>
+                            <small>This deploys everything to production with cost estimation.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-6">
+                        <div class="step-header">Step 6: Check Status</div>
+                        <div class="step-details">
+                            <p>Verify your deployment:</p>
+                            <code>unhazzle status</code>
+                            <small>This shows the health and status of all your services.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-7">
+                        <div class="step-header">Tutorial Complete!</div>
+                        <div class="step-details">
+                            <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
+                            <small>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="terminal-container">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="terminal-title">Unhazzle CLI Guide</span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-input-line">
+                            <span class="prompt">$</span>
+                            <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false">
+                            <span class="cursor">|</span>
+                        </div>
+                        <div id="terminal-output" class="terminal-output"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+    </div>
+    
+    <script src="cli-guide.js"></script>
+</body>
+</html>
