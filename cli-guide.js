@@ -170,7 +170,7 @@ Backups: Daily with 7-day retention`;
                         return `No databases found. Run 'unhazzle apply' to deploy resources.`;
                     }
                     return `Databases:
-  - my-db (PostgreSQL, small, dev)`;
+  - ${projectConfig.projectName}-database (${projectConfig.dbEngine}, ${projectConfig.dbSize}, ${projectConfig.environment})`;
                 }
                 return `Usage: unhazzle database create --name DB_NAME [--engine postgres|mysql|mongodb]
        unhazzle database list`;
@@ -181,7 +181,8 @@ Backups: Daily with 7-day retention`;
             execute: function(args) {
                 if (args[0] === 'create') {
                     const name = args[2] || 'my-cache';
-                    return `⚡ Created cache '${name}' (Redis)
+                    const engine = args.includes('--engine') ? args[args.indexOf('--engine') + 1] : 'redis';
+                    return `⚡ Created cache '${name}' (${engine})
 Connection string injected to application environment
 Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                 } else if (args[0] === 'list') {
@@ -189,7 +190,7 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                         return `No cache services found. Run 'unhazzle apply' to deploy resources.`;
                     }
                     return `Cache services:
-  - my-cache (Redis, small, dev)`;
+  - ${projectConfig.projectName}-cache (${projectConfig.cacheEngine}, ${projectConfig.cacheSize}, ${projectConfig.environment})`;
                 }
                 return `Usage: unhazzle cache create --name CACHE_NAME
        unhazzle cache list`;
@@ -211,12 +212,14 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                     totalCost += 8.50; // Base cost for app
                 }
                 if (projectConfig.hasDb) {
-                    resourcesList.push('  - 1 Database (PostgreSQL, small)');
-                    totalCost += 2.50; // Cost for database
+                    const dbCost = projectConfig.dbSize === 'medium' ? 5.00 : projectConfig.dbSize === 'large' ? 10.00 : 2.50;
+                    resourcesList.push(`  - 1 Database (${projectConfig.dbEngine}, ${projectConfig.dbSize})`);
+                    totalCost += dbCost;
                 }
                 if (projectConfig.hasCache) {
-                    resourcesList.push('  - 1 Cache (Redis, small)');
-                    totalCost += 1.50; // Cost for cache
+                    const cacheCost = projectConfig.cacheSize === 'medium' ? 3.00 : projectConfig.cacheSize === 'large' ? 6.00 : 1.50;
+                    resourcesList.push(`  - 1 Cache (${projectConfig.cacheEngine}, ${projectConfig.cacheSize})`);
+                    totalCost += cacheCost;
                 }
 
                 const resourcesText = resourcesList.length > 0 ? resourcesList.join('\n') : '  - No resources selected';
@@ -269,10 +272,10 @@ ${resourcesText}
                     statusLines.push('Applications: 1 running');
                 }
                 if (projectConfig.hasDb) {
-                    statusLines.push('Databases: 1 running');
+                    statusLines.push(`Databases: 1 running (${projectConfig.dbEngine}, ${projectConfig.dbSize})`);
                 }
                 if (projectConfig.hasCache) {
-                    statusLines.push('Cache: 1 running');
+                    statusLines.push(`Cache: 1 running (${projectConfig.cacheEngine}, ${projectConfig.cacheSize})`);
                 }
                 if (projectConfig.hasGitHubActions) {
                     statusLines.push('GitHub Actions: Enabled');
@@ -459,13 +462,15 @@ Do you want to add a database? (y/n):`);
                     loginData.addDb = true;
                     clearOutput();
                     interactiveStep = 5;
+                    currentPrompt = 'engine> ';
+                    updatePrompt();
                     addOutput(`Database: Yes
 
-Do you want to add a cache service? (y/n):`);
+Select database engine (postgres/mysql/mongodb, default: postgres):`);
                 } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addDb = false;
                     clearOutput();
-                    interactiveStep = 5;
+                    interactiveStep = 7;
                     addOutput(`Database: No
 
 Do you want to add a cache service? (y/n):`);
@@ -473,24 +478,88 @@ Do you want to add a cache service? (y/n):`);
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
             } else if (interactiveStep === 5) {
+                // Database engine choice
+                const engine = input.trim().toLowerCase() || 'postgres';
+                if (!['postgres', 'mysql', 'mongodb'].includes(engine)) {
+                    addOutput("Invalid engine. Please enter postgres, mysql, or mongodb:");
+                    return;
+                }
+                loginData.dbEngine = engine;
+                clearOutput();
+                interactiveStep = 6;
+                currentPrompt = 'size> ';
+                updatePrompt();
+                addOutput(`Database engine: ${engine}
+
+Select database size (small/medium/large, default: small):`);
+            } else if (interactiveStep === 6) {
+                // Database size choice
+                const size = input.trim().toLowerCase() || 'small';
+                if (!['small', 'medium', 'large'].includes(size)) {
+                    addOutput("Invalid size. Please enter small, medium, or large:");
+                    return;
+                }
+                loginData.dbSize = size;
+                clearOutput();
+                interactiveStep = 7;
+                currentPrompt = 'choice> ';
+                updatePrompt();
+                addOutput(`Database size: ${size}
+
+Do you want to add a cache service? (y/n):`);
+            } else if (interactiveStep === 7) {
                 // Cache choice
                 const choice = input.trim().toLowerCase();
                 if (choice === 'y' || choice === 'yes') {
                     loginData.addCache = true;
+                    clearOutput();
+                    interactiveStep = 8;
+                    currentPrompt = 'engine> ';
+                    updatePrompt();
+                    addOutput(`Cache: Yes
+
+Select cache engine (redis/memcached, default: redis):`);
                 } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addCache = false;
-                } else {
-                    addOutput("Please enter 'y' for yes or 'n' for no:");
-                    return;
-                }
-                clearOutput();
-                interactiveStep = 6;
-                currentPrompt = 'choice> ';
-                updatePrompt();
-                addOutput(`Cache: ${loginData.addCache ? 'Yes' : 'No'}
+                    clearOutput();
+                    interactiveStep = 9;
+                    addOutput(`Cache: No
 
 Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
-            } else if (interactiveStep === 6) {
+                } else {
+                    addOutput("Please enter 'y' for yes or 'n' for no:");
+                }
+            } else if (interactiveStep === 8) {
+                // Cache engine choice
+                const engine = input.trim().toLowerCase() || 'redis';
+                if (!['redis', 'memcached'].includes(engine)) {
+                    addOutput("Invalid engine. Please enter redis or memcached:");
+                    return;
+                }
+                loginData.cacheEngine = engine;
+                clearOutput();
+                interactiveStep = 9;
+                currentPrompt = 'size> ';
+                updatePrompt();
+                addOutput(`Cache engine: ${engine}
+
+Select cache size (small/medium/large, default: small):`);
+            } else if (interactiveStep === 9) {
+                // Cache size choice
+                const size = input.trim().toLowerCase() || 'small';
+                if (!['small', 'medium', 'large'].includes(size)) {
+                    addOutput("Invalid size. Please enter small, medium, or large:");
+                    return;
+                }
+                loginData.cacheSize = size;
+                clearOutput();
+                interactiveStep = 10;
+                currentPrompt = 'choice> ';
+                updatePrompt();
+                addOutput(`Cache size: ${size}
+
+Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
+            } else if (interactiveStep === 10) {
                 // GitHub Actions choice
                 const choice = input.trim().toLowerCase();
                 if (choice === '' || choice === 'y' || choice === 'yes') {
@@ -501,15 +570,14 @@ Do you want to generate GitHub Actions workflows for automatic deployment? (y/n)
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                     return;
                 }
-                clearOutput();
-                interactiveStep = 7;
-                addOutput(`Initializing project...
+                 clearOutput();
+                 addOutput(`Initializing project...
 
 Project: ${loginData.projectName}
 Environment: ${loginData.environment}
 Application: ${loginData.addApp ? 'Yes' : 'No'}
-Database: ${loginData.addDb ? 'Yes' : 'No'}
-Cache: ${loginData.addCache ? 'Yes' : 'No'}
+Database: ${loginData.addDb ? `Yes (${loginData.dbEngine || 'postgres'}, ${loginData.dbSize || 'small'})` : 'No'}
+Cache: ${loginData.addCache ? `Yes (${loginData.cacheEngine || 'redis'}, ${loginData.cacheSize || 'small'})` : 'No'}
 GitHub Actions: ${loginData.addGitHubActions ? 'Yes' : 'No'}
 
 Generating unhazzle.yaml manifest...`);
@@ -534,20 +602,19 @@ resources:`;
                         yaml += `
   databases:
     - name: ${loginData.projectName.replace(/'/g, "\\'")}-database
-      engine: postgresql
-      size: small`;
+      engine: ${loginData.dbEngine || 'postgres'}
+      size: ${loginData.dbSize || 'small'}`;
                     }
                     if (loginData.addCache) {
                         yaml += `
   cache:
     - name: ${loginData.projectName.replace(/'/g, "\\'")}-cache
-      engine: redis
-      size: small`;
+      engine: ${loginData.cacheEngine || 'redis'}
+      size: ${loginData.cacheSize || 'small'}`;
                     }
 
                     if (loginData.addGitHubActions) {
                         yaml += `
-
 workflows:
   deploy:
     name: Deploy to Unhazzle
@@ -574,7 +641,11 @@ workflows:
                         hasApp: loginData.addApp,
                         hasDb: loginData.addDb,
                         hasCache: loginData.addCache,
-                        hasGitHubActions: loginData.addGitHubActions
+                        hasGitHubActions: loginData.addGitHubActions,
+                        dbEngine: loginData.dbEngine || 'postgres',
+                        dbSize: loginData.dbSize || 'small',
+                        cacheEngine: loginData.cacheEngine || 'redis',
+                        cacheSize: loginData.cacheSize || 'small'
                     };
                     generatedYaml = yaml;
 
