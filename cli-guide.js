@@ -245,7 +245,7 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                         successMessage += `\nYour application is live at: ${appUrl}`;
                     }
                     if (projectConfig.hasGitHubActions) {
-                        successMessage += '\nGitHub Actions workflow generated for automatic deployments';
+                        successMessage += '\nGitHub Actions workflow generated for automatic deployments. Commit this file.';
                     }
 
                     addOutput(successMessage);
@@ -290,10 +290,28 @@ ${resourcesText}
                         statusLines.push('GitHub Actions: Enabled');
                     }
 
+                    // Calculate total estimated cost
+                    let totalCost = 0;
+                    if (projectConfig.hasApp) {
+                        const cpuCost = parseFloat(projectConfig.appCpu) * 10;
+                        const memoryGb = projectConfig.appMemory.endsWith('Gi') ?
+                            parseFloat(projectConfig.appMemory.replace('Gi', '')) :
+                            parseFloat(projectConfig.appMemory.replace('Mi', '')) / 1024;
+                        const memoryCost = memoryGb * 5;
+                        totalCost += Math.max(cpuCost + memoryCost, 5.00);
+                    }
+                    if (projectConfig.hasDb) {
+                        totalCost += projectConfig.dbSize === 'medium' ? 5.00 : projectConfig.dbSize === 'large' ? 10.00 : 2.50;
+                    }
+                    if (projectConfig.hasCache) {
+                        totalCost += projectConfig.cacheSize === 'medium' ? 3.00 : projectConfig.cacheSize === 'large' ? 6.00 : 1.50;
+                    }
+
                     addOutput(`📊 Deployment Status:
 ${statusLines.join('\n')}
 Last deployment: 2 minutes ago
-Health: All systems operational`);
+Health: All systems operational
+Estimated monthly cost: €${totalCost.toFixed(2)}`);
                 }, 1000); // 1 second delay
 
                 return `🔍 Fetching deployment status...`;
@@ -505,11 +523,19 @@ Do you want to add a database? (y/n):`);
                     return;
                 }
                 loginData.appMemory = memory;
+                // Calculate application cost
+                const cpuCost = parseFloat(loginData.appCpu) * 10; // €10 per CPU core
+                const memoryGb = memory.endsWith('Gi') ?
+                    parseFloat(memory.replace('Gi', '')) :
+                    parseFloat(memory.replace('Mi', '')) / 1024;
+                const memoryCost = memoryGb * 5; // €5 per GB
+                const appCost = Math.max(cpuCost + memoryCost, 5.00); // Minimum €5
                 clearOutput();
                 interactiveStep = 7;
                 currentPrompt = 'choice> ';
                 updatePrompt();
                 addOutput(`Memory: ${memory}
+Estimated monthly cost: €${appCost.toFixed(2)}
 
 >> Do you want to add a database? (y/n, default: n):`);
             } else if (interactiveStep === 7) {
@@ -557,11 +583,14 @@ Do you want to add a cache service? (y/n):`);
                     return;
                 }
                 loginData.dbSize = size;
+                // Calculate database cost
+                const dbCost = size === 'medium' ? 5.00 : size === 'large' ? 10.00 : 2.50;
                 clearOutput();
                 interactiveStep = 10;
                 currentPrompt = 'choice> ';
                 updatePrompt();
                 addOutput(`Database size: ${size}
+Estimated monthly cost: €${dbCost.toFixed(2)}
 
 >> Do you want to add a cache service? (y/n, default: n):`);
             } else if (interactiveStep === 10) {
@@ -609,11 +638,14 @@ Do you want to generate GitHub Actions workflows for automatic deployment? (y/n)
                     return;
                 }
                 loginData.cacheSize = size;
+                // Calculate cache cost
+                const cacheCost = size === 'medium' ? 3.00 : size === 'large' ? 6.00 : 1.50;
                 clearOutput();
                 interactiveStep = 13;
                 currentPrompt = 'choice> ';
                 updatePrompt();
                 addOutput(`Cache size: ${size}
+Estimated monthly cost: €${cacheCost.toFixed(2)}
 
 >> Do you want to generate GitHub Actions workflows for automatic deployment? (y/n, default: n):`);
             } else if (interactiveStep === 13) {
