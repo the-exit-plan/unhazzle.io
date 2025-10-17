@@ -598,12 +598,7 @@ Ready to configure resources!`);
             }
         });
 
-        if (currentStep >= totalSteps) {
-            // Tutorial completed
-            setTimeout(() => {
-                alert('Tutorial completed! You now know the Unhazzle CLI flow.');
-            }, 3000);
-        }
+
     }
 
     // Add click handlers for step headers
