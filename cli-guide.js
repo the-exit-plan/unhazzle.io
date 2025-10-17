@@ -408,7 +408,7 @@ Do you want to deploy an application? (y/n):`);
             } else if (interactiveStep === 3) {
                 // Application choice
                 const choice = input.trim().toLowerCase();
-                if (choice === 'y' || choice === 'yes') {
+                if (choice === '' || choice === 'y' || choice === 'yes') {
                     loginData.addApp = true;
                     clearOutput();
                     interactiveStep = 4;
@@ -435,7 +435,7 @@ Do you want to add a database? (y/n):`);
                     addOutput(`Database: Yes
 
 Do you want to add a cache service? (y/n):`);
-                } else if (choice === 'n' || choice === 'no') {
+                } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addDb = false;
                     clearOutput();
                     interactiveStep = 5;
@@ -450,7 +450,7 @@ Do you want to add a cache service? (y/n):`);
                 const choice = input.trim().toLowerCase();
                 if (choice === 'y' || choice === 'yes') {
                     loginData.addCache = true;
-                } else if (choice === 'n' || choice === 'no') {
+                } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addCache = false;
                 } else {
                     addOutput("Please enter 'y' for yes or 'n' for no:");
