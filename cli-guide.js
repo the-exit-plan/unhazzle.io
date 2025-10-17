@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let historyIndex = -1;
     let currentCommand = '';
     let hasApplied = false; // Track if apply has been run
+    let isDeploying = false; // Track if deployment is in progress
     let projectConfig = null; // Store generated project configuration
     let generatedYaml = null; // Store the actual generated YAML content
     let currentStep = 0;
@@ -201,8 +202,6 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                     return `No project initialized. Run 'unhazzle init --interactive' to create a project.`;
                 }
 
-                hasApplied = true; // Mark as applied
-
                 // Build resources list based on actual configuration
                 let resourcesList = [];
                 let totalCost = 0;
@@ -222,22 +221,32 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
 
                 const resourcesText = resourcesList.length > 0 ? resourcesList.join('\n') : '  - No resources selected';
 
-                const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
+                isDeploying = true; // Mark deployment as in progress
 
-                let successMessage = '✅ Infrastructure deployed successfully!';
-                if (projectConfig.hasApp) {
-                    successMessage += `\nYour application is live at: ${appUrl}`;
-                }
-                if (projectConfig.hasGitHubActions) {
-                    successMessage += '\nGitHub Actions workflow generated for automatic deployments';
-                }
+                // Simulate deployment time
+                setTimeout(() => {
+                    hasApplied = true; // Mark as applied after deployment
+                    isDeploying = false; // Mark deployment as complete
+
+                    const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
+
+                    let successMessage = '✅ Infrastructure deployed successfully!';
+                    if (projectConfig.hasApp) {
+                        successMessage += `\nYour application is live at: ${appUrl}`;
+                    }
+                    if (projectConfig.hasGitHubActions) {
+                        successMessage += '\nGitHub Actions workflow generated for automatic deployments';
+                    }
+
+                    addOutput(successMessage);
+                }, 5000); // 5 second deployment simulation
 
                 return `🔄 Applying infrastructure changes...
 Estimated monthly cost: €${totalCost.toFixed(2)}
 Resources to provision:
 ${resourcesText}
 
-${successMessage}`;
+⏳ Deploying infrastructure...`;
             }
         },
         status: {
@@ -245,6 +254,9 @@ ${successMessage}`;
             execute: function() {
                 if (!projectConfig) {
                     return `No project initialized. Run 'unhazzle init --interactive' to create a project.`;
+                }
+                if (isDeploying) {
+                    return `🚀 Deployment in progress... Please wait for infrastructure provisioning to complete.`;
                 }
                 if (!hasApplied) {
                     return `Project initialized but not deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
