@@ -602,7 +602,7 @@ Ready to configure resources!`);
             // Tutorial completed
             setTimeout(() => {
                 alert('Tutorial completed! You now know the Unhazzle CLI flow.');
-            }, 1000);
+            }, 3000);
         }
     }
 
