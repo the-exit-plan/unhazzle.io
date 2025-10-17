@@ -328,14 +328,14 @@ Interactive terminal experience.
             if (interactiveStep === 1) {
                 // Permission input
                 const choice = input.trim().toLowerCase();
-                if (choice === 'y' || choice === 'yes') {
+                if (choice === '' || choice === 'y' || choice === 'yes') {
                     clearOutput();
                     interactiveStep = 2;
                     addOutput(`Permission granted!
 
 Available repositories:
 1. my-portfolio (Public) - Personal portfolio website
-2. e-commerce-app (Private) - Online store application  
+2. e-commerce-app (Private) - Online store application
 3. blog-site (Public) - Blog with markdown support
 
 Enter repository numbers to allow access (e.g., "1,3" or "all"):`);
@@ -349,15 +349,15 @@ Enter repository numbers to allow access (e.g., "1,3" or "all"):`);
                 // Repository selection
                 const selection = input.trim().toLowerCase();
                 let allowedRepos = [];
-                
-                if (selection === 'all') {
+
+                if (selection === '' || selection === 'all') {
                     allowedRepos = ['my-portfolio', 'e-commerce-app', 'blog-site'];
                 } else {
                     const numbers = selection.split(',').map(n => parseInt(n.trim())).filter(n => n >= 1 && n <= 3);
                     const repoNames = ['my-portfolio', 'e-commerce-app', 'blog-site'];
                     allowedRepos = numbers.map(n => repoNames[n-1]).filter(Boolean);
                 }
-                
+
                 if (allowedRepos.length === 0) {
                     addOutput("No valid repositories selected. Please try again (e.g., '1,3' or 'all'):");
                     return;
