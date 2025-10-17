@@ -685,10 +685,10 @@ Ready to configure resources!`);
     function handleCommand() {
         const input = terminalInput.value.trim();
         console.log('Handling command:', input); // Debug logging
-        if (input) {
+        if (input || interactiveMode) {
             if (interactiveMode) {
-                // Handle interactive input
-                addOutput(`${currentPrompt}${input}`);
+                // Handle interactive input (allow empty input for defaults)
+                addOutput(`${currentPrompt}${input || ''}`);
                 handleInteractiveInput(input);
             } else {
                 // Add command to history
