@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Manifest - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+</head>
+<body>
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📦 Export unhazzle.yaml</h2>
+            </div>
+            
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: var(--space-4); line-height: 1.6;">
+                    Place this file in the root of your repository to manage your infrastructure as code. 
+                    Changes to this file will be automatically detected and applied.
+                </p>
+
+                <div style="background: var(--bg-secondary); padding: var(--space-4); border-radius: var(--radius-lg); margin-bottom: var(--space-4); border-left: 3px solid var(--primary-color);">
+                    <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                        <strong>💡 Pro tip:</strong> Commit this file to your repository to enable GitOps workflows 
+                        and version control for your infrastructure.
+                    </p>
+                </div>
+
+                <div style="background: var(--gray-900); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg);">
+                    <div style="background: var(--gray-800); padding: var(--space-3) var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: var(--space-3);">
+                            <div style="display: flex; gap: 6px;">
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background: #ff5f57;"></span>
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background: #ffbd2e;"></span>
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background: #28ca42;"></span>
+                            </div>
+                            <span style="color: var(--gray-200); font-size: var(--font-size-sm); font-weight: 500;">
+                                unhazzle.yaml
+                            </span>
+                        </div>
+                        <button class="btn btn-icon btn-secondary" style="font-size: var(--font-size-xs); padding: var(--space-1) var(--space-2);">
+                            Copy
+                        </button>
+                    </div>
+                    <pre id="yaml-export" style="padding: var(--space-4); margin: 0; color: var(--gray-200); overflow-x: auto; line-height: 1.5; font-family: 'Monaco', 'Menlo', monospace; font-size: var(--font-size-sm);"><code><!-- YAML will be generated here --></code></pre>
+                </div>
+
+                <div style="margin-top: var(--space-4); padding: var(--space-4); background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                    <h4 style="margin: 0 0 var(--space-2) 0; color: var(--text-primary);">
+                        📖 Next Steps
+                    </h4>
+                    <ol style="margin: 0; padding-left: var(--space-6); color: var(--text-secondary); line-height: 1.8;">
+                        <li>Download or copy the <code>unhazzle.yaml</code> file</li>
+                        <li>Place it in the root of your repository</li>
+                        <li>Commit and push to your repository</li>
+                        <li>Use <code>unhazzle apply</code> from CLI to deploy changes</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="history.back()">
+                    Close
+                </button>
+                <button class="btn btn-primary btn-large">
+                    📥 Download File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load configuration from sessionStorage
+        // Get user name for repo URL
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        const githubUsername = userName.toLowerCase().replace(/\s+/g, '-');
+        
+        let config = {
+            application: {
+                name: 'my-awesome-app',
+                type: 'application',
+                repo: `github.com/${githubUsername}/my-awesome-app`,
+                dockerfile: './Dockerfile',
+                cpu: 1,
+                memory: '512M',
+                envVars: 'DB_CONNECTION_STRING=postgres://...'
+            },
+            database: {
+                name: 'my-app-db',
+                type: 'database',
+                engine: 'postgres',
+                version: '14',
+                storage: '1G',
+                backups: true,
+                retention: 7
+            }
+        };
+
+        // Try to load saved config
+        const savedConfig = sessionStorage.getItem('unhazzleConfig');
+        if (savedConfig) {
+            config = JSON.parse(savedConfig);
+        }
+
+        // Generate YAML with syntax highlighting
+        function generateYAML() {
+            const envVarsArray = config.application.envVars
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    const value = valueParts.join('=');
+                    return `      - <span class="yaml-key">name:</span> <span class="yaml-value">${key.trim()}</span>
+        <span class="yaml-key">value:</span> <span class="yaml-value">${value.trim()}</span>`;
+                })
+                .join('\n');
+
+            return `<span class="yaml-key">version:</span> <span class="yaml-value">'1.0'</span>
+<span class="yaml-key">project:</span> <span class="yaml-value">silent-wind-1234</span>
+<span class="yaml-key">environment:</span> <span class="yaml-value">dev</span>
+
+<span class="yaml-key">resources:</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-value">${config.application.name}</span>
+    <span class="yaml-key">type:</span> <span class="yaml-value">${config.application.type}</span>
+    <span class="yaml-key">source:</span>
+      <span class="yaml-key">repo:</span> <span class="yaml-value">${config.application.repo}</span>
+      <span class="yaml-key">dockerfile:</span> <span class="yaml-value">${config.application.dockerfile}</span>
+    <span class="yaml-key">resources:</span>
+      <span class="yaml-key">cpu:</span> <span class="yaml-value">${config.application.cpu}</span>
+      <span class="yaml-key">memory:</span> <span class="yaml-value">${config.application.memory}</span>
+    <span class="yaml-key">env:</span>
+${envVarsArray}
+
+  - <span class="yaml-key">name:</span> <span class="yaml-value">${config.database.name}</span>
+    <span class="yaml-key">type:</span> <span class="yaml-value">${config.database.type}</span>
+    <span class="yaml-key">engine:</span> <span class="yaml-value">${config.database.engine}</span>
+    <span class="yaml-key">version:</span> <span class="yaml-value">'${config.database.version}'</span>
+    <span class="yaml-key">size:</span> <span class="yaml-value">${config.database.storage}</span>
+    <span class="yaml-key">backups:</span> <span class="yaml-value">${config.database.backups}</span>
+    <span class="yaml-key">retention:</span> <span class="yaml-value">${config.database.retention}d</span>`;
+        }
+
+        // Generate plain YAML (without HTML tags) for copying/downloading
+        function generatePlainYAML() {
+            const envVarsArray = config.application.envVars
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    const value = valueParts.join('=');
+                    return `      - name: ${key.trim()}
+        value: ${value.trim()}`;
+                })
+                .join('\n');
+
+            return `version: '1.0'
+project: silent-wind-1234
+environment: dev
+
+resources:
+  - name: ${config.application.name}
+    type: ${config.application.type}
+    source:
+      repo: ${config.application.repo}
+      dockerfile: ${config.application.dockerfile}
+    resources:
+      cpu: ${config.application.cpu}
+      memory: ${config.application.memory}
+    env:
+${envVarsArray}
+
+  - name: ${config.database.name}
+    type: ${config.database.type}
+    engine: ${config.database.engine}
+    version: '${config.database.version}'
+    size: ${config.database.storage}
+    backups: ${config.database.backups}
+    retention: ${config.database.retention}d`;
+        }
+
+        // Render the YAML on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const yamlExport = document.getElementById('yaml-export');
+            if (yamlExport) {
+                yamlExport.innerHTML = '<code>' + generateYAML() + '</code>';
+            }
+
+            // Add copy button functionality
+            const copyButton = document.querySelector('.btn-icon.btn-secondary');
+            if (copyButton) {
+                copyButton.addEventListener('click', function() {
+                    const plainYAML = generatePlainYAML();
+                    navigator.clipboard.writeText(plainYAML).then(() => {
+                        const originalText = copyButton.textContent;
+                        copyButton.textContent = '✓ Copied!';
+                        copyButton.style.background = 'var(--success-color)';
+                        setTimeout(() => {
+                            copyButton.textContent = originalText;
+                            copyButton.style.background = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                    });
+                });
+            }
+
+            // Add download button functionality
+            const downloadButton = document.querySelector('.btn-primary.btn-large');
+            if (downloadButton) {
+                downloadButton.addEventListener('click', function() {
+                    const plainYAML = generatePlainYAML();
+                    const blob = new Blob([plainYAML], { type: 'text/yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'unhazzle.yaml';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

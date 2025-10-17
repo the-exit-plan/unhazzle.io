@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+    <style>
+        .github-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .github-modal.active {
+            display: flex;
+        }
+
+        .github-modal-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .github-modal-header {
+            background: #24292e;
+            color: white;
+            padding: var(--space-6);
+            text-align: center;
+        }
+
+        .github-modal-header h2 {
+            margin: 0 0 var(--space-2) 0;
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+        }
+
+        .github-modal-header p {
+            margin: 0;
+            color: #8b949e;
+            font-size: var(--font-size-sm);
+        }
+
+        .github-modal-body {
+            padding: var(--space-6);
+        }
+
+        .github-app-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            padding: var(--space-4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-6);
+        }
+
+        .github-app-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-color);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .github-app-details h3 {
+            margin: 0 0 var(--space-1) 0;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+        }
+
+        .github-app-details p {
+            margin: 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .github-permissions {
+            margin-bottom: var(--space-6);
+        }
+
+        .github-permissions h4 {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--space-3);
+            color: var(--text-primary);
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: start;
+            gap: var(--space-2);
+            margin-bottom: var(--space-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .permission-item svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .github-modal-actions {
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        .github-modal-actions button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-cancel:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .btn-grant {
+            background: #2da44e;
+            color: white;
+        }
+
+        .btn-grant:hover {
+            background: #2c974b;
+        }
+
+        .github-repos-section {
+            margin-bottom: var(--space-6);
+            padding: var(--space-4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .github-repos-section h4 {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--space-1);
+            color: var(--text-primary);
+        }
+
+        .github-repos-section p {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-3);
+        }
+
+        .repo-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: white;
+        }
+
+        .repo-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .repo-item:last-child {
+            border-bottom: none;
+        }
+
+        .repo-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #2da44e;
+        }
+
+        .repo-icon {
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+        }
+
+        .repo-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .repo-name {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            font-family: 'Monaco', 'Menlo', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .repo-visibility {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="signin-container">
+        <div class="signin-card">
+            <div class="signin-logo">unhazzle</div>
+            <p class="signin-tagline">Infrastructure without the hassle</p>
+            
+            <p class="mb-6" style="color: var(--text-secondary); font-size: 1rem;">
+                Deploy your apps to production-grade infrastructure in minutes. 
+                Get started by connecting your GitHub account.
+            </p>
+            
+            <div style="margin-bottom: var(--space-6);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--space-2); color: var(--text-primary); font-size: var(--font-size-sm);">
+                    Your Name
+                </label>
+                <input 
+                    type="text" 
+                    id="userName" 
+                    placeholder="Enter your name" 
+                    style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: var(--font-size-base); background: var(--bg-primary); color: var(--text-primary);"
+                    required>
+            </div>
+            
+            <button class="btn btn-large github-btn" onclick="showGitHubModal()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                Sign in with GitHub
+            </button>
+            
+            <p class="mt-6" style="color: var(--text-tertiary); font-size: 0.875rem;">
+                By signing in, you agree to our 
+                <a href="#" style="color: var(--primary-color); text-decoration: none;">Terms of Service</a> 
+                and 
+                <a href="#" style="color: var(--primary-color); text-decoration: none;">Privacy Policy</a>
+            </p>
+            
+            <div class="mt-6" style="padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                <p style="color: var(--text-tertiary); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                    🇪🇺 European infrastructure • GDPR compliant by default
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub OAuth Modal -->
+    <div id="githubModal" class="github-modal">
+        <div class="github-modal-content">
+            <div class="github-modal-header">
+                <h2>Authorize unhazzle</h2>
+                <p>unhazzle by the-exit-plan</p>
+            </div>
+            <div class="github-modal-body">
+                <div class="github-app-info">
+                    <div class="github-app-icon">U</div>
+                    <div class="github-app-details">
+                        <h3>unhazzle</h3>
+                        <p>Infrastructure without the hassle</p>
+                    </div>
+                </div>
+
+                <div class="github-repos-section">
+                    <h4>Repository access</h4>
+                    <p>Select repositories that unhazzle can access</p>
+                    <div class="repo-list" id="repoList">
+                        <!-- Repos will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="github-permissions">
+                    <h4>This application will be able to:</h4>
+                    <div class="permission-item">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        <span><strong>Read and write</strong> access to selected repositories</span>
+                    </div>
+                    <div class="permission-item">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        <span><strong>Read</strong> access to your email addresses</span>
+                    </div>
+                </div>
+
+                <div class="github-modal-actions">
+                    <button class="btn btn-large btn-cancel" onclick="hideGitHubModal()">
+                        Cancel
+                    </button>
+                    <button class="btn btn-large btn-grant" onclick="grantAccess()">
+                        Grant Access
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showGitHubModal() {
+            const userName = document.getElementById('userName').value.trim();
+            if (!userName) {
+                alert('Please enter your name to continue');
+                document.getElementById('userName').focus();
+                return;
+            }
+            sessionStorage.setItem('userName', userName);
+            
+            // Populate repository list
+            populateRepoList(userName);
+            
+            document.getElementById('githubModal').classList.add('active');
+        }
+
+        function populateRepoList(userName) {
+            const githubUsername = userName.toLowerCase().replace(/\s+/g, '-');
+            const repos = [
+                { name: 'my-awesome-app', visibility: 'Public', checked: true },
+                { name: 'api-service', visibility: 'Private', checked: true },
+                { name: 'frontend-app', visibility: 'Public', checked: true },
+                { name: 'mobile-app', visibility: 'Private', checked: true },
+                { name: 'data-pipeline', visibility: 'Private', checked: true }
+            ];
+
+            const repoList = document.getElementById('repoList');
+            repoList.innerHTML = repos.map(repo => `
+                <div class="repo-item">
+                    <input type="checkbox" ${repo.checked ? 'checked' : ''} id="repo-${repo.name}">
+                    <svg class="repo-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"/>
+                    </svg>
+                    <div class="repo-details">
+                        <div class="repo-name">${githubUsername}/${repo.name}</div>
+                        <div class="repo-visibility">
+                            ${repo.visibility === 'Public' ? 
+                                '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm.93-9.412l-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 110-2 1 1 0 010 2z"/></svg>' :
+                                '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 4v2h-.25A1.75 1.75 0 002 7.75v5.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0014 13.25v-5.5A1.75 1.75 0 0012.25 6H12V4a4 4 0 10-8 0zm6.5 2V4a2.5 2.5 0 00-5 0v2h5z"/></svg>'
+                            }
+                            ${repo.visibility}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function hideGitHubModal() {
+            document.getElementById('githubModal').classList.remove('active');
+        }
+
+        function grantAccess() {
+            // Add a brief delay to simulate OAuth processing
+            setTimeout(() => {
+                location.href = '03-canvas.html';
+            }, 300);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('githubModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideGitHubModal();
+            }
+        });
+    </script>
+</body>
+</html>
