@@ -224,13 +224,20 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
 
                 const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
 
+                let successMessage = '✅ Infrastructure deployed successfully!';
+                if (projectConfig.hasApp) {
+                    successMessage += `\nYour application is live at: ${appUrl}`;
+                }
+                if (projectConfig.hasGitHubActions) {
+                    successMessage += '\nGitHub Actions workflow generated for automatic deployments';
+                }
+
                 return `🔄 Applying infrastructure changes...
 Estimated monthly cost: €${totalCost.toFixed(2)}
 Resources to provision:
 ${resourcesText}
 
-✅ Infrastructure deployed successfully!${projectConfig.hasApp ? `
-Your application is live at: ${appUrl}` : ''}`;
+${successMessage}`;
             }
         },
         status: {
@@ -254,6 +261,9 @@ Your application is live at: ${appUrl}` : ''}`;
                 }
                 if (projectConfig.hasCache) {
                     statusLines.push('Cache: 1 running');
+                }
+                if (projectConfig.hasGitHubActions) {
+                    statusLines.push('GitHub Actions: Enabled');
                 }
 
                 return `📊 Deployment Status:
@@ -458,6 +468,24 @@ Do you want to add a cache service? (y/n):`);
                 }
                 clearOutput();
                 interactiveStep = 6;
+                currentPrompt = 'choice> ';
+                updatePrompt();
+                addOutput(`Cache: ${loginData.addCache ? 'Yes' : 'No'}
+
+Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
+            } else if (interactiveStep === 6) {
+                // GitHub Actions choice
+                const choice = input.trim().toLowerCase();
+                if (choice === '' || choice === 'y' || choice === 'yes') {
+                    loginData.addGitHubActions = true;
+                } else if (choice === 'n' || choice === 'no') {
+                    loginData.addGitHubActions = false;
+                } else {
+                    addOutput("Please enter 'y' for yes or 'n' for no:");
+                    return;
+                }
+                clearOutput();
+                interactiveStep = 7;
                 addOutput(`Initializing project...
 
 Project: ${loginData.projectName}
@@ -465,6 +493,7 @@ Environment: ${loginData.environment}
 Application: ${loginData.addApp ? 'Yes' : 'No'}
 Database: ${loginData.addDb ? 'Yes' : 'No'}
 Cache: ${loginData.addCache ? 'Yes' : 'No'}
+GitHub Actions: ${loginData.addGitHubActions ? 'Yes' : 'No'}
 
 Generating unhazzle.yaml manifest...`);
 
@@ -499,13 +528,36 @@ resources:`;
       size: small`;
                     }
 
+                    if (loginData.addGitHubActions) {
+                        yaml += `
+
+workflows:
+  deploy:
+    name: Deploy to Unhazzle
+    on:
+      push:
+        branches: [ main, master ]
+      pull_request:
+        branches: [ main, master ]
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v3
+        - name: Deploy to Unhazzle
+          run: |
+            unhazzle login
+            unhazzle apply`;
+                    }
+
                     // Store the configuration and YAML for later use
                     projectConfig = {
                         projectName: loginData.projectName,
                         environment: loginData.environment,
                         hasApp: loginData.addApp,
                         hasDb: loginData.addDb,
-                        hasCache: loginData.addCache
+                        hasCache: loginData.addCache,
+                        hasGitHubActions: loginData.addGitHubActions
                     };
                     generatedYaml = yaml;
 
