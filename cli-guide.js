@@ -40,30 +40,18 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 2: Initialize Project",
-            description: "Create a new Unhazzle project with: <code>unhazzle init --interactive</code><br><small>Use <code>--interactive</code> for guided setup, or run <code>unhazzle init</code> alone for default settings (project: my-project, env: dev).</small>",
+            description: "Create a new Unhazzle project:<br><code>unhazzle init --interactive</code><br><small>Use the <strong>interactive mode</strong> for guided setup with prompts for project name, environment, and resources. This is recommended for first-time users.</small>",
             command: "unhazzle init --interactive",
             completed: false
         },
         {
-            title: "Step 3: Create Application",
-            description: "Deploy your application:<br><code>unhazzle application create --name my-app</code><br><small>This creates a new application instance with automatic scaling.</small>",
-            command: "unhazzle application create --name my-app",
-            completed: false
-        },
-        {
-            title: "Step 4: Add Database",
-            description: "Add a PostgreSQL database:<br><code>unhazzle database create --name my-db --engine postgres</code><br><small>This provisions a managed database with backups.</small>",
-            command: "unhazzle database create --name my-db --engine postgres",
-            completed: false
-        },
-        {
-            title: "Step 5: Deploy Infrastructure",
+            title: "Step 3: Deploy Infrastructure",
             description: "Apply all infrastructure changes:<br><code>unhazzle apply</code><br><small>This deploys everything to production with cost estimation.</small>",
             command: "unhazzle apply",
             completed: false
         },
         {
-            title: "Step 6: Check Status",
+            title: "Step 4: Check Status",
             description: "Verify your deployment:<br><code>unhazzle status</code><br><small>This shows the health and status of all your services.</small>",
             command: "unhazzle status",
             completed: false
@@ -76,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     ];
 
-    const totalSteps = steps.length - 1; // Exclude the final completion step
+    const totalSteps = steps.length - 2; // Exclude welcome and completion steps
     totalStepsEl.textContent = totalSteps;
 
     // Predefined commands (same as main terminal)
@@ -296,13 +284,6 @@ resources:
     // Function to display welcome message
     function displayWelcome() {
         const welcomeMessage = `
-    ____  __  __  ____  _     _____ _   _ _____
-   / __ \\|  \\/  |/ __ \\| |   | ____| \\ | | ____|
-  | |  | | \\  / | |  | | |   |  _| |  \\| |  _|
-  | |  | | |\\/| | |  | | |___| |___| |\\  | |___|
-  | |__| | |  | | |__| |_____|_____|_| \\_|_____|
-   \\____/|_|  |_|\\____/|_____|_____|_|  |_|_____|
-
 Welcome to Unhazzle CLI Guide v1.0.0
 Interactive terminal experience.
 `;

@@ -17,7 +17,7 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
-            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">6</span></div>
+            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">4</span></div>
         </header>
         
         <div class="guide-content">
@@ -43,43 +43,27 @@
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
                             <p>Create a new Unhazzle project:</p>
-                            <code>unhazzle init</code>
-                            <small>This sets up your project configuration and environment.</small>
+                            <code>unhazzle init --interactive</code>
+                            <small>Use the <strong>interactive mode</strong> for guided setup with prompts for project name, environment, and resources. This is recommended for first-time users.</small>
                         </div>
                     </div>
                     <div class="step-item" id="step-3">
-                        <div class="step-header">Step 3: Create Application</div>
-                        <div class="step-details">
-                            <p>Deploy your application:</p>
-                            <code>unhazzle application create --name my-app</code>
-                            <small>This creates a new application instance with automatic scaling.</small>
-                        </div>
-                    </div>
-                    <div class="step-item" id="step-4">
-                        <div class="step-header">Step 4: Add Database</div>
-                        <div class="step-details">
-                            <p>Add a PostgreSQL database:</p>
-                            <code>unhazzle database create --name my-db --engine postgres</code>
-                            <small>This provisions a managed database with backups.</small>
-                        </div>
-                    </div>
-                    <div class="step-item" id="step-5">
-                        <div class="step-header">Step 5: Deploy Infrastructure</div>
+                        <div class="step-header">Step 3: Deploy Infrastructure</div>
                         <div class="step-details">
                             <p>Apply all infrastructure changes:</p>
                             <code>unhazzle apply</code>
                             <small>This deploys everything to production with cost estimation.</small>
                         </div>
                     </div>
-                    <div class="step-item" id="step-6">
-                        <div class="step-header">Step 6: Check Status</div>
+                    <div class="step-item" id="step-4">
+                        <div class="step-header">Step 4: Check Status</div>
                         <div class="step-details">
                             <p>Verify your deployment:</p>
                             <code>unhazzle status</code>
                             <small>This shows the health and status of all your services.</small>
                         </div>
                     </div>
-                    <div class="step-item" id="step-7">
+                    <div class="step-item" id="step-5">
                         <div class="step-header">Tutorial Complete!</div>
                         <div class="step-details">
                             <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
