@@ -222,7 +222,7 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
 
                 const resourcesText = resourcesList.length > 0 ? resourcesList.join('\n') : '  - No resources selected';
 
-                const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
+                const appUrl = projectConfig.hasApp ? `https://web-app.unhazzle.dev` : '';
 
                 return `🔄 Applying infrastructure changes...
 Estimated monthly cost: €${totalCost.toFixed(2)}
