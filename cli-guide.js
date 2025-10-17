@@ -222,7 +222,7 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
 
                 const resourcesText = resourcesList.length > 0 ? resourcesList.join('\n') : '  - No resources selected';
 
-                const appUrl = projectConfig.hasApp ? `https://web-app.unhazzle.dev` : '';
+                const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
 
                 return `🔄 Applying infrastructure changes...
 Estimated monthly cost: €${totalCost.toFixed(2)}
@@ -477,7 +477,7 @@ resources:`;
                     if (loginData.addApp) {
                         yaml += `
   applications:
-    - name: web-app
+    - name: ${loginData.projectName.replace(/'/g, "\\'")}
       type: nextjs
       repo: github.com/user/${loginData.projectName.replace(/'/g, "\\'")}
       cpu: 0.5
@@ -487,14 +487,14 @@ resources:`;
                     if (loginData.addDb) {
                         yaml += `
   databases:
-    - name: postgres-db
+    - name: ${loginData.projectName.replace(/'/g, "\\'")}-database
       engine: postgresql
       size: small`;
                     }
                     if (loginData.addCache) {
                         yaml += `
   cache:
-    - name: redis-cache
+    - name: ${loginData.projectName.replace(/'/g, "\\'")}-cache
       engine: redis
       size: small`;
                     }
