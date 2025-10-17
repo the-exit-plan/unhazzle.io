@@ -197,16 +197,40 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
         apply: {
             description: 'Apply infrastructure changes',
             execute: function() {
-                hasApplied = true; // Mark as applied
-                return `🔄 Applying infrastructure changes...
-Estimated monthly cost: €12.50
-Resources to provision:
-  - 1 Application (0.5 CPU, 512Mi RAM)
-  - 1 Database (PostgreSQL, small)
-  - 1 Cache (Redis, small)
+                if (!projectConfig) {
+                    return `No project initialized. Run 'unhazzle init --interactive' to create a project.`;
+                }
 
-✅ Infrastructure deployed successfully!
-Your application is live at: https://my-app.unhazzle.dev`;
+                hasApplied = true; // Mark as applied
+
+                // Build resources list based on actual configuration
+                let resourcesList = [];
+                let totalCost = 0;
+
+                if (projectConfig.hasApp) {
+                    resourcesList.push('  - 1 Application (0.5 CPU, 512Mi RAM)');
+                    totalCost += 8.50; // Base cost for app
+                }
+                if (projectConfig.hasDb) {
+                    resourcesList.push('  - 1 Database (PostgreSQL, small)');
+                    totalCost += 2.50; // Cost for database
+                }
+                if (projectConfig.hasCache) {
+                    resourcesList.push('  - 1 Cache (Redis, small)');
+                    totalCost += 1.50; // Cost for cache
+                }
+
+                const resourcesText = resourcesList.length > 0 ? resourcesList.join('\n') : '  - No resources selected';
+
+                const appUrl = projectConfig.hasApp ? `https://${projectConfig.projectName.replace(/'/g, '')}.unhazzle.dev` : '';
+
+                return `🔄 Applying infrastructure changes...
+Estimated monthly cost: €${totalCost.toFixed(2)}
+Resources to provision:
+${resourcesText}
+
+✅ Infrastructure deployed successfully!${projectConfig.hasApp ? `
+Your application is live at: ${appUrl}` : ''}`;
             }
         },
         status: {
@@ -219,16 +243,21 @@ Your application is live at: https://my-app.unhazzle.dev`;
                     return `Project initialized but not deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
                 }
 
-                // Count actual resources based on configuration
-                const appCount = projectConfig.hasApp ? 1 : 0;
-                const dbCount = projectConfig.hasDb ? 1 : 0;
-                const cacheCount = projectConfig.hasCache ? 1 : 0;
+                // Build status lines for resources that exist
+                let statusLines = [`Environment: ${projectConfig.environment}`];
+
+                if (projectConfig.hasApp) {
+                    statusLines.push('Applications: 1 running');
+                }
+                if (projectConfig.hasDb) {
+                    statusLines.push('Databases: 1 running');
+                }
+                if (projectConfig.hasCache) {
+                    statusLines.push('Cache: 1 running');
+                }
 
                 return `📊 Deployment Status:
-Environment: ${projectConfig.environment}
-Applications: ${appCount} running
-Databases: ${dbCount} running
-Cache: ${cacheCount} running
+${statusLines.join('\n')}
 Last deployment: 2 minutes ago
 Health: All systems operational`;
             }
