@@ -103,9 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     `Authentication required. Please login to continue with project initialization.
 
 GitHub Login
-Allow Unhazzle to access your GitHub account? (y/n)` :
+>> Allow Unhazzle to access your GitHub account? (y/n, default: y)` :
                     `GitHub Login
-Allow Unhazzle to access your GitHub account? (y/n)`;
+>> Allow Unhazzle to access your GitHub account? (y/n, default: y)`;
                 forcedLogin = false; // reset
                 return message;
             }
@@ -126,7 +126,7 @@ Allow Unhazzle to access your GitHub account? (y/n)`;
                     updatePrompt();
                     return `Unhazzle Project Initialization
 
-Enter project name (default: my-project):`;
+>> Enter project name (default: my-project):`;
                 } else {
                     return `🚀 Initialized unhazzle project 'my-project'
 Created default environment: dev
@@ -149,7 +149,7 @@ Application is ready for deployment!`;
                         return `No applications found. Run 'unhazzle apply' to deploy resources.`;
                     }
                     return `Applications:
-  - my-app (Next.js, dev, https://my-app.unhazzle.dev)`;
+  - ${projectConfig.appName} (${projectConfig.appCpu} CPU, ${projectConfig.appMemory}, ${projectConfig.environment}, https://${projectConfig.appName}.unhazzle.dev)`;
                 }
                 return `Usage: unhazzle application create --name APP_NAME [--image IMAGE]
        unhazzle application list`;
@@ -208,8 +208,15 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                 let totalCost = 0;
 
                 if (projectConfig.hasApp) {
-                    resourcesList.push('  - 1 Application (0.5 CPU, 512Mi RAM)');
-                    totalCost += 8.50; // Base cost for app
+                    // Calculate cost based on CPU and memory
+                    const cpuCost = parseFloat(projectConfig.appCpu) * 10; // €10 per CPU core
+                    const memoryGb = projectConfig.appMemory.endsWith('Gi') ?
+                        parseFloat(projectConfig.appMemory.replace('Gi', '')) :
+                        parseFloat(projectConfig.appMemory.replace('Mi', '')) / 1024;
+                    const memoryCost = memoryGb * 5; // €5 per GB
+                    const appCost = Math.max(cpuCost + memoryCost, 5.00); // Minimum €5
+                    resourcesList.push(`  - 1 Application (${projectConfig.appCpu} CPU, ${projectConfig.appMemory})`);
+                    totalCost += appCost;
                 }
                 if (projectConfig.hasDb) {
                     const dbCost = projectConfig.dbSize === 'medium' ? 5.00 : projectConfig.dbSize === 'large' ? 10.00 : 2.50;
@@ -265,26 +272,31 @@ ${resourcesText}
                     return `Project initialized but not deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
                 }
 
-                // Build status lines for resources that exist
-                let statusLines = [`Environment: ${projectConfig.environment}`];
+                // Simulate status fetching delay
+                setTimeout(() => {
+                    // Build status lines for resources that exist
+                    let statusLines = [`Environment: ${projectConfig.environment}`];
 
-                if (projectConfig.hasApp) {
-                    statusLines.push('Applications: 1 running');
-                }
-                if (projectConfig.hasDb) {
-                    statusLines.push(`Databases: 1 running (${projectConfig.dbEngine}, ${projectConfig.dbSize})`);
-                }
-                if (projectConfig.hasCache) {
-                    statusLines.push(`Cache: 1 running (${projectConfig.cacheEngine}, ${projectConfig.cacheSize})`);
-                }
-                if (projectConfig.hasGitHubActions) {
-                    statusLines.push('GitHub Actions: Enabled');
-                }
+                    if (projectConfig.hasApp) {
+                        statusLines.push(`Applications: 1 running (${projectConfig.appCpu} CPU, ${projectConfig.appMemory})`);
+                    }
+                    if (projectConfig.hasDb) {
+                        statusLines.push(`Databases: 1 running (${projectConfig.dbEngine}, ${projectConfig.dbSize})`);
+                    }
+                    if (projectConfig.hasCache) {
+                        statusLines.push(`Cache: 1 running (${projectConfig.cacheEngine}, ${projectConfig.cacheSize})`);
+                    }
+                    if (projectConfig.hasGitHubActions) {
+                        statusLines.push('GitHub Actions: Enabled');
+                    }
 
-                return `📊 Deployment Status:
+                    addOutput(`📊 Deployment Status:
 ${statusLines.join('\n')}
 Last deployment: 2 minutes ago
-Health: All systems operational`;
+Health: All systems operational`);
+                }, 1000); // 1 second delay
+
+                return `🔍 Fetching deployment status...`;
             }
         },
         cat: {
@@ -368,7 +380,7 @@ Available repositories:
 2. e-commerce-app (Private) - Online store application
 3. blog-site (Public) - Blog with markdown support
 
-Enter repository numbers to allow access (e.g., "1,3" or "all"):`);
+>> Enter repository numbers to allow access (e.g., "1,3" or "all", default: all):`);
                 } else if (choice === 'n' || choice === 'no') {
                     addOutput("Login cancelled.");
                     exitInteractiveMode();
@@ -419,7 +431,7 @@ Welcome back! Your repositories are now accessible for deployment.`);
                 updatePrompt();
                 addOutput(`Project name: ${projectName}
 
-Enter environment (dev/staging/prod, default: dev):`);
+>> Enter environment (dev/staging/prod, default: dev):`);
             } else if (interactiveStep === 2) {
                 // Environment input
                 const environment = input.trim() || 'dev';
@@ -434,7 +446,7 @@ Enter environment (dev/staging/prod, default: dev):`);
                 updatePrompt();
                 addOutput(`Environment: ${environment}
 
-Do you want to deploy an application? (y/n):`);
+>> Do you want to deploy an application? (y/n, default: y):`);
             } else if (interactiveStep === 3) {
                 // Application choice
                 const choice = input.trim().toLowerCase();
@@ -442,13 +454,15 @@ Do you want to deploy an application? (y/n):`);
                     loginData.addApp = true;
                     clearOutput();
                     interactiveStep = 4;
+                    currentPrompt = 'name> ';
+                    updatePrompt();
                     addOutput(`Application: Yes
 
-Do you want to add a database? (y/n):`);
+>> Enter application name (default: my-app):`);
                 } else if (choice === 'n' || choice === 'no') {
                     loginData.addApp = false;
                     clearOutput();
-                    interactiveStep = 4;
+                    interactiveStep = 7;
                     addOutput(`Application: No
 
 Do you want to add a database? (y/n):`);
@@ -456,28 +470,71 @@ Do you want to add a database? (y/n):`);
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
             } else if (interactiveStep === 4) {
+                // Application name choice
+                const name = input.trim() || 'my-app';
+                loginData.appName = name;
+                clearOutput();
+                interactiveStep = 5;
+                currentPrompt = 'cpu> ';
+                updatePrompt();
+                addOutput(`Application name: ${name}
+
+>> Enter CPU cores (0.25/0.5/1.0/2.0, default: 0.5):`);
+            } else if (interactiveStep === 5) {
+                // Application CPU choice
+                const cpu = input.trim() || '0.5';
+                const validCpus = ['0.25', '0.5', '1.0', '2.0'];
+                if (!validCpus.includes(cpu)) {
+                    addOutput("Invalid CPU. Please enter 0.25, 0.5, 1.0, or 2.0:");
+                    return;
+                }
+                loginData.appCpu = cpu;
+                clearOutput();
+                interactiveStep = 6;
+                currentPrompt = 'memory> ';
+                updatePrompt();
+                addOutput(`CPU cores: ${cpu}
+
+>> Enter memory (256Mi/512Mi/1Gi/2Gi/4Gi, default: 512Mi):`);
+            } else if (interactiveStep === 6) {
+                // Application memory choice
+                const memory = input.trim() || '512Mi';
+                const validMemory = ['256Mi', '512Mi', '1Gi', '2Gi', '4Gi'];
+                if (!validMemory.includes(memory)) {
+                    addOutput("Invalid memory. Please enter 256Mi, 512Mi, 1Gi, 2Gi, or 4Gi:");
+                    return;
+                }
+                loginData.appMemory = memory;
+                clearOutput();
+                interactiveStep = 7;
+                currentPrompt = 'choice> ';
+                updatePrompt();
+                addOutput(`Memory: ${memory}
+
+>> Do you want to add a database? (y/n, default: n):`);
+            } else if (interactiveStep === 7) {
                 // Database choice
                 const choice = input.trim().toLowerCase();
                 if (choice === 'y' || choice === 'yes') {
                     loginData.addDb = true;
                     clearOutput();
-                    interactiveStep = 5;
+                    interactiveStep = 8;
                     currentPrompt = 'engine> ';
                     updatePrompt();
                     addOutput(`Database: Yes
 
-Select database engine (postgres/mysql/mongodb, default: postgres):`);
+>> Select database engine (postgres/mysql/mongodb, default: postgres):`);
                 } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addDb = false;
                     clearOutput();
-                    interactiveStep = 7;
+                    interactiveStep = 10;
                     addOutput(`Database: No
 
 Do you want to add a cache service? (y/n):`);
                 } else {
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
-            } else if (interactiveStep === 5) {
+            } else if (interactiveStep === 8) {
                 // Database engine choice
                 const engine = input.trim().toLowerCase() || 'postgres';
                 if (!['postgres', 'mysql', 'mongodb'].includes(engine)) {
@@ -486,13 +543,13 @@ Do you want to add a cache service? (y/n):`);
                 }
                 loginData.dbEngine = engine;
                 clearOutput();
-                interactiveStep = 6;
+                interactiveStep = 9;
                 currentPrompt = 'size> ';
                 updatePrompt();
                 addOutput(`Database engine: ${engine}
 
-Select database size (small/medium/large, default: small):`);
-            } else if (interactiveStep === 6) {
+>> Select database size (small/medium/large, default: small):`);
+            } else if (interactiveStep === 9) {
                 // Database size choice
                 const size = input.trim().toLowerCase() || 'small';
                 if (!['small', 'medium', 'large'].includes(size)) {
@@ -501,35 +558,35 @@ Select database size (small/medium/large, default: small):`);
                 }
                 loginData.dbSize = size;
                 clearOutput();
-                interactiveStep = 7;
+                interactiveStep = 10;
                 currentPrompt = 'choice> ';
                 updatePrompt();
                 addOutput(`Database size: ${size}
 
-Do you want to add a cache service? (y/n):`);
-            } else if (interactiveStep === 7) {
+>> Do you want to add a cache service? (y/n, default: n):`);
+            } else if (interactiveStep === 10) {
                 // Cache choice
                 const choice = input.trim().toLowerCase();
                 if (choice === 'y' || choice === 'yes') {
                     loginData.addCache = true;
                     clearOutput();
-                    interactiveStep = 8;
+                    interactiveStep = 11;
                     currentPrompt = 'engine> ';
                     updatePrompt();
                     addOutput(`Cache: Yes
 
-Select cache engine (redis/memcached, default: redis):`);
+>> Select cache engine (redis/memcached, default: redis):`);
                 } else if (choice === '' || choice === 'n' || choice === 'no') {
                     loginData.addCache = false;
                     clearOutput();
-                    interactiveStep = 9;
+                    interactiveStep = 12;
                     addOutput(`Cache: No
 
 Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
                 } else {
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
-            } else if (interactiveStep === 8) {
+            } else if (interactiveStep === 11) {
                 // Cache engine choice
                 const engine = input.trim().toLowerCase() || 'redis';
                 if (!['redis', 'memcached'].includes(engine)) {
@@ -538,13 +595,13 @@ Do you want to generate GitHub Actions workflows for automatic deployment? (y/n)
                 }
                 loginData.cacheEngine = engine;
                 clearOutput();
-                interactiveStep = 9;
+                interactiveStep = 12;
                 currentPrompt = 'size> ';
                 updatePrompt();
                 addOutput(`Cache engine: ${engine}
 
-Select cache size (small/medium/large, default: small):`);
-            } else if (interactiveStep === 9) {
+>> Select cache size (small/medium/large, default: small):`);
+            } else if (interactiveStep === 12) {
                 // Cache size choice
                 const size = input.trim().toLowerCase() || 'small';
                 if (!['small', 'medium', 'large'].includes(size)) {
@@ -553,13 +610,13 @@ Select cache size (small/medium/large, default: small):`);
                 }
                 loginData.cacheSize = size;
                 clearOutput();
-                interactiveStep = 10;
+                interactiveStep = 13;
                 currentPrompt = 'choice> ';
                 updatePrompt();
                 addOutput(`Cache size: ${size}
 
-Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
-            } else if (interactiveStep === 10) {
+>> Do you want to generate GitHub Actions workflows for automatic deployment? (y/n, default: n):`);
+            } else if (interactiveStep === 13) {
                 // GitHub Actions choice
                 const choice = input.trim().toLowerCase();
                 if (choice === '' || choice === 'y' || choice === 'yes') {
@@ -575,7 +632,7 @@ Do you want to generate GitHub Actions workflows for automatic deployment? (y/n)
 
 Project: ${loginData.projectName}
 Environment: ${loginData.environment}
-Application: ${loginData.addApp ? 'Yes' : 'No'}
+Application: ${loginData.addApp ? `Yes (${loginData.appName || 'my-app'}, ${loginData.appCpu || '0.5'} CPU, ${loginData.appMemory || '512Mi'})` : 'No'}
 Database: ${loginData.addDb ? `Yes (${loginData.dbEngine || 'postgres'}, ${loginData.dbSize || 'small'})` : 'No'}
 Cache: ${loginData.addCache ? `Yes (${loginData.cacheEngine || 'redis'}, ${loginData.cacheSize || 'small'})` : 'No'}
 GitHub Actions: ${loginData.addGitHubActions ? 'Yes' : 'No'}
@@ -591,11 +648,11 @@ resources:`;
                     if (loginData.addApp) {
                         yaml += `
   applications:
-    - name: ${loginData.projectName.replace(/'/g, "\\'")}
+    - name: ${loginData.appName || 'my-app'}
       type: nextjs
       repo: github.com/user/${loginData.projectName.replace(/'/g, "\\'")}
-      cpu: 0.5
-      memory: 512Mi
+      cpu: ${loginData.appCpu || '0.5'}
+      memory: ${loginData.appMemory || '512Mi'}
       public: true`;
                     }
                     if (loginData.addDb) {
@@ -642,6 +699,9 @@ workflows:
                         hasDb: loginData.addDb,
                         hasCache: loginData.addCache,
                         hasGitHubActions: loginData.addGitHubActions,
+                        appName: loginData.appName || 'my-app',
+                        appCpu: loginData.appCpu || '0.5',
+                        appMemory: loginData.appMemory || '512Mi',
                         dbEngine: loginData.dbEngine || 'postgres',
                         dbSize: loginData.dbSize || 'small',
                         cacheEngine: loginData.cacheEngine || 'redis',

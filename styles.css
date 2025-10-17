@@ -1996,7 +1996,14 @@ a:focus {
     grid-template-rows: 1fr;
     gap: var(--space-8);
     margin-bottom: var(--space-8);
-    height: 500px;
+    height: 650px;
+}
+
+.guide-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-8);
 }
 
 .instruction-panel {
@@ -2011,6 +2018,7 @@ a:focus {
 .instruction-panel h2 {
     color: var(--text-primary);
     margin-bottom: var(--space-4);
+    font-size: var(--font-size-2xl);
 }
 
 .steps-list {
