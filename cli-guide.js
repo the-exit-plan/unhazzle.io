@@ -279,6 +279,11 @@ Health: All systems operational`;
                     if (!generatedYaml) {
                         return `No unhazzle.yaml found. Run 'unhazzle init --interactive' to create a project.`;
                     }
+                    // Return only the infrastructure YAML, exclude workflows section
+                    const workflowsIndex = generatedYaml.indexOf('\nworkflows:');
+                    if (workflowsIndex !== -1) {
+                        return generatedYaml.substring(0, workflowsIndex);
+                    }
                     return generatedYaml;
                 }
                 return `Usage: unhazzle cat [unhazzle.yaml]`;
