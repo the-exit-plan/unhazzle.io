@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let historyIndex = -1;
     let currentCommand = '';
     let hasApplied = false; // Track if apply has been run
+    let projectConfig = null; // Store generated project configuration
+    let generatedYaml = null; // Store the actual generated YAML content
     let currentStep = 0;
     let interactiveMode = false;
     let interactiveCommand = '';
@@ -110,6 +112,10 @@ Allow Unhazzle to access your GitHub account? (y/n)`;
         init: {
             description: 'Initialize unhazzle project [--interactive]',
             execute: function(args) {
+                // Reset previous configuration when starting new init
+                projectConfig = null;
+                generatedYaml = null;
+
                 if (args.includes('--interactive')) {
                     clearOutput();
                     interactiveMode = true;
@@ -206,14 +212,23 @@ Your application is live at: https://my-app.unhazzle.dev`;
         status: {
             description: 'Show deployment status',
             execute: function() {
-                if (!hasApplied) {
-                    return `No deployment found. Run 'unhazzle apply' to deploy your infrastructure.`;
+                if (!projectConfig) {
+                    return `No project initialized. Run 'unhazzle init --interactive' to create a project.`;
                 }
+                if (!hasApplied) {
+                    return `Project initialized but not deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
+                }
+
+                // Count actual resources based on configuration
+                const appCount = projectConfig.hasApp ? 1 : 0;
+                const dbCount = projectConfig.hasDb ? 1 : 0;
+                const cacheCount = projectConfig.hasCache ? 1 : 0;
+
                 return `📊 Deployment Status:
-Environment: dev
-Applications: 1 running
-Databases: 1 running
-Cache: 1 running
+Environment: ${projectConfig.environment}
+Applications: ${appCount} running
+Databases: ${dbCount} running
+Cache: ${cacheCount} running
 Last deployment: 2 minutes ago
 Health: All systems operational`;
             }
@@ -222,27 +237,10 @@ Health: All systems operational`;
             description: 'Display deployment manifest',
             execute: function(args) {
                 if (args[0] === 'unhazzle.yaml' || args.length === 0) {
-                    return `project: tavo-portfolio
-environment: dev
-
-resources:
-  applications:
-    - name: my-app
-      type: nextjs
-      repo: github.com/tavo/portfolio
-      cpu: 0.5
-      memory: 512Mi
-      public: true
-
-  databases:
-    - name: my-db
-      engine: postgresql
-      size: small
-
-  cache:
-    - name: my-cache
-      engine: redis
-      size: small`;
+                    if (!generatedYaml) {
+                        return `No unhazzle.yaml found. Run 'unhazzle init --interactive' to create a project.`;
+                    }
+                    return generatedYaml;
                 }
                 return `Usage: unhazzle cat [unhazzle.yaml]`;
             }
@@ -471,6 +469,16 @@ resources:`;
       engine: redis
       size: small`;
                     }
+
+                    // Store the configuration and YAML for later use
+                    projectConfig = {
+                        projectName: loginData.projectName,
+                        environment: loginData.environment,
+                        hasApp: loginData.addApp,
+                        hasDb: loginData.addDb,
+                        hasCache: loginData.addCache
+                    };
+                    generatedYaml = yaml;
 
                     addOutput(`🚀 Initialized unhazzle project '${loginData.projectName.replace(/'/g, "\\'")}'
 Created environment: ${loginData.environment}
