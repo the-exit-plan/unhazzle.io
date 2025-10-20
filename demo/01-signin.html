@@ -375,9 +375,20 @@
         }
 
         function grantAccess() {
+            // Collect selected repositories
+            const selectedRepos = [];
+            document.querySelectorAll('#repoList input[type="checkbox"]:checked').forEach(checkbox => {
+                const repoItem = checkbox.closest('.repo-item');
+                const repoName = repoItem.querySelector('.repo-name').textContent;
+                selectedRepos.push(repoName);
+            });
+            
+            // Save to sessionStorage
+            sessionStorage.setItem('selectedRepos', JSON.stringify(selectedRepos));
+            
             // Add a brief delay to simulate OAuth processing
             setTimeout(() => {
-                location.href = '03-canvas.html';
+                location.href = '02a-questionnaire.html';
             }, 300);
         }
 

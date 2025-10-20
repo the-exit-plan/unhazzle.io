@@ -37,29 +37,32 @@
         <section class="mb-6">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--space-6);">
                 <!-- UI Flow Card -->
-                <div class="card card-clickable" onclick="location.href='01-signin.html'" style="padding: var(--space-8); border: 2px solid var(--border-color); transition: all 0.3s ease;">
+                <div class="card card-clickable" onclick="location.href='01-signin.html'" style="padding: var(--space-8); border: 2px solid var(--primary-color); transition: all 0.3s ease; position: relative;">
+                    <div style="position: absolute; top: var(--space-4); right: var(--space-4); padding: 0.25rem 0.75rem; background: var(--primary-color); color: white; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">
+                        RECOMMENDED
+                    </div>
                     <div style="display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4);">
                         <div style="font-size: 3rem;">🖱️</div>
                         <div>
                             <h3 style="font-size: var(--font-size-xl); margin-bottom: var(--space-1); color: var(--text-primary);">Visual UI Flow</h3>
-                            <span style="display: inline-block; padding: 0.25rem 0.75rem; background: var(--primary-color); color: white; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">RECOMMENDED</span>
+                            <span style="display: inline-block; padding: 0.25rem 0.75rem; background: var(--primary-color); color: white; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">BEGINNER FRIENDLY</span>
                         </div>
                     </div>
                     <p style="color: var(--text-secondary); margin-bottom: var(--space-4); line-height: 1.6;">
-                        Build your infrastructure visually with our interactive canvas. Drag, drop, and configure resources with real-time YAML sync.
+                        Answer a few questions and let unhazzle propose a production-ready infrastructure design for you to inspect and deploy.
                     </p>
                     <div style="background: var(--bg-secondary); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
                         <h4 style="font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2);">You'll experience:</h4>
                         <ul style="color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.8; padding-left: var(--space-5);">
+                            <li>No YAML required to start</li>
+                            <li>Guided, interactive experience</li>
                             <li>Visual infrastructure canvas</li>
-                            <li>Bidirectional YAML sync</li>
-                            <li>Resource configuration</li>
-                            <li>Cost estimation</li>
-                            <li>One-click deployment</li>
+                            <li>Real-time cost estimation</li>
+                            <li>Operations dashboard</li>
                         </ul>
                     </div>
                     <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--primary-color); font-weight: 500;">
-                        <span>Start UI Tour</span>
+                        <span>Start Visual Tour</span>
                         <span>→</span>
                     </div>
                 </div>

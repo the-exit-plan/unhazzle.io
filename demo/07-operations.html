@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .main-content { max-width: 1200px; margin: 4rem auto; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: var(--space-5); }
+        .metric-card, .logs-card, .config-card { 
+            background: var(--bg-secondary); 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--radius-lg); 
+            padding: var(--space-5); 
+        }
+        .metric-card h4, .logs-card h4, .config-card h4 { margin-top: 0; color: var(--text-primary); }
+        .logs-terminal { 
+            background: #1a1a1a; 
+            color: #d4d4d4; 
+            font-family: 'Monaco', monospace; 
+            font-size: 13px; 
+            padding: var(--space-4); 
+            border-radius: var(--radius-md); 
+            height: 300px; 
+            overflow-y: scroll;
+            border: 1px solid var(--border-color);
+        }
+        .log-line { display: block; white-space: pre-wrap; }
+        .log-line .timestamp { color: #888; margin-right: 1em; }
+        .log-line.info .level { color: #3794ff; }
+        .log-line.warn .level { color: #f9a825; }
+        .log-line.error .level { color: #f44336; }
+        .ip-address { 
+            background: var(--bg-primary); 
+            padding: var(--space-2) var(--space-3); 
+            border-radius: var(--radius-sm); 
+            font-family: monospace; 
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div id="userAvatar" class="avatar">T</div>
+                    <span id="userNameDisplay" style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="02-dashboard.html" class="header-link">← Dashboard</a>
+                <a href="01-signin.html" class="header-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+    <main class="main-content">
+        <div style="margin-bottom: var(--space-6);">
+            <h1 style="font-size: var(--font-size-3xl); margin-bottom: var(--space-2);" id="appNameHeader">🚀 ecommerce-startup / dev</h1>
+            <p style="color: var(--text-secondary); font-size: var(--font-size-lg);">Monitor metrics, view logs, and operate your live application.</p>
+        </div>
+
+        <!-- Control Panel -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6);">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: var(--space-2);">
+                <span>⚙️</span>
+                <span>Infrastructure Controls</span>
+                <span style="background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600; margin-left: var(--space-2);">LIVE</span>
+            </h3>
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">Manage your application's infrastructure in real-time. Changes take effect immediately.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-5);">
+                <!-- Replica Scaling -->
+                <div style="background: var(--bg-primary); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="margin-top: 0; font-size: var(--font-size-base); display: flex; align-items: center; gap: var(--space-2);">
+                        <span>📊</span>
+                        <span>Manual Scaling</span>
+                    </h4>
+                    <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--space-3);">
+                        Current replicas: <strong id="replica-count-display">1</strong>
+                    </p>
+                    <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3);">
+                        <input type="number" id="replica-input" value="1" min="1" max="10" style="flex: 1; padding: var(--space-2); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <button class="btn btn-primary" onclick="scaleReplicas()" style="white-space: nowrap;">Apply</button>
+                    </div>
+                    <p style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin: 0;">
+                        💡 Auto-scaling is enabled and will override manual settings if CPU exceeds 70%
+                    </p>
+                </div>
+
+                <!-- Application Actions -->
+                <div style="background: var(--bg-primary); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="margin-top: 0; font-size: var(--font-size-base); display: flex; align-items: center; gap: var(--space-2);">
+                        <span>🔄</span>
+                        <span>Application Actions</span>
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <button class="btn btn-secondary" onclick="restartApp()" style="justify-content: flex-start;">
+                            <span>🔄</span>
+                            <span>Rolling Restart</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearCache()" style="justify-content: flex-start;">
+                            <span>🧹</span>
+                            <span>Clear Cache</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="viewLogs()" style="justify-content: flex-start;">
+                            <span>📜</span>
+                            <span>Download Logs</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Database Actions -->
+                <div style="background: var(--bg-primary); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="margin-top: 0; font-size: var(--font-size-base); display: flex; align-items: center; gap: var(--space-2);">
+                        <span>💾</span>
+                        <span>Database Management</span>
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <button class="btn btn-secondary" onclick="createBackup()" style="justify-content: flex-start;">
+                            <span>💾</span>
+                            <span>Create Backup Now</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="openShell()" style="justify-content: flex-start;">
+                            <span>⌨️</span>
+                            <span>Open psql Shell</span>
+                        </button>
+                        <p style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin: var(--space-2) 0 0 0;">
+                            Last backup: <strong>2 hours ago</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Resource Limits -->
+                <div style="background: var(--bg-primary); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="margin-top: 0; font-size: var(--font-size-base); display: flex; align-items: center; gap: var(--space-2);">
+                        <span>💪</span>
+                        <span>Resource Limits</span>
+                    </h4>
+                    <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                            <span>CPU per replica:</span>
+                            <strong id="cpu-limit-display">1 vCPU</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                            <span>Memory per replica:</span>
+                            <strong id="memory-limit-display">2GB</strong>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="editResources()" style="margin-top: var(--space-3); width: 100%;">
+                        <span>✏️</span>
+                        <span>Edit Resources</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="metric-card">
+                <h4>CPU Usage & Auto-scaling</h4>
+                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: -10px;">Horizontal Pod Autoscaler (HPA) automatically adds replicas when CPU exceeds 70%.</p>
+                <canvas id="cpuChart"></canvas>
+            </div>
+            <div class="metric-card">
+                <h4>Live Traffic (requests/min)</h4>
+                 <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: -10px;">Simulating a typical e-commerce traffic pattern with daily peaks.</p>
+                <canvas id="trafficChart"></canvas>
+            </div>
+            <div class="logs-card" style="grid-column: 1 / -1;">
+                <h4>Live Application Logs</h4>
+                <div class="logs-terminal" id="logs-terminal"></div>
+            </div>
+            <div class="config-card">
+                 <h4>Network Configuration</h4>
+                 <p>Your application's backend is reachable via the following static IP address. Use this for whitelisting with third-party vendors like payment gateways.</p>
+                 <p><strong>Static Outbound IP:</strong> <span class="ip-address">34.141.215.108</span></p>
+            </div>
+             <div class="config-card">
+                 <h4>Environment Variables</h4>
+                 <p>Manage your application's secrets and configuration. These are injected securely at runtime.</p>
+                 <pre style="background: var(--bg-primary); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--border-color);"><code id="env-vars-display"></code></pre>
+            </div>
+        </div>
+    </main>
+    <script>
+        // Load and display user name
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        document.getElementById('userNameDisplay').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+
+        // Load project config
+        const projectConfig = JSON.parse(sessionStorage.getItem('projectConfig')) || {};
+        const appName = projectConfig.application?.name || 'ecommerce-startup';
+        document.getElementById('appNameHeader').textContent = `🚀 ${appName} / dev`;
+        
+        // Display resource limits from config
+        const cpuLimit = projectConfig.application?.cpu || 1;
+        const memoryLimit = projectConfig.application?.memory || '2GB';
+        document.getElementById('cpu-limit-display').textContent = `${cpuLimit} vCPU`;
+        document.getElementById('memory-limit-display').textContent = memoryLimit;
+
+        // Display env vars
+        const envVarsDisplay = document.getElementById('env-vars-display');
+        const envVars = projectConfig.application?.envVars || 'NODE_ENV=production';
+        const envLines = envVars.split('\n');
+        envVarsDisplay.innerHTML = envLines.map(line => {
+            const [key, value] = line.split('=');
+            if (key.toLowerCase().includes('key') || key.toLowerCase().includes('secret')) {
+                return `${key}=<span style="opacity:0.5;">************</span> <button class="btn btn-secondary btn-small" style="float: right;">Reveal</button>`;
+            }
+            return line;
+        }).join('\n');
+
+        // --- Chart & Log Simulation ---
+        const cpuChartCtx = document.getElementById('cpuChart').getContext('2d');
+        const trafficChartCtx = document.getElementById('trafficChart').getContext('2d');
+        const logsTerminal = document.getElementById('logs-terminal');
+
+        const cpuData = {
+            labels: Array(20).fill(''),
+            datasets: [{
+                label: 'CPU Usage (%)',
+                data: Array(20).fill(30),
+                borderColor: 'var(--primary-color)',
+                backgroundColor: 'var(--primary-color-translucent)',
+                fill: true,
+                tension: 0.4,
+            }, {
+                label: 'HPA Threshold',
+                data: Array(20).fill(70),
+                borderColor: 'var(--danger-color)',
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0,
+            }]
+        };
+
+        const trafficData = {
+            labels: Array(20).fill(''),
+            datasets: [{
+                label: 'Requests/min',
+                data: Array(20).fill(100),
+                borderColor: 'var(--accent-color)',
+                backgroundColor: 'var(--accent-color-translucent)',
+                fill: true,
+                tension: 0.4,
+            }]
+        };
+
+        const cpuChart = new Chart(cpuChartCtx, { type: 'line', data: cpuData, options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } } });
+        const trafficChart = new Chart(trafficChartCtx, { type: 'line', data: trafficData, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
+
+        let replicaCount = 1;
+        let manualScaling = false;
+
+        // Control Panel Functions
+        function scaleReplicas() {
+            const newCount = parseInt(document.getElementById('replica-input').value);
+            if (newCount < 1 || newCount > 10) {
+                alert('Please enter a valid number of replicas (1-10)');
+                return;
+            }
+            
+            manualScaling = true;
+            replicaCount = newCount;
+            document.getElementById('replica-count-display').textContent = replicaCount;
+            document.getElementById('replica-input').value = replicaCount;
+            
+            addLog(`Manual scaling: Updated replica count to ${replicaCount}`, 'info');
+            
+            // Reset manual scaling after 30 seconds to allow auto-scaling again
+            setTimeout(() => {
+                manualScaling = false;
+                addLog('Auto-scaling re-enabled', 'info');
+            }, 30000);
+        }
+
+        function restartApp() {
+            addLog('Initiating rolling restart...', 'info');
+            setTimeout(() => addLog('Pod 1/1 restarted successfully', 'info'), 2000);
+            setTimeout(() => addLog('Application health check passed', 'info'), 3000);
+        }
+
+        function clearCache() {
+            addLog('Flushing Redis cache...', 'warn');
+            setTimeout(() => addLog('Cache cleared successfully', 'info'), 1500);
+        }
+
+        function viewLogs() {
+            addLog('Generating log archive...', 'info');
+            setTimeout(() => {
+                addLog('Log archive ready for download: logs-2025-10-20.tar.gz', 'info');
+                alert('In a real implementation, logs would be downloaded here.');
+            }, 2000);
+        }
+
+        function createBackup() {
+            addLog('Creating database backup...', 'info');
+            setTimeout(() => addLog('Database backup completed: backup-2025-10-20-14-30.sql', 'info'), 3000);
+        }
+
+        function openShell() {
+            addLog('Opening secure database shell connection...', 'info');
+            setTimeout(() => {
+                alert('In a real implementation, this would open a terminal with psql access.');
+            }, 1000);
+        }
+
+        function editResources() {
+            alert('In a real implementation, you could edit CPU and memory limits here. Changes would trigger a rolling restart.');
+        }
+
+        function updateCharts() {
+            // Simulate CPU spike
+            const lastCpu = cpuData.datasets[0].data[19];
+            let nextCpu = lastCpu + (Math.random() - 0.4) * 10;
+            if (nextCpu < 20) nextCpu = 20;
+            if (nextCpu > 95) nextCpu = 95;
+            
+            cpuData.datasets[0].data.shift();
+            cpuData.datasets[0].data.push(nextCpu);
+
+            // Only auto-scale if not manually scaled recently
+            if (!manualScaling) {
+                if (nextCpu > 70 && replicaCount < 3) {
+                    replicaCount++;
+                    document.getElementById('replica-count-display').textContent = replicaCount;
+                    document.getElementById('replica-input').value = replicaCount;
+                    addLog(`CPU usage at ${nextCpu.toFixed(1)}%, auto-scaling up to ${replicaCount} replicas.`, 'warn');
+                } else if (nextCpu < 40 && replicaCount > 1) {
+                    replicaCount--;
+                    document.getElementById('replica-count-display').textContent = replicaCount;
+                    document.getElementById('replica-input').value = replicaCount;
+                    addLog(`CPU usage at ${nextCpu.toFixed(1)}%, auto-scaling down to ${replicaCount} replicas.`, 'info');
+                }
+            }
+
+            // Simulate traffic
+            const lastTraffic = trafficData.datasets[0].data[19];
+            let nextTraffic = lastTraffic + (Math.random() - 0.5) * 50;
+            if (nextTraffic < 50) nextTraffic = 50;
+            trafficData.datasets[0].data.shift();
+            trafficData.datasets[0].data.push(nextTraffic);
+
+            cpuChart.update('none');
+            trafficChart.update('none');
+        }
+
+        const logMessages = [
+            { level: 'info', msg: 'GET /api/products 200 OK' },
+            { level: 'info', msg: 'GET /api/products/123 200 OK' },
+            { level: 'info', msg: 'POST /api/cart 201 Created' },
+            { level: 'warn', msg: 'Stripe API latency detected: 350ms' },
+            { level: 'info', msg: 'GET /api/user/profile 200 OK' },
+            { level: 'error', msg: 'Failed to process payment for order 456: Card declined' },
+        ];
+
+        function addLog(message, level = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('span');
+            logLine.className = `log-line ${level}`;
+            logLine.innerHTML = `<span class="timestamp">${timestamp}</span><span class="level">[${level.toUpperCase()}]</span> ${message}`;
+            logsTerminal.appendChild(logLine);
+            logsTerminal.scrollTop = logsTerminal.scrollHeight;
+        }
+
+        setInterval(updateCharts, 2000);
+        setInterval(() => {
+            const log = logMessages[Math.floor(Math.random() * logMessages.length)];
+            addLog(log.msg, log.level);
+        }, 3000);
+        addLog('Application server started successfully. Listening on port 8080.', 'info');
+
+    </script>
+</body>
+</html>

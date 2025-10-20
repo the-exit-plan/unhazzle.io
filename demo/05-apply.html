@@ -179,7 +179,8 @@
                 });
             }
 
-            // Save to sessionStorage for dashboard
+            // Save to sessionStorage for dashboard and operations page
+            sessionStorage.setItem('projectConfig', JSON.stringify(config));
             sessionStorage.setItem('provisionedProject', JSON.stringify(project));
             sessionStorage.setItem('projectProvisioned', 'true');
 

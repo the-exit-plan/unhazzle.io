@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze Your Workload - unhazzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mockup-styles.css">
+    <style>
+        .main-content { max-width: 800px; margin: 4rem auto; }
+        .question-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-5);
+        }
+        .question-group { margin-bottom: var(--space-5); }
+        .question-group:last-child { margin-bottom: 0; }
+        .question-group label { display: block; font-weight: 500; margin-bottom: var(--space-3); color: var(--text-primary); }
+        .radio-options { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+        .radio-options label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            background: var(--bg-primary);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-size: var(--font-size-sm);
+        }
+        .radio-options label:hover { 
+            border-color: var(--primary-color);
+            background: var(--bg-tertiary);
+        }
+        .radio-options input:checked + label {
+            border-color: var(--accent-color);
+            background: var(--accent-color-translucent);
+            color: var(--accent-color-dark);
+            box-shadow: 0 0 0 2px var(--accent-color-translucent);
+        }
+        .radio-options input { display: none; }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="../index.html" class="logo-text">unhazzle</a>
+            </div>
+            <nav class="header-nav">
+                <div class="user-info">
+                    <div id="userAvatar" class="avatar">T</div>
+                    <span id="userNameDisplay" style="color: var(--text-primary); font-weight: 500;">Tavo</span>
+                </div>
+                <a href="docs.html" class="header-link">📖 Docs</a>
+                <a href="02-dashboard.html" class="header-link">← Dashboard</a>
+                <a href="01-signin.html" class="header-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+    <main class="main-content">
+        <div style="margin-bottom: var(--space-6); text-align: center;">
+            <h1 style="font-size: var(--font-size-3xl); margin-bottom: var(--space-2);">Let's Design Your Infrastructure</h1>
+            <p style="color: var(--text-secondary); font-size: var(--font-size-lg);">Answer a few questions, and we'll propose a production-ready design for you.</p>
+        </div>
+
+        <div class="question-card">
+            <div class="question-group">
+                <label>First, select the repository you want to deploy:</label>
+                <div class="radio-options" id="repoOptions">
+                    <!-- Repositories will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="question-group">
+                <label>What type of application are you deploying?</label>
+                <div class="radio-options">
+                    <input type="radio" id="type-ecommerce" name="app-type" value="ecommerce" checked>
+                    <label for="type-ecommerce">🛒 E-commerce Site</label>
+                    <input type="radio" id="type-saas" name="app-type" value="saas">
+                    <label for="type-saas">💼 SaaS Application</label>
+                    <input type="radio" id="type-api" name="app-type" value="api">
+                    <label for="type-api">🔄 API Backend</label>
+                     <input type="radio" id="type-other" name="app-type" value="other">
+                    <label for="type-other">🤔 Other</label>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <label>What is your expected user traffic at launch?</label>
+                <div class="radio-options">
+                    <input type="radio" id="traffic-low" name="traffic" value="low">
+                    <label for="traffic-low"> hobbyist (&lt;1,000 users/mo)</label>
+                    <input type="radio" id="traffic-medium" name="traffic" value="medium" checked>
+                    <label for="traffic-medium"> startup (1k-50k users/mo)</label>
+                    <input type="radio" id="traffic-high" name="traffic" value="high">
+                    <label for="traffic-high"> scale-up (&gt;50k users/mo)</label>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <label>Does your application require a relational database?</label>
+                <div class="radio-options">
+                    <input type="radio" id="db-yes" name="database" value="yes" checked>
+                    <label for="db-yes">✅ Yes, for user accounts, orders, etc.</label>
+                    <input type="radio" id="db-no" name="database" value="no">
+                    <label for="db-no">❌ No, it's a static or stateless app.</label>
+                </div>
+            </div>
+
+             <div class="question-group">
+                <label>Will you need a high-speed cache for sessions or frequently accessed data?</label>
+                <div class="radio-options">
+                    <input type="radio" id="cache-yes" name="cache" value="yes" checked>
+                    <label for="cache-yes">✅ Yes, performance is critical.</label>
+                    <input type="radio" id="cache-no" name="cache" value="no">
+                    <label for="cache-no">❌ Not at this stage.</label>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: var(--space-5);">
+            <button class="btn btn-primary btn-large" onclick="generateProposal()">
+                Analyze & Propose Infrastructure →
+            </button>
+        </div>
+    </main>
+    <script>
+        // Load and display user name
+        const userName = sessionStorage.getItem('userName') || 'Tavo';
+        const githubUsername = userName.toLowerCase().replace(/\s+/g, '-');
+        document.getElementById('userNameDisplay').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+
+        // Populate repository options
+        const selectedRepos = JSON.parse(sessionStorage.getItem('selectedRepos') || '[]');
+        const repoOptionsContainer = document.getElementById('repoOptions');
+        
+        if (selectedRepos.length > 0) {
+            repoOptionsContainer.innerHTML = selectedRepos.map((repo, index) => {
+                const repoSlug = repo.split('/')[1] || repo;
+                const repoId = `repo-${index}`;
+                return `
+                    <input type="radio" id="${repoId}" name="repository" value="${repo}" ${index === 0 ? 'checked' : ''}>
+                    <label for="${repoId}">📦 ${repo}</label>
+                `;
+            }).join('');
+        } else {
+            // Fallback if no repos in sessionStorage
+            repoOptionsContainer.innerHTML = `
+                <input type="radio" id="repo-0" name="repository" value="${githubUsername}/my-awesome-app" checked>
+                <label for="repo-0">📦 ${githubUsername}/my-awesome-app</label>
+            `;
+        }
+
+        function generateProposal() {
+            const selectedRepo = document.querySelector('input[name="repository"]:checked').value;
+            const traffic = document.querySelector('input[name="traffic"]:checked').value;
+            const needsDatabase = document.querySelector('input[name="database"]:checked').value === 'yes';
+            const needsCache = document.querySelector('input[name="cache"]:checked').value === 'yes';
+
+            // Extract app name from repo
+            const appName = selectedRepo.split('/')[1] || 'my-app';
+
+            // Build the config object that matches exactly what the canvas expects
+            const config = {
+                application: {
+                    name: appName,
+                    type: 'application',
+                    repo: `github.com/${selectedRepo}`,
+                    dockerfile: './Dockerfile',
+                    cpu: traffic === 'low' ? 0.5 : (traffic === 'medium' ? 1 : 2),
+                    memory: traffic === 'low' ? '512M' : (traffic === 'medium' ? '2GB' : '4GB'),
+                    envVars: 'NODE_ENV=production\nSTRIPE_API_KEY=pk_test_123'
+                },
+                database: needsDatabase ? {
+                    name: 'store-db-prod',
+                    type: 'database',
+                    engine: 'postgres',
+                    version: '15',
+                    storage: traffic === 'low' ? '10GB' : (traffic === 'medium' ? '20GB' : '100GB'),
+                    backups: true,
+                    retention: traffic === 'low' ? 3 : (traffic === 'medium' ? 7 : 30)
+                } : null,
+                cache: needsCache ? {
+                    name: 'session-cache-prod',
+                    type: 'cache',
+                    engine: 'redis',
+                    version: '7',
+                    memory: traffic === 'low' ? '256M' : (traffic === 'medium' ? '512M' : '2GB')
+                } : null
+            };
+            
+            sessionStorage.setItem('proposedConfig', JSON.stringify(config));
+            location.href = '04-canvas-with-resources.html';
+        }
+    </script>
+</body>
+</html>
