@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentPrompt = '$';
     let isLoggedIn = false;
     let forcedLogin = false;
+    let logStreamingMode = false;
+    let logStreamInterval = null;
 
     const steps = [
         {
@@ -60,8 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
             completed: false
         },
         {
-            title: "Step 5: Check Logs",
-            description: "View application logs:<br><code>unhazzle logs</code><br><small>This displays the latest application logs to monitor your deployment.</small>",
+            title: "Step 5: Monitor Application Logs",
+            description: "Start monitoring application logs:<br><code>unhazzle logs</code><br><small>This starts streaming application logs in real-time.</small><br><br>Then test your application with a curl request:<br><code>curl -X POST https://my-app.unhazzle.dev/api/users -d '{\"name\":\"John Doe\",\"email\":\"john@example.com\"}'</code><br><small>Watch how the logs reflect your user creation request and request body.</small>",
             command: "unhazzle logs",
             completed: false
         },
@@ -82,17 +84,18 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Show available commands',
             execute: function() {
                 return `Available commands:
-   unhazzle help          - Show this help message
-   unhazzle login         - Sign in with Github
-   unhazzle init [--interactive] - Initialize unhazzle project
-   unhazzle logs          - Fetch application logs
-   unhazzle application   - Manage applications
-   unhazzle database      - Manage databases
-   unhazzle cache         - Manage cache services
-   unhazzle apply         - Apply infrastructure changes
-   unhazzle status        - Show deployment status
-   clear                  - Clear the terminal screen
-   history                - Show command history`;
+    unhazzle help          - Show this help message
+    unhazzle login         - Sign in with Github
+    unhazzle init [--interactive] - Initialize unhazzle project
+    unhazzle logs          - Fetch application logs
+    unhazzle application   - Manage applications
+    unhazzle database      - Manage databases
+    unhazzle cache         - Manage cache services
+    unhazzle apply         - Apply infrastructure changes
+    unhazzle status        - Show deployment status
+    curl                   - Make HTTP requests
+    clear                  - Clear the terminal screen
+    history                - Show command history`;
             }
         },
         login: {
@@ -212,25 +215,49 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                 if (!hasApplied) {
                     return `Application not yet deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
                 }
-                return `📋 Application Logs (last 50 lines):
 
-2024-10-20 14:32:15 INFO  Starting application on port 3000
-2024-10-20 14:32:16 INFO  Connected to database successfully
-2024-10-20 14:32:17 INFO  Cache connection established
-2024-10-20 14:32:20 INFO  GET / 200 45ms
-2024-10-20 14:32:22 INFO  GET /api/users 200 23ms
-2024-10-20 14:32:25 INFO  POST /api/login 200 67ms
-2024-10-20 14:32:28 INFO  GET /dashboard 200 34ms
-2024-10-20 14:32:30 WARN  Rate limit exceeded for IP 192.168.1.100
-2024-10-20 14:32:35 INFO  GET /api/data 200 45ms
-2024-10-20 14:32:40 INFO  POST /api/submit 201 89ms
-2024-10-20 14:32:45 INFO  GET /static/css/main.css 200 12ms
-2024-10-20 14:32:50 INFO  GET /static/js/app.js 200 15ms
-2024-10-20 14:32:55 INFO  Database query executed in 23ms
-2024-10-20 14:33:00 INFO  Cache hit for user:123
-2024-10-20 14:33:05 INFO  GET /health 200 5ms
-2024-10-20 14:33:10 INFO  Memory usage: 45%
-2024-10-20 14:33:15 INFO  CPU usage: 12%`;
+                if (logStreamingMode) {
+                    clearInterval(logStreamInterval);
+                    logStreamingMode = false;
+                    return `📋 Stopped log streaming.`;
+                }
+
+                logStreamingMode = true;
+                let logCount = 0;
+
+                // Start streaming logs
+                addOutput(`📋 Starting application log streaming... (Press Ctrl+C or run 'unhazzle logs' again to stop)`);
+
+                const initialLogs = [
+                    `2024-10-20 14:32:15 INFO  Starting application on port 3000`,
+                    `2024-10-20 14:32:16 INFO  Connected to database successfully`,
+                    `2024-10-20 14:32:17 INFO  Cache connection established`,
+                    `2024-10-20 14:32:20 INFO  GET / 200 45ms`,
+                    `2024-10-20 14:32:22 INFO  GET /api/users 200 23ms`,
+                    `2024-10-20 14:32:25 INFO  POST /api/login 200 67ms`,
+                    `2024-10-20 14:32:28 INFO  GET /dashboard 200 34ms`,
+                    `2024-10-20 14:32:30 WARN  Rate limit exceeded for IP 192.168.1.100`,
+                    `2024-10-20 14:32:35 INFO  GET /api/data 200 45ms`,
+                    `2024-10-20 14:32:40 INFO  POST /api/submit 201 89ms`
+                ];
+
+                // Show initial logs
+                initialLogs.forEach(log => addOutput(log));
+
+                // Start periodic log streaming - only health checks by default
+                logStreamInterval = setInterval(() => {
+                    const now = new Date();
+                    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+                    addOutput(`${timestamp} INFO  GET /health 200 ${Math.floor(Math.random() * 10 + 1)}ms`);
+                    logCount++;
+                    if (logCount > 50) {
+                        clearInterval(logStreamInterval);
+                        logStreamingMode = false;
+                        addOutput(`📋 Log streaming stopped after 50 entries. Run 'unhazzle logs' to start again.`);
+                    }
+                }, 3000);
+
+                return '';
             }
         },
         apply: {
@@ -385,6 +412,103 @@ Estimated monthly cost: €${totalCost.toFixed(2)}`);
                     return 'No commands in history';
                 }
                 return commandHistory.map((cmd, index) => `${index + 1}  ${cmd}`).join('\n');
+            }
+        },
+        curl: {
+            description: 'Make HTTP requests',
+            execute: function(args) {
+                if (!projectConfig || !projectConfig.hasApp || !hasApplied) {
+                    return `No application deployed. Run 'unhazzle apply' to deploy your infrastructure first.`;
+                }
+
+                // Parse curl arguments
+                let method = 'GET';
+                let url = '';
+                let data = '';
+                let headers = {};
+
+                for (let i = 0; i < args.length; i++) {
+                    const arg = args[i];
+                    if (arg === '-X' || arg === '--request') {
+                        method = args[++i];
+                    } else if (arg === '-d' || arg === '--data' || arg === '--data-raw') {
+                        data = args[++i];
+                    } else if (arg === '-H' || arg === '--header') {
+                        const header = args[++i];
+                        const [key, value] = header.split(': ');
+                        headers[key] = value;
+                    } else if (!arg.startsWith('-') && !url) {
+                        url = arg;
+                    }
+                }
+
+                if (!url) {
+                    return `Usage: curl [options] <url>
+Options:
+  -X, --request METHOD    Specify request method
+  -d, --data DATA         HTTP POST data
+  -H, --header HEADER     Pass custom header(s)`;
+                }
+
+                // Simulate HTTP request
+                const now = new Date();
+                const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+                const statusCode = method === 'POST' ? 201 : 200;
+                const responseTime = Math.floor(Math.random() * 100 + 20);
+
+                // Generate logs for this request
+                if (logStreamingMode) {
+                    setTimeout(() => {
+                        addOutput(`${timestamp} INFO  ${method} ${url.replace('https://' + projectConfig.appName + '.unhazzle.dev', '')} ${statusCode} ${responseTime}ms`);
+
+                        if (data) {
+                            // Parse and log request body
+                            try {
+                                const parsedData = JSON.parse(data);
+                                addOutput(`${timestamp} INFO  Processing request body: ${JSON.stringify(parsedData)}`);
+                                if (parsedData.name && parsedData.email) {
+                                    addOutput(`${timestamp} INFO  Creating user: ${parsedData.name} (${parsedData.email})`);
+                                    addOutput(`${timestamp} INFO  User validation successful`);
+                                    // Add database write logs if database was deployed
+                                    if (projectConfig.hasDb) {
+                                        setTimeout(() => {
+                                            const dbTimestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                                            addOutput(`${dbTimestamp} INFO  INSERT INTO users (name, email, created_at) VALUES ('${parsedData.name}', '${parsedData.email}', '${new Date().toISOString()}')`);
+                                            addOutput(`${dbTimestamp} INFO  Database write completed successfully`);
+                                        }, 200);
+                                    }
+                                } else if (parsedData.message) {
+                                    addOutput(`${timestamp} INFO  Received message: "${parsedData.message}"`);
+                                }
+                            } catch (e) {
+                                addOutput(`${timestamp} INFO  Processing request body: ${data}`);
+                            }
+                        }
+
+                        addOutput(`${timestamp} INFO  Request completed successfully`);
+                    }, 1000);
+                }
+
+                // Return curl response
+                let response = '';
+                if (method === 'POST' && data) {
+                    try {
+                        const parsedData = JSON.parse(data);
+                        if (parsedData.name && parsedData.email) {
+                            // Simulate user creation
+                            const userId = Math.floor(Math.random() * 10000);
+                            response = `{"status":"success","user":{"id":${userId},"name":"${parsedData.name}","email":"${parsedData.email}","createdAt":"${now.toISOString()}"},"message":"User created successfully"}`;
+                        } else {
+                            response = `{"status":"success","received":${JSON.stringify(parsedData)},"timestamp":"${now.toISOString()}"}`;
+                        }
+                    } catch (e) {
+                        response = `{"status":"success","received":"${data}","timestamp":"${now.toISOString()}"}`;
+                    }
+                } else {
+                    response = `{"status":"success","message":"Hello from ${projectConfig.appName}!","timestamp":"${now.toISOString()}"}`;
+                }
+
+                return response;
             }
         }
     };
@@ -830,7 +954,7 @@ Ready to configure resources!`);
                 addOutput(result);
 
                 // Check if this command advances the tutorial (only for non-interactive commands)
-                if (!interactiveMode) {
+                if (!interactiveMode && cmd !== 'curl') {
                     checkTutorialProgress(command.trim());
                 }
             } catch (error) {
@@ -947,6 +1071,14 @@ Ready to configure resources!`);
             const matchingCommands = Object.keys(commands).filter(cmd => cmd.startsWith(currentValue) || `unhazzle ${cmd}`.startsWith(currentValue));
             if (matchingCommands.length === 1) {
                 terminalInput.value = `unhazzle ${matchingCommands[0]}`;
+            }
+        } else if (e.ctrlKey && e.key === 'c') {
+            e.preventDefault();
+            if (logStreamingMode) {
+                clearInterval(logStreamInterval);
+                logStreamingMode = false;
+                addOutput(`^C`);
+                addOutput(`📋 Log streaming stopped.`);
             }
         }
     });

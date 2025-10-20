@@ -63,14 +63,18 @@
                             <small>This shows the health and status of all your services.</small>
                         </div>
                     </div>
-                    <div class="step-item" id="step-5">
-                        <div class="step-header">Step 5: Check Logs</div>
-                        <div class="step-details">
-                            <p>View application logs:</p>
-                            <code>unhazzle logs</code>
-                            <small>This displays the latest application logs to monitor your deployment.</small>
-                        </div>
-                    </div>
+                     <div class="step-item" id="step-5">
+                         <div class="step-header">Step 5: Monitor Application Logs</div>
+                         <div class="step-details">
+                             <p>Start monitoring application logs:</p>
+                             <code>unhazzle logs &</code>
+                             <small>This starts streaming application logs in real-time.</small>
+                             <br><br>
+                             <p>Then test your application with a curl request:</p>
+                             <code>curl -X POST https://my-app.unhazzle.dev/api/users -d '{"name":"John Doe","email":"john@example.com"}'</code>
+                             <small>Watch how the logs reflect your user creation request and request body.</small>
+                         </div>
+                     </div>
                     <div class="step-item" id="step-6">
                         <div class="step-header">Tutorial Complete!</div>
                          <div class="step-details">
