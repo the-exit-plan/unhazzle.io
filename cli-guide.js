@@ -60,6 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
             completed: false
         },
         {
+            title: "Step 5: Check Logs",
+            description: "View application logs:<br><code>unhazzle logs</code><br><small>This displays the latest application logs to monitor your deployment.</small>",
+            command: "unhazzle logs",
+            completed: false
+        },
+        {
             title: "Tutorial Complete!",
             description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.",
             command: "",
@@ -76,16 +82,17 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Show available commands',
             execute: function() {
                 return `Available commands:
-  unhazzle help          - Show this help message
-  unhazzle login         - Sign in with Github
-  unhazzle init [--interactive] - Initialize unhazzle project
-  unhazzle application   - Manage applications
-  unhazzle database      - Manage databases
-  unhazzle cache         - Manage cache services
-  unhazzle apply         - Apply infrastructure changes
-  unhazzle status        - Show deployment status
-  clear                  - Clear the terminal screen
-  history                - Show command history`;
+   unhazzle help          - Show this help message
+   unhazzle login         - Sign in with Github
+   unhazzle init [--interactive] - Initialize unhazzle project
+   unhazzle logs          - Fetch application logs
+   unhazzle application   - Manage applications
+   unhazzle database      - Manage databases
+   unhazzle cache         - Manage cache services
+   unhazzle apply         - Apply infrastructure changes
+   unhazzle status        - Show deployment status
+   clear                  - Clear the terminal screen
+   history                - Show command history`;
             }
         },
         login: {
@@ -193,7 +200,37 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
   - ${projectConfig.projectName}-cache (${projectConfig.cacheEngine}, ${projectConfig.cacheSize}, ${projectConfig.environment})`;
                 }
                 return `Usage: unhazzle cache create --name CACHE_NAME
-       unhazzle cache list`;
+        unhazzle cache list`;
+            }
+        },
+        logs: {
+            description: 'Fetch application logs',
+            execute: function(args) {
+                if (!projectConfig || !projectConfig.hasApp) {
+                    return `No application deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
+                }
+                if (!hasApplied) {
+                    return `Application not yet deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
+                }
+                return `📋 Application Logs (last 50 lines):
+
+2024-10-20 14:32:15 INFO  Starting application on port 3000
+2024-10-20 14:32:16 INFO  Connected to database successfully
+2024-10-20 14:32:17 INFO  Cache connection established
+2024-10-20 14:32:20 INFO  GET / 200 45ms
+2024-10-20 14:32:22 INFO  GET /api/users 200 23ms
+2024-10-20 14:32:25 INFO  POST /api/login 200 67ms
+2024-10-20 14:32:28 INFO  GET /dashboard 200 34ms
+2024-10-20 14:32:30 WARN  Rate limit exceeded for IP 192.168.1.100
+2024-10-20 14:32:35 INFO  GET /api/data 200 45ms
+2024-10-20 14:32:40 INFO  POST /api/submit 201 89ms
+2024-10-20 14:32:45 INFO  GET /static/css/main.css 200 12ms
+2024-10-20 14:32:50 INFO  GET /static/js/app.js 200 15ms
+2024-10-20 14:32:55 INFO  Database query executed in 23ms
+2024-10-20 14:33:00 INFO  Cache hit for user:123
+2024-10-20 14:33:05 INFO  GET /health 200 5ms
+2024-10-20 14:33:10 INFO  Memory usage: 45%
+2024-10-20 14:33:15 INFO  CPU usage: 12%`;
             }
         },
         apply: {
