@@ -7,10 +7,10 @@
 
 ***
 
-## Implementation Options (Pick One)
+## Implementation
 
-### Option 1: Frontend-Only with State Management (Recommended)
-**Tech:** React/Next.js with state machine (XState or simple useState)
+### Frontend-Only with State Management (Recommended)
+**Tech:** Next.js with state machine
 
 **How it works:**
 - Build actual UI components
@@ -19,71 +19,14 @@
 - "Deploy" button triggers 5-second animation, then shows dashboard
 - No backend - just transitions between screens
 
-**Why this works:**
-- Feels real because it's actual UI
-- Users can type/click anything
-- You control the outcome
-- Fast to build (1-2 weeks)
-
 ***
 
-### Option 2: Figma Prototype (Fastest)
-**Tech:** Figma with clickable hotspots
-
-**How it works:**
-- Design all screens in Figma
-- Add click interactions between frames
-- Share prototype link
-
-**Why this works:**
-- 2-3 days to build
-- Easy to iterate based on feedback
-- No coding needed
-
-**Why it's limited:**
-- Less "real" feeling
-- Can't actually type in fields
-- Obvious it's not real
-
-***
-
-### Option 3: Hybrid (Best of Both Worlds)
-**Tech:** Real frontend + fake API responses
-
-**How it works:**
-- Build actual UI with forms
-- Mock API returns pre-defined JSON responses
-- Everything works, nothing actually deploys
-
-**Why this works:**
-- Feels 100% real
-- Users can type/edit
-- You get UX feedback on forms
-- Can log analytics on user behavior
-
-***
-
-## Recommended: Guided Demo Mode (Option 3 Implementation)
+## Recommended: Guided Demo Mode
 
 ### Step-by-Step Setup
 
-**1. Pre-fill Everything with E-commerce Example**
+**1. Pre-fill Everything with E-commerce Example and based on the questionnaire answers**
 
-```javascript
-// On page load, pre-populate with sample data
-const demoData = {
-  appType: "e-commerce",
-  traffic: "burst",
-  needsDatabase: true,
-  needsCache: true,
-  image: "ghcr.io/demo/acme-shop:v2.1.0",
-  envVars: {
-    STRIPE_SECRET_KEY: "sk_test_••••••••••••",
-    STRIPE_WEBHOOK_SECRET: "whsec_••••••••••••"
-  },
-  domain: "shop.acme.com"
-}
-```
 
 **Why:** User doesn't need real image - you provide realistic example but they can edit if curious.
 
@@ -180,19 +123,6 @@ setInterval(updateMetrics, 2000)
 - "Is the cost breakdown clear?"
 - "Would you trust this platform with your production app?"
 - "What's missing from this flow?"
-
-***
-
-## Technical Stack (1-2 Week Build)
-
-```
-Frontend: Next.js + TailwindCSS
-State: Zustand or XState (flow control)
-Animations: Framer Motion (for progress bars)
-Mock Data: Static JSON files
-Analytics: PostHog (track clicks/time)
-Hosting: Vercel (instant deploys)
-```
 
 ***
 

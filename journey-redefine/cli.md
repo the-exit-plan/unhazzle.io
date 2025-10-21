@@ -1,5 +1,14 @@
 # Unhazzle CLI Design Guide
 
+# CLI validation
+
+After the UI demo finishes and the local-to-production process is completed we share with our friends our vision for the next steps. From now on they can continuously deploy the application by moving the unhazzle.yaml to their GitHub repository and integrate with Unhazzle CLI via GitHub actions.
+
+1. What do you think about this?
+2. Would you also like to have the same UI flow implemented in the CLI?
+3. How would you use the CLI to interact with Unhazzle? (Both for a first project or an existing running project)
+
+
 ## Core Philosophy
 
 **UI = Exploration, discovery, first-time use, visual feedback**  
