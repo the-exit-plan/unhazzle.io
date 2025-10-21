@@ -72,6 +72,13 @@ services/website/
 
 ## Development
 
+### Prototype app 
+
+```bash
+cd prototype-app
+npm run dev
+```
+
 ### Local Development
 
 Simply open `index.html` in a web browser or serve with a local server:
