@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 2: Initialize Project",
-            description: "Create a new Unhazzle project:<br><code>unhazzle init --interactive</code><br><small>Use the <strong>interactive mode</strong> for guided setup with prompts for project name, environment, and resources. This is recommended for first-time users.</small>",
-            command: "unhazzle init --interactive",
+            description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --with-app --app-name my-app</code><br><small>Use flags to configure your project. Available flags: --name, --env, --with-app, --app-name, --app-image, --app-cpu, --app-memory, --with-db, --db-engine, --db-size, --with-cache, --cache-engine, --cache-size, --with-github-actions.</small>",
+            command: "unhazzle init --name my-project --env dev --with-app --app-name my-app",
             completed: false
         },
         {
@@ -68,6 +68,12 @@ document.addEventListener('DOMContentLoaded', function() {
             completed: false
         },
         {
+            title: "Step 6: Destroy Infrastructure",
+            description: "Destroy all infrastructure resources:<br><code>unhazzle destroy</code><br><small>This removes all deployed resources and stops billing. Use with caution!</small>",
+            command: "unhazzle destroy",
+            completed: false
+        },
+        {
             title: "Tutorial Complete!",
             description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.",
             command: "",
@@ -86,13 +92,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 return `Available commands:
     unhazzle help          - Show this help message
     unhazzle login         - Sign in with Github
-    unhazzle init [--interactive] - Initialize unhazzle project
+    unhazzle init [flags] - Initialize unhazzle project
+      --name NAME              Project name (default: my-project)
+      --env ENV                Environment: dev/staging/prod (default: dev)
+      --with-app               Include application (default: true)
+      --app-name NAME          Application name (default: my-app)
+      --app-image IMAGE        Application Docker image (default: node:18)
+      --app-cpu CPU            CPU cores: 0.25/0.5/1.0/2.0 (default: 0.5)
+      --app-memory MEM         Memory: 256Mi/512Mi/1Gi/2Gi/4Gi (default: 512Mi)
+      --with-db                Include database (default: false)
+      --db-engine ENGINE       Database engine: postgres/mysql/mongodb (default: postgres)
+      --db-size SIZE           Database size: small/medium/large (default: small)
+      --with-cache             Include cache service (default: false)
+      --cache-engine ENGINE    Cache engine: redis/memcached (default: redis)
+      --cache-size SIZE        Cache size: small/medium/large (default: small)
+      --with-github-actions    Generate GitHub Actions workflows (default: false)
     unhazzle logs          - Fetch application logs
     unhazzle application   - Manage applications
     unhazzle database      - Manage databases
     unhazzle cache         - Manage cache services
     unhazzle apply         - Apply infrastructure changes
     unhazzle status        - Show deployment status
+    unhazzle destroy       - Destroy infrastructure resources
     curl                   - Make HTTP requests
     clear                  - Clear the terminal screen
     history                - Show command history`;
@@ -121,28 +142,163 @@ GitHub Login
             }
         },
         init: {
-            description: 'Initialize unhazzle project [--interactive]',
+            description: 'Initialize unhazzle project with flags',
             execute: function(args) {
                 // Reset previous configuration when starting new init
                 projectConfig = null;
                 generatedYaml = null;
 
-                if (args.includes('--interactive')) {
-                    clearOutput();
-                    interactiveMode = true;
-                    interactiveCommand = 'init';
-                    interactiveStep = 1;
-                    currentPrompt = 'name> ';
-                    updatePrompt();
-                    return `Unhazzle Project Initialization
-
->> Enter project name (default: my-project):`;
-                } else {
-                    return `🚀 Initialized unhazzle project 'my-project'
-Created default environment: dev
-Generated unhazzle.yaml manifest
-Ready to configure resources!`;
+                // Parse flags
+                const flags = {};
+                for (let i = 0; i < args.length; i++) {
+                    const arg = args[i];
+                    if (arg.startsWith('--')) {
+                        const flagName = arg.substring(2);
+                        const nextArg = args[i + 1];
+                        if (nextArg && !nextArg.startsWith('--')) {
+                            flags[flagName] = nextArg;
+                            i++; // Skip the next arg as it's the value
+                        } else {
+                            flags[flagName] = true; // Boolean flag
+                        }
+                    }
                 }
+
+                // Set defaults and validate
+                const projectName = flags.name || 'my-project';
+                const environment = flags.env || 'dev';
+                if (!['dev', 'staging', 'prod'].includes(environment)) {
+                    return `Error: Invalid environment '${environment}'. Must be dev, staging, or prod.`;
+                }
+
+                const addApp = flags['with-app'] !== false && flags['with-app'] !== 'false';
+                const appName = flags['app-name'] || 'my-app';
+                const appCpu = flags['app-cpu'] || '0.5';
+                const validCpus = ['0.25', '0.5', '1.0', '2.0'];
+                if (!validCpus.includes(appCpu)) {
+                    return `Error: Invalid CPU '${appCpu}'. Must be 0.25, 0.5, 1.0, or 2.0.`;
+                }
+
+                const appMemory = flags['app-memory'] || '512Mi';
+                const validMemory = ['256Mi', '512Mi', '1Gi', '2Gi', '4Gi'];
+                if (!validMemory.includes(appMemory)) {
+                    return `Error: Invalid memory '${appMemory}'. Must be 256Mi, 512Mi, 1Gi, 2Gi, or 4Gi.`;
+                }
+
+                const appImage = flags['app-image'] || 'node:18';
+
+                const addDb = flags['with-db'] === true || flags['with-db'] === 'true';
+                const dbEngine = flags['db-engine'] || 'postgres';
+                if (!['postgres', 'mysql', 'mongodb'].includes(dbEngine)) {
+                    return `Error: Invalid database engine '${dbEngine}'. Must be postgres, mysql, or mongodb.`;
+                }
+
+                const dbSize = flags['db-size'] || 'small';
+                if (!['small', 'medium', 'large'].includes(dbSize)) {
+                    return `Error: Invalid database size '${dbSize}'. Must be small, medium, or large.`;
+                }
+
+                const addCache = flags['with-cache'] === true || flags['with-cache'] === 'true';
+                const cacheEngine = flags['cache-engine'] || 'redis';
+                if (!['redis', 'memcached'].includes(cacheEngine)) {
+                    return `Error: Invalid cache engine '${cacheEngine}'. Must be redis or memcached.`;
+                }
+
+                const cacheSize = flags['cache-size'] || 'small';
+                if (!['small', 'medium', 'large'].includes(cacheSize)) {
+                    return `Error: Invalid cache size '${cacheSize}'. Must be small, medium, or large.`;
+                }
+
+                const addGitHubActions = flags['with-github-actions'] === true || flags['with-github-actions'] === 'true';
+
+                // Store configuration
+                loginData = {
+                    projectName,
+                    environment,
+                    addApp,
+                    appName,
+                    appCpu,
+                    appMemory,
+                    appImage,
+                    addDb,
+                    dbEngine,
+                    dbSize,
+                    addCache,
+                    cacheEngine,
+                    cacheSize,
+                    addGitHubActions
+                };
+
+                // Generate YAML
+                let yaml = `project: ${projectName.replace(/'/g, "\\'")}
+environment: ${environment}
+
+resources:`;
+
+                if (addApp) {
+                    yaml += `
+  applications:
+    - name: ${appName}
+      type: nextjs
+      repo: github.com/user/${projectName.replace(/'/g, "\\'")}
+      image: ${appImage}
+      cpu: ${appCpu}
+      memory: ${appMemory}
+      public: true`;
+                }
+
+                if (addDb) {
+                    yaml += `
+
+  databases:
+    - name: ${projectName.replace(/'/g, "\\'")}-db
+      engine: ${dbEngine}
+      size: ${dbSize}`;
+                }
+
+                if (addCache) {
+                    yaml += `
+
+  caches:
+    - name: ${projectName.replace(/'/g, "\\'")}-cache
+      engine: ${cacheEngine}
+      size: ${cacheSize}`;
+                }
+
+                if (addGitHubActions) {
+                    yaml += `
+
+github_actions:
+  enabled: true
+  workflows:
+    - deploy`;
+                }
+
+                projectConfig = {
+                    projectName,
+                    environment,
+                    hasApp: addApp,
+                    appName,
+                    appCpu,
+                    appMemory,
+                    appImage,
+                    hasDb: addDb,
+                    dbEngine,
+                    dbSize,
+                    hasCache: addCache,
+                    cacheEngine,
+                    cacheSize,
+                    hasGitHubActions: addGitHubActions
+                };
+                generatedYaml = yaml;
+
+                return `🚀 Initialized unhazzle project '${projectName.replace(/'/g, "\\'")}'
+Created environment: ${environment}
+Generated unhazzle.yaml manifest:
+
+${yaml}
+
+Ready to configure resources!`;
             }
         },
         application: {
@@ -566,7 +722,8 @@ Available repositories:
                 } else {
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
-            } else if (interactiveStep === 2) {
+            }
+        else if (interactiveStep === 2) {
                 // Repository selection
                 const selection = input.trim().toLowerCase();
                 let allowedRepos = [];
@@ -597,323 +754,10 @@ Welcome back! Your repositories are now accessible for deployment.`);
                     isLoggedIn = true;
                     exitInteractiveMode();
                     checkTutorialProgress('unhazzle login');
-                }, 2000);
-            }
-        } else if (interactiveCommand === 'init') {
-            if (interactiveStep === 1) {
-                // Project name input
-                const projectName = input.trim() || 'my-project';
-                loginData.projectName = projectName;
-                clearOutput();
-                interactiveStep = 2;
-                currentPrompt = 'env> ';
-                updatePrompt();
-                addOutput(`Project name: ${projectName}
-
->> Enter environment (dev/staging/prod, default: dev):`);
-            } else if (interactiveStep === 2) {
-                // Environment input
-                const environment = input.trim() || 'dev';
-                if (!['dev', 'staging', 'prod'].includes(environment)) {
-                    addOutput("Invalid environment. Please enter dev, staging, or prod:");
-                    return;
-                }
-                loginData.environment = environment;
-                clearOutput();
-                interactiveStep = 3;
-                currentPrompt = 'choice> ';
-                updatePrompt();
-                addOutput(`Environment: ${environment}
-
->> Do you want to deploy an application? (y/n, default: y):`);
-            } else if (interactiveStep === 3) {
-                // Application choice
-                const choice = input.trim().toLowerCase();
-                if (choice === '' || choice === 'y' || choice === 'yes') {
-                    loginData.addApp = true;
-                    clearOutput();
-                    interactiveStep = 4;
-                    currentPrompt = 'name> ';
-                    updatePrompt();
-                    addOutput(`Application: Yes
-
->> Enter application name (default: my-app):`);
-                } else if (choice === 'n' || choice === 'no') {
-                    loginData.addApp = false;
-                    clearOutput();
-                    interactiveStep = 7;
-                    addOutput(`Application: No
-
-Do you want to add a database? (y/n):`);
-                } else {
-                    addOutput("Please enter 'y' for yes or 'n' for no:");
-                }
-            } else if (interactiveStep === 4) {
-                // Application name choice
-                const name = input.trim() || 'my-app';
-                loginData.appName = name;
-                clearOutput();
-                interactiveStep = 5;
-                currentPrompt = 'cpu> ';
-                updatePrompt();
-                addOutput(`Application name: ${name}
-
->> Enter CPU cores (0.25/0.5/1.0/2.0, default: 0.5):`);
-            } else if (interactiveStep === 5) {
-                // Application CPU choice
-                const cpu = input.trim() || '0.5';
-                const validCpus = ['0.25', '0.5', '1.0', '2.0'];
-                if (!validCpus.includes(cpu)) {
-                    addOutput("Invalid CPU. Please enter 0.25, 0.5, 1.0, or 2.0:");
-                    return;
-                }
-                loginData.appCpu = cpu;
-                clearOutput();
-                interactiveStep = 6;
-                currentPrompt = 'memory> ';
-                updatePrompt();
-                addOutput(`CPU cores: ${cpu}
-
->> Enter memory (256Mi/512Mi/1Gi/2Gi/4Gi, default: 512Mi):`);
-            } else if (interactiveStep === 6) {
-                // Application memory choice
-                const memory = input.trim() || '512Mi';
-                const validMemory = ['256Mi', '512Mi', '1Gi', '2Gi', '4Gi'];
-                if (!validMemory.includes(memory)) {
-                    addOutput("Invalid memory. Please enter 256Mi, 512Mi, 1Gi, 2Gi, or 4Gi:");
-                    return;
-                }
-                loginData.appMemory = memory;
-                // Calculate application cost
-                const cpuCost = parseFloat(loginData.appCpu) * 10; // €10 per CPU core
-                const memoryGb = memory.endsWith('Gi') ?
-                    parseFloat(memory.replace('Gi', '')) :
-                    parseFloat(memory.replace('Mi', '')) / 1024;
-                const memoryCost = memoryGb * 5; // €5 per GB
-                const appCost = Math.max(cpuCost + memoryCost, 5.00); // Minimum €5
-                clearOutput();
-                interactiveStep = 7;
-                currentPrompt = 'choice> ';
-                updatePrompt();
-                addOutput(`Memory: ${memory}
-Estimated monthly cost: €${appCost.toFixed(2)}
-
->> Do you want to add a database? (y/n, default: n):`);
-            } else if (interactiveStep === 7) {
-                // Database choice
-                const choice = input.trim().toLowerCase();
-                if (choice === 'y' || choice === 'yes') {
-                    loginData.addDb = true;
-                    clearOutput();
-                    interactiveStep = 8;
-                    currentPrompt = 'engine> ';
-                    updatePrompt();
-                    addOutput(`Database: Yes
-
->> Select database engine (postgres/mysql/mongodb, default: postgres):`);
-                } else if (choice === '' || choice === 'n' || choice === 'no') {
-                    loginData.addDb = false;
-                    clearOutput();
-                    interactiveStep = 10;
-                    addOutput(`Database: No
-
-Do you want to add a cache service? (y/n):`);
-                } else {
-                    addOutput("Please enter 'y' for yes or 'n' for no:");
-                }
-            } else if (interactiveStep === 8) {
-                // Database engine choice
-                const engine = input.trim().toLowerCase() || 'postgres';
-                if (!['postgres', 'mysql', 'mongodb'].includes(engine)) {
-                    addOutput("Invalid engine. Please enter postgres, mysql, or mongodb:");
-                    return;
-                }
-                loginData.dbEngine = engine;
-                clearOutput();
-                interactiveStep = 9;
-                currentPrompt = 'size> ';
-                updatePrompt();
-                addOutput(`Database engine: ${engine}
-
->> Select database size (small/medium/large, default: small):`);
-            } else if (interactiveStep === 9) {
-                // Database size choice
-                const size = input.trim().toLowerCase() || 'small';
-                if (!['small', 'medium', 'large'].includes(size)) {
-                    addOutput("Invalid size. Please enter small, medium, or large:");
-                    return;
-                }
-                loginData.dbSize = size;
-                // Calculate database cost
-                const dbCost = size === 'medium' ? 5.00 : size === 'large' ? 10.00 : 2.50;
-                clearOutput();
-                interactiveStep = 10;
-                currentPrompt = 'choice> ';
-                updatePrompt();
-                addOutput(`Database size: ${size}
-Estimated monthly cost: €${dbCost.toFixed(2)}
-
->> Do you want to add a cache service? (y/n, default: n):`);
-            } else if (interactiveStep === 10) {
-                // Cache choice
-                const choice = input.trim().toLowerCase();
-                if (choice === 'y' || choice === 'yes') {
-                    loginData.addCache = true;
-                    clearOutput();
-                    interactiveStep = 11;
-                    currentPrompt = 'engine> ';
-                    updatePrompt();
-                    addOutput(`Cache: Yes
-
->> Select cache engine (redis/memcached, default: redis):`);
-                } else if (choice === '' || choice === 'n' || choice === 'no') {
-                    loginData.addCache = false;
-                    clearOutput();
-                    interactiveStep = 12;
-                    addOutput(`Cache: No
-
-Do you want to generate GitHub Actions workflows for automatic deployment? (y/n):`);
-                } else {
-                    addOutput("Please enter 'y' for yes or 'n' for no:");
-                }
-            } else if (interactiveStep === 11) {
-                // Cache engine choice
-                const engine = input.trim().toLowerCase() || 'redis';
-                if (!['redis', 'memcached'].includes(engine)) {
-                    addOutput("Invalid engine. Please enter redis or memcached:");
-                    return;
-                }
-                loginData.cacheEngine = engine;
-                clearOutput();
-                interactiveStep = 12;
-                currentPrompt = 'size> ';
-                updatePrompt();
-                addOutput(`Cache engine: ${engine}
-
->> Select cache size (small/medium/large, default: small):`);
-            } else if (interactiveStep === 12) {
-                // Cache size choice
-                const size = input.trim().toLowerCase() || 'small';
-                if (!['small', 'medium', 'large'].includes(size)) {
-                    addOutput("Invalid size. Please enter small, medium, or large:");
-                    return;
-                }
-                loginData.cacheSize = size;
-                // Calculate cache cost
-                const cacheCost = size === 'medium' ? 3.00 : size === 'large' ? 6.00 : 1.50;
-                clearOutput();
-                interactiveStep = 13;
-                currentPrompt = 'choice> ';
-                updatePrompt();
-                addOutput(`Cache size: ${size}
-Estimated monthly cost: €${cacheCost.toFixed(2)}
-
->> Do you want to generate GitHub Actions workflows for automatic deployment? (y/n, default: n):`);
-            } else if (interactiveStep === 13) {
-                // GitHub Actions choice
-                const choice = input.trim().toLowerCase();
-                if (choice === '' || choice === 'y' || choice === 'yes') {
-                    loginData.addGitHubActions = true;
-                } else if (choice === 'n' || choice === 'no') {
-                    loginData.addGitHubActions = false;
-                } else {
-                    addOutput("Please enter 'y' for yes or 'n' for no:");
-                    return;
-                }
-                 clearOutput();
-                 addOutput(`Initializing project...
-
-Project: ${loginData.projectName}
-Environment: ${loginData.environment}
-Application: ${loginData.addApp ? `Yes (${loginData.appName || 'my-app'}, ${loginData.appCpu || '0.5'} CPU, ${loginData.appMemory || '512Mi'})` : 'No'}
-Database: ${loginData.addDb ? `Yes (${loginData.dbEngine || 'postgres'}, ${loginData.dbSize || 'small'})` : 'No'}
-Cache: ${loginData.addCache ? `Yes (${loginData.cacheEngine || 'redis'}, ${loginData.cacheSize || 'small'})` : 'No'}
-GitHub Actions: ${loginData.addGitHubActions ? 'Yes' : 'No'}
-
-Generating unhazzle.yaml manifest...`);
-
-                // Simulate initialization delay
-                setTimeout(() => {
-                    let yaml = `project: ${loginData.projectName.replace(/'/g, "\\'")}
-environment: ${loginData.environment}
-
-resources:`;
-                    if (loginData.addApp) {
-                        yaml += `
-  applications:
-    - name: ${loginData.appName || 'my-app'}
-      type: nextjs
-      repo: github.com/user/${loginData.projectName.replace(/'/g, "\\'")}
-      cpu: ${loginData.appCpu || '0.5'}
-      memory: ${loginData.appMemory || '512Mi'}
-      public: true`;
-                    }
-                    if (loginData.addDb) {
-                        yaml += `
-  databases:
-    - name: ${loginData.projectName.replace(/'/g, "\\'")}-database
-      engine: ${loginData.dbEngine || 'postgres'}
-      size: ${loginData.dbSize || 'small'}`;
-                    }
-                    if (loginData.addCache) {
-                        yaml += `
-  cache:
-    - name: ${loginData.projectName.replace(/'/g, "\\'")}-cache
-      engine: ${loginData.cacheEngine || 'redis'}
-      size: ${loginData.cacheSize || 'small'}`;
-                    }
-
-                    if (loginData.addGitHubActions) {
-                        yaml += `
-workflows:
-  deploy:
-    name: Deploy to Unhazzle
-    on:
-      push:
-        branches: [ main, master ]
-      pull_request:
-        branches: [ main, master ]
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout@v3
-        - name: Deploy to Unhazzle
-          run: |
-            unhazzle login
-            unhazzle apply`;
-                    }
-
-                    // Store the configuration and YAML for later use
-                    projectConfig = {
-                        projectName: loginData.projectName,
-                        environment: loginData.environment,
-                        hasApp: loginData.addApp,
-                        hasDb: loginData.addDb,
-                        hasCache: loginData.addCache,
-                        hasGitHubActions: loginData.addGitHubActions,
-                        appName: loginData.appName || 'my-app',
-                        appCpu: loginData.appCpu || '0.5',
-                        appMemory: loginData.appMemory || '512Mi',
-                        dbEngine: loginData.dbEngine || 'postgres',
-                        dbSize: loginData.dbSize || 'small',
-                        cacheEngine: loginData.cacheEngine || 'redis',
-                        cacheSize: loginData.cacheSize || 'small'
-                    };
-                    generatedYaml = yaml;
-
-                    addOutput(`🚀 Initialized unhazzle project '${loginData.projectName.replace(/'/g, "\\'")}'
-Created environment: ${loginData.environment}
-Generated unhazzle.yaml manifest:
-
-${yaml}
-
-Ready to configure resources!`);
-                    exitInteractiveMode();
-                    checkTutorialProgress('unhazzle init --interactive');
-                }, 2000);
+                 }, 2000);
             }
         }
+
     }
 
     // Function to exit interactive mode

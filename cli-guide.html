@@ -17,7 +17,7 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
-            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">5</span></div>
+            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">6</span></div>
         </header>
         
         <div class="guide-content">
@@ -43,8 +43,8 @@
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
                             <p>Create a new Unhazzle project:</p>
-                            <code>unhazzle init --interactive</code>
-                            <small>Use the <strong>interactive mode</strong> for guided setup with prompts for project name, environment, and resources. This is recommended for first-time users.</small>
+                            <code>unhazzle init --name my-project --env dev --with-app --app-name my-app</code>
+                            <small>Use flags to configure your project. Available flags: --name, --env, --with-app, --app-name, --app-image, --app-cpu, --app-memory, --with-db, --db-engine, --db-size, --with-cache, --cache-engine, --cache-size, --with-github-actions.</small>
                         </div>
                     </div>
                     <div class="step-item" id="step-3">
@@ -75,13 +75,21 @@
                              <small>Watch how the logs reflect your user creation request and request body.</small>
                          </div>
                      </div>
-                    <div class="step-item" id="step-6">
-                        <div class="step-header">Tutorial Complete!</div>
+                     <div class="step-item" id="step-6">
+                         <div class="step-header">Step 6: Destroy Infrastructure</div>
                          <div class="step-details">
-                             <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
-                             <small>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.</small>
+                             <p>Destroy all infrastructure resources:</p>
+                             <code>unhazzle destroy</code>
+                             <small>This removes all deployed resources and stops billing. Use with caution!</small>
                          </div>
-                    </div>
+                     </div>
+                     <div class="step-item" id="step-7">
+                         <div class="step-header">Tutorial Complete!</div>
+                          <div class="step-details">
+                              <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
+                              <small>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.</small>
+                          </div>
+                     </div>
                 </div>
             </div>
             

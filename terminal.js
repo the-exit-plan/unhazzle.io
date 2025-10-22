@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return `Available commands:
    unhazzle help          - Show this help message
    unhazzle login         - Sign in with Github
-   unhazzle init          - Initialize unhazzle project
+    unhazzle init [flags]   - Initialize unhazzle project
    unhazzle logs          - Fetch application logs
    unhazzle application   - Manage applications
    unhazzle database      - Manage databases
