@@ -1,7 +1,18 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Serve under the repo path: https://the-exit-plan.github.io/unhazzle.io
+  basePath: '/unhazzle.io',
+  assetPrefix: '/unhazzle.io/',
+  trailingSlash: true,
+
+  // Make Next produce a full static export
+  output: 'export',
+
+  // Disable image optimization (not available on GitHub Pages)
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
