@@ -100,12 +100,18 @@ document.addEventListener('DOMContentLoaded', function() {
             command: "unhazzle logs",
             completed: false
         },
-         {
-             title: "Step 6: Destroy Infrastructure",
-             description: "Destroy all infrastructure resources:<br><code>unhazzle destroy</code><br><small>This will prompt for confirmation by requiring you to type the project name. Use with extreme caution!</small>",
-             command: "unhazzle destroy",
-             completed: false
-         },
+        {
+            title: "Step 6: Check Application Metrics",
+            description: "View performance metrics for your deployed services:<br><code>unhazzle metrics</code><br><small>This shows CPU usage, memory, response times, database connections, and cache hit rates.</small>",
+            command: "unhazzle metrics",
+            completed: false
+        },
+          {
+              title: "Step 7: Destroy Infrastructure",
+              description: "Destroy all infrastructure resources:<br><code>unhazzle destroy</code><br><small>This will prompt for confirmation by requiring you to type the project name. Use with extreme caution!</small>",
+              command: "unhazzle destroy",
+              completed: false
+          },
         {
             title: "Tutorial Complete!",
              description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands.",
@@ -129,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
       --name NAME              Project name (default: my-project)
       --env ENV                Environment: dev/staging/prod (default: dev)
       --app-name NAME          Application name (default: my-app)
-       --app-image IMAGE        Application Docker image (default: ghcr.io/my-org/my-app:v2.1.4)
+        --app-image IMAGE        Application Docker image (default: ghcr.io/my-org/my-app:v2.1.4)
       --app-cpu CPU            CPU cores: 0.25/0.5/1.0/2.0 (default: 0.5)
       --app-memory MEM         Memory: 256Mi/512Mi/1Gi/2Gi/4Gi (default: 512Mi)
       --public                 Make application publicly accessible (default: true)
@@ -138,10 +144,11 @@ document.addEventListener('DOMContentLoaded', function() {
       --db-size SIZE           Database size: small/medium/large (default: small)
       --with-cache             Include cache service (default: false)
       --cache-engine ENGINE    Cache engine: redis/memcached (default: redis)
-       --cache-size SIZE        Cache size: small/medium/large (default: small)
-       --health-check PATH      Health check endpoint path (default: /health)
-       --with-github-actions    Generate GitHub Actions workflows (default: false)
+        --cache-size SIZE        Cache size: small/medium/large (default: small)
+        --health-check PATH      Health check endpoint path (default: /health)
+        --with-github-actions    Generate GitHub Actions workflows (default: false)
     unhazzle logs          - Fetch application logs
+    unhazzle metrics       - Show application performance metrics
     unhazzle application   - Manage applications
     unhazzle database      - Manage databases
     unhazzle cache         - Manage cache services
@@ -462,6 +469,64 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                 }, 3000);
 
                 return '';
+            }
+        },
+        metrics: {
+            description: 'Show application performance metrics',
+            execute: function(args) {
+                if (!projectConfig) {
+                    return `No project initialized. Run 'unhazzle init' to create a project.`;
+                }
+                if (!hasApplied) {
+                    return `No infrastructure deployed. Run 'unhazzle apply' to deploy your infrastructure.`;
+                }
+
+                let metricsOutput = `📊 Application Metrics (Last 5 minutes)\n\n`;
+
+                // Application metrics (always shown if app is deployed)
+                if (projectConfig.hasApp) {
+                    const cpuUsage = Math.floor(Math.random() * 30 + 20); // 20-50%
+                    const memoryUsage = Math.floor(Math.random() * 40 + 30); // 30-70%
+                    const avgResponseTime = Math.floor(Math.random() * 50 + 20); // 20-70ms
+                    const requestCount = Math.floor(Math.random() * 500 + 200); // 200-700 requests
+
+                    metricsOutput += `Application (${projectConfig.appName}):\n`;
+                    metricsOutput += `  CPU Usage: ${cpuUsage}%\n`;
+                    metricsOutput += `  Memory Usage: ${memoryUsage}%\n`;
+                    metricsOutput += `  Avg Response Time: ${avgResponseTime}ms\n`;
+                    metricsOutput += `  Total Requests: ${requestCount}\n`;
+                    metricsOutput += `  Error Rate: 0.1%\n\n`;
+                }
+
+                // Database metrics (only if database is deployed)
+                if (projectConfig.hasDb) {
+                    const dbConnections = Math.floor(Math.random() * 20 + 10); // 10-30 connections
+                    const dbQueries = Math.floor(Math.random() * 1000 + 500); // 500-1500 queries
+                    const dbLatency = Math.floor(Math.random() * 5 + 2); // 2-7ms
+
+                    metricsOutput += `Database (${projectConfig.dbEngine}):\n`;
+                    metricsOutput += `  Active Connections: ${dbConnections}\n`;
+                    metricsOutput += `  Queries per Minute: ${dbQueries}\n`;
+                    metricsOutput += `  Avg Query Latency: ${dbLatency}ms\n`;
+                    metricsOutput += `  Connection Pool Usage: ${Math.floor(dbConnections / 50 * 100)}%\n\n`;
+                }
+
+                // Cache metrics (only if cache is deployed)
+                if (projectConfig.hasCache) {
+                    const cacheHitRate = Math.floor(Math.random() * 20 + 80); // 80-100%
+                    const cacheOps = Math.floor(Math.random() * 2000 + 1000); // 1000-3000 operations
+                    const cacheMemory = Math.floor(Math.random() * 30 + 20); // 20-50%
+
+                    metricsOutput += `Cache (${projectConfig.cacheEngine}):\n`;
+                    metricsOutput += `  Hit Rate: ${cacheHitRate}%\n`;
+                    metricsOutput += `  Operations per Minute: ${cacheOps}\n`;
+                    metricsOutput += `  Memory Usage: ${cacheMemory}%\n`;
+                    metricsOutput += `  Cache Keys: ${Math.floor(Math.random() * 5000 + 1000)}\n\n`;
+                }
+
+                metricsOutput += `Last updated: ${new Date().toLocaleTimeString()}`;
+
+                return metricsOutput;
             }
         },
         apply: {
