@@ -101,7 +101,7 @@
     --border-light: var(--gray-600);
     
     /* Dark theme specific colors */
-    --white: #0f172a;
+    --white: #fff;
     --gray-50: var(--gray-800);
     --gray-100: var(--gray-700);
     --gray-200: var(--gray-600);
@@ -1573,7 +1573,7 @@ h4 { font-size: var(--font-size-xl); }
     background: var(--gray-900);
     font-family: 'Monaco', 'Menlo', 'SF Mono', monospace;
     font-size: var(--font-size-sm);
-    color: var(--gray-200);
+    color: var(--white);
     line-height: 1.4;
     position: relative;
 }
@@ -1588,6 +1588,7 @@ h4 { font-size: var(--font-size-xl); }
     margin-bottom: var(--space-1);
     white-space: pre-wrap;
     word-wrap: break-word;
+    color: var(--white) !important;
 }
 
 .terminal-input-line {
@@ -1597,7 +1598,7 @@ h4 { font-size: var(--font-size-xl); }
 }
 
 .prompt {
-    color: var(--gray-200);
+    color: var(--white);
     font-weight: bold;
 }
 
@@ -1606,10 +1607,10 @@ h4 { font-size: var(--font-size-xl); }
     background: transparent;
     border: none;
     outline: none;
-    color: var(--gray-200);
+    color: var(--white) !important;
     font-family: inherit;
     font-size: inherit;
-    caret-color: var(--gray-200);
+    caret-color: var(--white);
 }
 
 .terminal-input::selection {
@@ -1617,7 +1618,7 @@ h4 { font-size: var(--font-size-xl); }
 }
 
 .cursor {
-    color: var(--gray-200);
+    color: var(--white);
     animation: blink 1s infinite;
 }
 
@@ -2106,7 +2107,7 @@ a:focus {
 
 .step-header {
     padding: var(--space-3);
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
@@ -2156,7 +2157,7 @@ a:focus {
 }
 
 .step-details small {
-    color: var(--text-tertiary);
+    color: var(--text-primary);
     font-size: 0.85em;
     display: block;
     margin-top: var(--space-1);
@@ -2203,57 +2204,19 @@ a:focus {
     color: var(--white);
 }
 
-/* Terminal Dark Theme */
-[data-theme="dark"] .terminal-window {
-    background: var(--gray-900);
-    border-color: var(--gray-700);
-}
-
-[data-theme="dark"] .terminal-header {
-    background: var(--gray-800);
-    border-color: var(--gray-700);
-}
-
-[data-theme="dark"] .terminal-title {
-    color: var(--gray-400);
-}
-
-[data-theme="dark"] .terminal-body {
-    background: var(--gray-900);
-    color: var(--gray-200);
-}
-
-[data-theme="dark"] .terminal-output {
-    background: var(--gray-900);
-    color: var(--gray-200);
-}
-
-[data-theme="dark"] .terminal-input-line {
-    color: var(--gray-200);
-}
-
-[data-theme="dark"] .terminal-input {
-    background: var(--gray-900);
-    color: var(--gray-200);
-    border-color: var(--gray-700);
-}
-
-[data-theme="dark"] .terminal-input::selection {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .prompt {
-    color: var(--gray-200);
-}
-
-[data-theme="dark"] .cursor {
-    color: var(--gray-200);
-}
-
 /* Step Panels Dark Theme */
 [data-theme="dark"] .step-item {
     background: var(--bg-secondary);
     border-color: var(--gray-700);
+}
+
+[data-theme="dark"] .step-item.active .step-header {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+[data-theme="dark"] .step-header {
+    color: var(--white);
 }
 
 [data-theme="dark"] .step-item.active .step-header {
@@ -2276,7 +2239,7 @@ a:focus {
 }
 
 [data-theme="dark"] .step-details small {
-    color: var(--text-tertiary);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .step-details code {

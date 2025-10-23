@@ -56,8 +56,8 @@
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
                             <p>Create a new Unhazzle project:</p>
-                             <code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image ghcr.io/my-org/my-app:latest --with-db --with-cache</code>
-                             <small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:latest), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>
+                             <code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health</code>
+                             <small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:v2.1.4), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --with-github-actions (false).</small>
                         </div>
                     </div>
                      <div class="step-item" id="step-3">
