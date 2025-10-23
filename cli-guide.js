@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 2: Initialize Project",
-            description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --with-app --app-name my-app</code><br><small>Use flags to configure your project. Available flags: --name, --env, --with-app, --app-name, --app-image, --app-cpu, --app-memory, --with-db, --db-engine, --db-size, --with-cache, --cache-engine, --cache-size, --with-github-actions.</small>",
-            command: "unhazzle init --name my-project --env dev --with-app --app-name my-app",
+            description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18</code><br><small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (node:18), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>",
+            command: "unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18",
             completed: false
         },
         {
@@ -63,16 +63,16 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 5: Monitor Application Logs",
-            description: "Start monitoring application logs:<br><code>unhazzle logs</code><br><small>This starts streaming application logs in real-time.</small><br><br>Then test your application with a curl request:<br><code>curl -X POST https://my-app.unhazzle.dev/api/users -d '{\"name\":\"John Doe\",\"email\":\"john@example.com\"}'</code><br><small>Watch how the logs reflect your user creation request and request body.</small>",
+            description: "Start monitoring application logs:<br><code>unhazzle logs</code><br><small>This starts streaming application logs in real-time. Run the command again to stop log streaming.</small>",
             command: "unhazzle logs",
             completed: false
         },
-        {
-            title: "Step 6: Destroy Infrastructure",
-            description: "Destroy all infrastructure resources:<br><code>unhazzle destroy</code><br><small>This removes all deployed resources and stops billing. Use with caution!</small>",
-            command: "unhazzle destroy",
-            completed: false
-        },
+         {
+             title: "Step 6: Destroy Infrastructure",
+             description: "Destroy all infrastructure resources:<br><code>unhazzle destroy</code><br><small>This will prompt for confirmation by requiring you to type the project name. Use with extreme caution!</small>",
+             command: "unhazzle destroy",
+             completed: false
+         },
         {
             title: "Tutorial Complete!",
             description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.",
@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
       --app-image IMAGE        Application Docker image (default: node:18)
       --app-cpu CPU            CPU cores: 0.25/0.5/1.0/2.0 (default: 0.5)
       --app-memory MEM         Memory: 256Mi/512Mi/1Gi/2Gi/4Gi (default: 512Mi)
+      --public                 Make application publicly accessible (default: true)
       --with-db                Include database (default: false)
       --db-engine ENGINE       Database engine: postgres/mysql/mongodb (default: postgres)
       --db-size SIZE           Database size: small/medium/large (default: small)
@@ -210,6 +211,7 @@ GitHub Login
                 }
 
                 const addGitHubActions = flags['with-github-actions'] === true || flags['with-github-actions'] === 'true';
+                const isPublic = flags['public'] !== false && flags['public'] !== 'false';
 
                 // Store configuration
                 loginData = {
@@ -220,6 +222,7 @@ GitHub Login
                     appCpu,
                     appMemory,
                     appImage,
+                    isPublic,
                     addDb,
                     dbEngine,
                     dbSize,
@@ -239,12 +242,11 @@ resources:`;
                     yaml += `
   applications:
     - name: ${appName}
-      type: nextjs
-      repo: github.com/user/${projectName.replace(/'/g, "\\'")}
+      type: application
       image: ${appImage}
       cpu: ${appCpu}
       memory: ${appMemory}
-      public: true`;
+      public: ${isPublic}`;
                 }
 
                 if (addDb) {
@@ -282,6 +284,7 @@ github_actions:
                     appCpu,
                     appMemory,
                     appImage,
+                    isPublic,
                     hasDb: addDb,
                     dbEngine,
                     dbSize,
@@ -388,13 +391,20 @@ Endpoint: ${name}.internal.unhazzle.dev (internal only)`;
                     `2024-10-20 14:32:15 INFO  Starting application on port 3000`,
                     `2024-10-20 14:32:16 INFO  Connected to database successfully`,
                     `2024-10-20 14:32:17 INFO  Cache connection established`,
+                    `2024-10-20 14:32:18 INFO  Application health check passed`,
                     `2024-10-20 14:32:20 INFO  GET / 200 45ms`,
                     `2024-10-20 14:32:22 INFO  GET /api/users 200 23ms`,
                     `2024-10-20 14:32:25 INFO  POST /api/login 200 67ms`,
                     `2024-10-20 14:32:28 INFO  GET /dashboard 200 34ms`,
                     `2024-10-20 14:32:30 WARN  Rate limit exceeded for IP 192.168.1.100`,
+                    `2024-10-20 14:32:32 INFO  GET /api/profile 200 28ms`,
                     `2024-10-20 14:32:35 INFO  GET /api/data 200 45ms`,
-                    `2024-10-20 14:32:40 INFO  POST /api/submit 201 89ms`
+                    `2024-10-20 14:32:38 INFO  PUT /api/settings 200 52ms`,
+                    `2024-10-20 14:32:40 INFO  POST /api/submit 201 89ms`,
+                    `2024-10-20 14:32:42 INFO  DELETE /api/session 204 15ms`,
+                    `2024-10-20 14:32:45 INFO  GET /health 200 12ms`,
+                    `2024-10-20 14:32:48 INFO  Database connection pool healthy`,
+                    `2024-10-20 14:32:50 INFO  Cache hit ratio: 94.2%`
                 ];
 
                 // Show initial logs
@@ -666,6 +676,29 @@ Options:
 
                 return response;
             }
+        },
+        destroy: {
+            description: 'Destroy infrastructure resources',
+            execute: function() {
+                if (!projectConfig) {
+                    return `No project initialized. Run 'unhazzle init --interactive' to create a project.`;
+                }
+                if (!hasApplied) {
+                    return `No infrastructure deployed. Run 'unhazzle apply' to deploy resources first.`;
+                }
+
+                interactiveMode = true;
+                interactiveCommand = 'destroy';
+                interactiveStep = 1;
+                currentPrompt = 'confirm> ';
+                updatePrompt();
+
+                return `⚠️  WARNING: This will permanently destroy all infrastructure resources for project '${projectConfig.projectName}'!
+
+This action cannot be undone. All data, applications, databases, and cache services will be permanently lost.
+
+Type '${projectConfig.projectName}' to confirm destruction, or 'cancel' to abort:`;
+            }
         }
     };
 
@@ -707,15 +740,19 @@ Interactive terminal experience.
                 const choice = input.trim().toLowerCase();
                 if (choice === '' || choice === 'y' || choice === 'yes') {
                     clearOutput();
-                    interactiveStep = 2;
                     addOutput(`Permission granted!
 
-Available repositories:
-1. my-portfolio (Public) - Personal portfolio website
-2. e-commerce-app (Private) - Online store application
-3. blog-site (Public) - Blog with markdown support
+GitHub Login
+>> Authenticating with GitHub...`);
 
->> Enter repository numbers to allow access (e.g., "1,3" or "all", default: all):`);
+                    // Simulate authentication delay
+                    setTimeout(() => {
+                        addOutput(`🔐 Logged in with Github successfully!
+Welcome back! Your repositories are now accessible for deployment.`);
+                        isLoggedIn = true;
+                        exitInteractiveMode();
+                        checkTutorialProgress('unhazzle login');
+                     }, 2000);
                 } else if (choice === 'n' || choice === 'no') {
                     addOutput("Login cancelled.");
                     exitInteractiveMode();
@@ -723,38 +760,43 @@ Available repositories:
                     addOutput("Please enter 'y' for yes or 'n' for no:");
                 }
             }
-        else if (interactiveStep === 2) {
-                // Repository selection
-                const selection = input.trim().toLowerCase();
-                let allowedRepos = [];
+        } else if (interactiveCommand === 'destroy') {
+            if (interactiveStep === 1) {
+                // Destruction confirmation
+                const confirmation = input.trim();
+                if (confirmation === projectConfig.projectName) {
+                    addOutput(`Project name confirmed. Proceeding with destruction...
 
-                if (selection === '' || selection === 'all') {
-                    allowedRepos = ['my-portfolio', 'e-commerce-app', 'blog-site'];
-                } else {
-                    const numbers = selection.split(',').map(n => parseInt(n.trim())).filter(n => n >= 1 && n <= 3);
-                    const repoNames = ['my-portfolio', 'e-commerce-app', 'blog-site'];
-                    allowedRepos = numbers.map(n => repoNames[n-1]).filter(Boolean);
-                }
+🔄 Destroying infrastructure resources for '${projectConfig.projectName}'...
+This will remove all deployed resources and stop billing.
 
-                if (allowedRepos.length === 0) {
-                    addOutput("No valid repositories selected. Please try again (e.g., '1,3' or 'all'):");
-                    return;
-                }
-                
-                loginData.allowedRepos = allowedRepos;
-                interactiveStep = 3;
-                addOutput(`Access granted to repositories: ${allowedRepos.join(', ')}
+⏳ Destroying infrastructure...`);
 
-Authenticating with GitHub...`);
-                
-                // Simulate authentication delay
-                setTimeout(() => {
-                    addOutput(`🔐 Logged in with Github successfully!
-Welcome back! Your repositories are now accessible for deployment.`);
-                    isLoggedIn = true;
+                    // Stop any ongoing log streaming
+                    if (logStreamingMode) {
+                        clearInterval(logStreamInterval);
+                        logStreamingMode = false;
+                        addOutput(`📋 Log streaming stopped due to infrastructure destruction.`);
+                    }
+
+                    // Simulate destruction time
+                    setTimeout(() => {
+                        hasApplied = false; // Mark as not applied
+                        projectConfig = null; // Clear project config
+                        generatedYaml = null; // Clear generated YAML
+
+                        addOutput(`🗑️ Infrastructure destroyed successfully!
+All resources for project '${confirmation}' have been removed and billing has stopped.
+Your application, databases, and cache services are no longer available.`);
+                        exitInteractiveMode();
+                        checkTutorialProgress('unhazzle destroy');
+                    }, 3000); // 3 second destruction simulation
+                } else if (confirmation === 'cancel') {
+                    addOutput("Destruction cancelled. Infrastructure remains intact.");
                     exitInteractiveMode();
-                    checkTutorialProgress('unhazzle login');
-                 }, 2000);
+                } else {
+                    addOutput(`Invalid confirmation. Type '${projectConfig.projectName}' to confirm destruction, or 'cancel' to abort:`);
+                }
             }
         }
 
@@ -795,11 +837,22 @@ Welcome back! Your repositories are now accessible for deployment.`);
         if (commands[cmd]) {
             try {
                 const result = commands[cmd].execute(args);
-                addOutput(result);
 
-                // Check if this command advances the tutorial (only for non-interactive commands)
-                if (!interactiveMode && cmd !== 'curl') {
-                    checkTutorialProgress(command.trim());
+                // Add delay for init command
+                if (cmd === 'init') {
+                    setTimeout(() => {
+                        addOutput(result);
+                        // Check if this command advances the tutorial (only for non-interactive commands)
+                        if (!interactiveMode && cmd !== 'curl') {
+                            checkTutorialProgress(command.trim());
+                        }
+                    }, 1000);
+                } else {
+                    addOutput(result);
+                    // Check if this command advances the tutorial (only for non-interactive commands)
+                    if (!interactiveMode && cmd !== 'curl') {
+                        checkTutorialProgress(command.trim());
+                    }
                 }
             } catch (error) {
                 addOutput(`Error executing command: ${error.message}`);
@@ -811,10 +864,19 @@ Welcome back! Your repositories are now accessible for deployment.`);
 
     // Function to check tutorial progress
     function checkTutorialProgress(executedCommand) {
-        if (currentStep < steps.length - 1 && executedCommand === steps[currentStep].command) {
-            steps[currentStep].completed = true;
-            currentStep++;
-            updateStepUI();
+        if (currentStep < steps.length - 1) {
+            // For init command, check if it's any valid init command, not just the exact example
+            if (currentStep === 2 && executedCommand.startsWith('unhazzle init')) {
+                steps[currentStep].completed = true;
+                currentStep++;
+                updateStepUI();
+            }
+            // For other commands, do exact match
+            else if (executedCommand === steps[currentStep].command) {
+                steps[currentStep].completed = true;
+                currentStep++;
+                updateStepUI();
+            }
         }
     }
 

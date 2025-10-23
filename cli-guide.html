@@ -43,36 +43,32 @@
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
                             <p>Create a new Unhazzle project:</p>
-                            <code>unhazzle init --name my-project --env dev --with-app --app-name my-app</code>
-                            <small>Use flags to configure your project. Available flags: --name, --env, --with-app, --app-name, --app-image, --app-cpu, --app-memory, --with-db, --db-engine, --db-size, --with-cache, --cache-engine, --cache-size, --with-github-actions.</small>
+                            <code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18</code>
+                            <small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (node:18), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>
                         </div>
                     </div>
-                    <div class="step-item" id="step-3">
-                        <div class="step-header">Step 3: Deploy Infrastructure</div>
-                        <div class="step-details">
-                            <p>Apply all infrastructure changes:</p>
-                            <code>unhazzle apply</code>
-                            <small>This deploys everything to production with cost estimation.</small>
-                        </div>
-                    </div>
-                    <div class="step-item" id="step-4">
-                        <div class="step-header">Step 4: Check Status</div>
-                        <div class="step-details">
-                            <p>Verify your deployment:</p>
-                            <code>unhazzle status</code>
-                            <small>This shows the health and status of all your services.</small>
-                        </div>
-                    </div>
+                     <div class="step-item" id="step-3">
+                         <div class="step-header">Step 3: Deploy Infrastructure</div>
+                         <div class="step-details">
+                             <p>Apply all infrastructure changes:</p>
+                             <code>unhazzle apply</code>
+                             <small>This deploys everything to production with cost estimation.</small>
+                         </div>
+                     </div>
+                     <div class="step-item" id="step-4">
+                         <div class="step-header">Step 4: Check Status</div>
+                         <div class="step-details">
+                             <p>Verify your deployment:</p>
+                             <code>unhazzle status</code>
+                             <small>This shows the health and status of all your services.</small>
+                         </div>
+                     </div>
                      <div class="step-item" id="step-5">
                          <div class="step-header">Step 5: Monitor Application Logs</div>
                          <div class="step-details">
                              <p>Start monitoring application logs:</p>
-                             <code>unhazzle logs &</code>
-                             <small>This starts streaming application logs in real-time.</small>
-                             <br><br>
-                             <p>Then test your application with a curl request:</p>
-                             <code>curl -X POST https://my-app.unhazzle.dev/api/users -d '{"name":"John Doe","email":"john@example.com"}'</code>
-                             <small>Watch how the logs reflect your user creation request and request body.</small>
+                             <code>unhazzle logs</code>
+                             <small>This starts streaming application logs in real-time. Run the command again to stop log streaming.</small>
                          </div>
                      </div>
                      <div class="step-item" id="step-6">
@@ -80,7 +76,7 @@
                          <div class="step-details">
                              <p>Destroy all infrastructure resources:</p>
                              <code>unhazzle destroy</code>
-                             <small>This removes all deployed resources and stops billing. Use with caution!</small>
+                             <small>This will prompt for confirmation by requiring you to type the project name. Use with extreme caution!</small>
                          </div>
                      </div>
                      <div class="step-item" id="step-7">
