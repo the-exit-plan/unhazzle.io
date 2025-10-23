@@ -1,5 +1,38 @@
 // Terminal functionality for CLI Guide
 document.addEventListener('DOMContentLoaded', function() {
+    // Theme management functions
+    function getStoredTheme() {
+        return localStorage.getItem('theme') || 'light';
+    }
+
+    function setStoredTheme(theme) {
+        localStorage.setItem('theme', theme);
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        updateThemeIcon(theme);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.querySelector('.theme-icon');
+        if (icon) {
+            icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+    }
+
+    // Global theme toggle function
+    window.toggleTheme = function() {
+        const currentTheme = getStoredTheme();
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setStoredTheme(newTheme);
+        applyTheme(newTheme);
+    };
+
+    // Initialize theme on page load
+    const savedTheme = getStoredTheme();
+    applyTheme(savedTheme);
+
     const terminalInput = document.getElementById('terminal-input');
     const terminalOutput = document.getElementById('terminal-output');
     const progressFill = document.getElementById('progress-fill');

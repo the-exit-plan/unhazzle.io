@@ -12,12 +12,24 @@
 <body>
     <div class="cli-guide-container">
         <header class="guide-header">
-            <h1>Experience Unhazzle CLI Flow</h1>
-            <p>Follow this guided walkthrough to see how easy infrastructure management can be</p>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
+            <div class="header-content">
+                <div class="header-main">
+                    <div class="header-icon">🚀</div>
+                    <div class="header-text">
+                        <h1>Experience Unhazzle CLI Flow</h1>
+                        <p>Master infrastructure deployment through our interactive terminal guide</p>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">6</span></div>
+                </div>
             </div>
-            <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">6</span></div>
         </header>
         
         <div class="guide-content">
