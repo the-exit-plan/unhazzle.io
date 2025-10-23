@@ -24,13 +24,14 @@
             <div class="instruction-panel" id="instruction-panel">
                 <h2>CLI User Journey</h2>
                 <div class="steps-list">
-                    <div class="step-item active" id="step-0">
-                        <div class="step-header">Welcome to Unhazzle CLI</div>
-                        <div class="step-details">
-                            <p>Type the command: <code>unhazzle help</code></p>
-                            <small>This will show you all available commands to get started.</small>
-                        </div>
-                    </div>
+                     <div class="step-item active" id="step-0">
+                         <div class="step-header">Welcome to Unhazzle CLI - Ecommerce App Deployment Guide</div>
+                         <div class="step-details">
+                             <p>This guided tutorial will walk you through deploying a complete ecommerce application with database and cache services.</p>
+                             <p>Let's get started with: <code>unhazzle help</code></p>
+                             <small>This will show you all available commands to get started.</small>
+                         </div>
+                     </div>
                     <div class="step-item" id="step-1">
                         <div class="step-header">Step 1: Login with GitHub</div>
                         <div class="step-details">
@@ -43,8 +44,8 @@
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
                             <p>Create a new Unhazzle project:</p>
-                            <code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18</code>
-                            <small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (node:18), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>
+                             <code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image ghcr.io/my-org/my-app:latest --with-db --with-cache</code>
+                             <small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:latest), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>
                         </div>
                     </div>
                      <div class="step-item" id="step-3">
@@ -81,10 +82,10 @@
                      </div>
                      <div class="step-item" id="step-7">
                          <div class="step-header">Tutorial Complete!</div>
-                          <div class="step-details">
-                              <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
-                              <small>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.</small>
-                          </div>
+                           <div class="step-details">
+                               <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
+                               <small>You can now explore more commands. Or give our UI a spin!</small>
+                           </div>
                      </div>
                 </div>
             </div>
@@ -99,14 +100,14 @@
                         </div>
                         <span class="terminal-title">Unhazzle CLI Guide</span>
                     </div>
-                    <div class="terminal-body">
-                        <div class="terminal-input-line">
-                            <span class="prompt">$</span>
-                            <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false">
-                            <span class="cursor">|</span>
-                        </div>
-                        <div id="terminal-output" class="terminal-output"></div>
-                    </div>
+                     <div class="terminal-body">
+                         <div id="terminal-output" class="terminal-output"></div>
+                          <div class="terminal-input-line">
+                              <span class="prompt">$</span>
+                              <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false">
+                              <span class="cursor">|</span>
+                          </div>
+                     </div>
                 </div>
             </div>
         </div>

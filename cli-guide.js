@@ -31,12 +31,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let logStreamInterval = null;
 
     const steps = [
-        {
-            title: "Welcome to Unhazzle CLI",
-            description: "Type the command: <code>unhazzle help</code><br><small>This will show you all available commands to get started.</small>",
-            command: "unhazzle help",
-            completed: false
-        },
+         {
+             title: "Welcome to Unhazzle CLI - Ecommerce App Deployment Guide",
+             description: "This guided tutorial will walk you through deploying a complete ecommerce application with database and cache services.<br><br>Type the command: <code>unhazzle help</code><br><small>This will show you all available commands to get started.</small>",
+             command: "unhazzle help",
+             completed: false
+         },
         {
             title: "Step 1: Login with GitHub",
             description: "Authenticate with your GitHub account:<br><code>unhazzle login</code><br><small>This connects your GitHub repositories for deployment.</small>",
@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 2: Initialize Project",
-            description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18</code><br><small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (node:18), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>",
-            command: "unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image node:18",
+             description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image ghcr.io/my-org/my-app:latest --with-db --with-cache</code><br><small>Available flags with defaults:<br>--name (my-project), --env (dev), --with-app (true), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:latest), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --with-github-actions (false).</small>",
+             command: "unhazzle init --name my-project --env dev --with-app --app-name my-app --app-image ghcr.io/my-org/my-app:latest --with-db --with-cache",
             completed: false
         },
         {
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
          },
         {
             title: "Tutorial Complete!",
-            description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands like <code>unhazzle cat unhazzle.yaml</code> or <code>clear</code> to reset the terminal.",
+             description: "🎉 You've successfully completed the Unhazzle CLI journey!<br><br>You can now explore more commands.",
             command: "",
             completed: true
         }
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
       --env ENV                Environment: dev/staging/prod (default: dev)
       --with-app               Include application (default: true)
       --app-name NAME          Application name (default: my-app)
-      --app-image IMAGE        Application Docker image (default: node:18)
+       --app-image IMAGE        Application Docker image (default: ghcr.io/my-org/my-app:latest)
       --app-cpu CPU            CPU cores: 0.25/0.5/1.0/2.0 (default: 0.5)
       --app-memory MEM         Memory: 256Mi/512Mi/1Gi/2Gi/4Gi (default: 512Mi)
       --public                 Make application publicly accessible (default: true)
@@ -186,7 +186,7 @@ GitHub Login
                     return `Error: Invalid memory '${appMemory}'. Must be 256Mi, 512Mi, 1Gi, 2Gi, or 4Gi.`;
                 }
 
-                const appImage = flags['app-image'] || 'node:18';
+                 const appImage = flags['app-image'] || 'ghcr.io/my-org/my-app:latest';
 
                 const addDb = flags['with-db'] === true || flags['with-db'] === 'true';
                 const dbEngine = flags['db-engine'] || 'postgres';
