@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>unhazzle - Infrastructure for Developers, Not Operators</title>
+    <meta name="description" content="Stop hiring DevOps engineers. Stop your developers spending 25% of their time managing infrastructure. Deploy production-grade apps in minutes with Unhazzle.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="logo-brand">
+                    <div>
+                        <span class="logo-text">unhazzle</span>
+                        <span class="logo-tagline">Infrastructure without the hassle</span>
+                    </div>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#why">Why unhazzle</a></li>
+                    <li><a href="#problems">The problem we solve</a></li>
+                    <li><a href="/unhazzle.io/" class="cta-button">Try our Demo</a></li>
+                </ul>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-stars"></div>
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-badge">The infrastructure layer your team has been waiting for</div>
+                    <h1 class="hero-title">
+                        Ship production 
+                        <span class="gradient-text">infrastructure in minutes</span>,
+                        not weeks
+                    </h1>
+                    <p class="hero-subtitle">
+                        Stop hiring DevOps consultants. Stop your developers spending +25% of their time managing servers. 
+                        Deploy from git to production. Let <strong>unhazzle</strong> handle the complexity.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="/unhazzle.io/" class="btn btn-ghost btn-large btn-glow">Try our Demo</a>
+                        <a href="#why" class="btn btn-ghost btn-large">See How It Works</a>
+                    </div>
+                    <div class="hero-trust">
+                        <span>Trusted by European startups</span>
+                        <div class="trust-badges">
+                            <span class="badge">🇪🇺 GDPR Ready</span>
+                            <span class="badge">40 min deploy</span>
+                            <span class="badge">Enterprise security</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-card card-1">
+                        <div class="card-header">Applications</div>
+                        <div class="card-icon">◈</div>
+                        <p>Deploy your long-running apps effortlessly</p>
+                    </div>
+                    <div class="floating-card card-2">
+                        <div class="card-header">Databases</div>
+                        <div class="card-icon">⚡</div>
+                        <p>Managed database services</p>
+                    </div>
+                    <div class="floating-card card-3">
+                        <div class="card-header">Cache Services</div>
+                        <div class="card-icon">📈</div>
+                        <p>Boost performance with caching</p>
+                    </div>
+                    <div class="floating-card card-4">
+                        <div class="card-header">Functions as a Service</div>
+                        <div class="card-icon">📈</div>
+                        <p>Short-lived, event-driven functions</p>
+                    </div>
+                    <div class="floating-card card-5">
+                        <div class="card-header">Intelligent Sizing</div>
+                        <div class="card-icon">⚙️</div>
+                        <p>Automatically optimize resource allocation</p>
+                    </div>
+                    <div class="floating-card card-6">
+                        <div class="card-header">Infra as Code</div>
+                        <div class="card-icon">📝</div>
+                        <p>Define infrastructure using code</p>
+                    </div>
+                    <div class="glow-orb orb-1"></div>
+                    <div class="glow-orb orb-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Problems Section -->
+        <section id="problems" class="problems">
+            <div class="container">
+                <div class="section-header">
+                    <h2>The DevOps Problem Nobody Talks About</h2>
+                    <p>Your developers are drowning in infrastructure work</p>
+                </div>
+                <div class="problems-grid">
+                    <div class="problem-card problem-card-1">
+                        <div class="problem-icon">🧠</div>
+                        <h3>Kubernetes Complexity</h3>
+                        <p>Your team doesn't have deep K8s expertise, so they waste cycles learning container orchestration instead of shipping features.</p>
+                    </div>
+                    <div class="problem-card problem-card-2">
+                        <div class="problem-icon">💸</div>
+                        <h3>DevOps Tax</h3>
+                        <p>Hiring specialized DevOps engineers is expensive and slow. Your budget doesn't justify a full-time ops person yet.</p>
+                    </div>
+                    <div class="problem-card problem-card-3">
+                        <div class="problem-icon">⏰</div>
+                        <h3>Lost Productivity</h3>
+                        <p>Engineers spend 25%+ of their time on infrastructure, CI/CD, and deployment pipelines instead of building your product.</p>
+                    </div>
+                    <div class="problem-card problem-card-4">
+                        <div class="problem-icon">🔗</div>
+                        <h3>Fragmented Tooling</h3>
+                        <p>Database, cache, DNS, SSL, monitoring, logging—you're stitching together 6+ separate tools and learning curves.</p>
+                    </div>
+                    <div class="problem-card problem-card-5">
+                        <div class="problem-icon">🚨</div>
+                        <h3>Security Gaps</h3>
+                        <p>Configuring networking, firewalls, and compliance correctly is hard. One mistake and you're exposed.</p>
+                    </div>
+                    <div class="problem-card problem-card-6">
+                        <div class="problem-icon">🌍</div>
+                        <h3>GDPR Headaches</h3>
+                        <p>US hyperscalers expose you to CLOUD Act jurisdiction. European customers demand data sovereignty.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Solution Section -->
+        <section id="why" class="solution">
+            <div class="container">
+                <div class="section-header">
+                    <h2>The <span class="logo-text">unhazzle</span> Solution</h2>
+                    <p>Infrastructure provisioned seamlessly. Deploy like you're using Vercel, but for backends.</p>
+                </div>
+                <div class="solution-grid">
+                    <div class="solution-card">
+                        <div class="solution-icon icon-git">→</div>
+                        <h3>Painless infrastructure configuration</h3>
+                        <p>Quickly tell us about your application.</p>
+                        <div class="check-list">
+                            <span>Answer 4 simple questions. Well do the rest.</span>
+                            <span>Connect your OCI (docker image) registry.</span>
+                            <span>Developer-first experience.</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-magic">✨</div>
+                        <h3>Smart Preconfiguration</h3>
+                        <p>unhazzle analyzes your answers and container image metadata to infer what you need: CPU, memory, ports, health checks, scaling thresholds.</p>
+                        <div class="check-list">
+                            <span>Intelligent defaults.</span>
+                            <span>Customizable anytime. You are in control.</span>
+                            <span>Industry best practice standards.</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-database">◎</div>
+                        <h3>Managed Databases and in-memory caching</h3>
+                        <p>Support for the most popular open source database engines and in-memory caching systems.</p>
+                        <div class="check-list">
+                            <span>Auto-scaling storage.</span>
+                            <span>Daily backups. Point-in-time recovery.</span>
+                            <span>Intelligent right sizing.</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-scale">⇌</div>
+                        <h3>Auto-Scaling Built-In</h3>
+                        <p>Your app scales based on CPU, memory, and request count. No manual intervention. Handles traffic spikes automatically.</p>
+                        <div class="check-list">
+                            <span>Configurable thresholds</span>
+                            <span>Cost-optimized</span>
+                            <span>Zero-downtime scaling</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-lock">🔐</div>
+                        <h3>Enterprise Security</h3>
+                        <p>SSL/TLS by default, network isolation, DDoS protection, compliance configurations, and firewall rules automatically applied.</p>
+                        <div class="check-list">
+                            <span>SSL certificates</span>
+                            <span>WAF included</span>
+                            <span>Encryption at rest and in transit</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-europe">🇪🇺</div>
+                        <h3>European Sovereignty</h3>
+                        <p>Your infrastructure lives in Europe. Full GDPR compliance. No CLOUD Act exposure. Your data, protected.</p>
+                        <div class="check-list">
+                            <span>EU data residency</span>
+                            <span>GDPR pre-configured</span>
+                            <span>Privacy first</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-hero">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to <strong>unhazzle</strong> your infrastructure?</h2>
+                    <p>Join growth-stage startups and indie developers building on Unhazzle</p>
+                    <div class="cta-actions">
+                        <a href="/unhazzle.io/" class="btn btn-primary btn-large btn-glow">Try our Demo</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-text">unhazzle</span>
+                    <p>Infrastructure without the hassle</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#why">Why Unhazzle</a></li>
+                            <li><a href="#problems">The problem we solve</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="/unhazzle.io/">Launch App</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Security</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Unhazzle. All rights reserved. 🇪🇺 Built in Europe.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
