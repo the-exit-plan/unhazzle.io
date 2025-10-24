@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          working-directory: prototype-app
 
       - name: Create deployment directory
         run: mkdir -p deploy
