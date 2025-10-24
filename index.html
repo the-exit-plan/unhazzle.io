@@ -1,30 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unhazzle - Simplify Your Infrastructure</title>
-    <meta name="description" content="Handle infrastructure complexity so developers focus on features, not deployments. Simplified infrastructure management for production-grade applications.">
+    <title>unhazzle - Infrastructure for Developers, Not Operators</title>
+    <meta name="description" content="Stop hiring DevOps engineers. Stop your developers spending 25% of their time managing infrastructure. Deploy production-grade apps in minutes with Unhazzle.">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="header">
         <nav class="nav">
             <div class="nav-container">
-                <div class="logo">
-                    <span class="logo-text">unhazzle</span>
-                    <span class="logo-tagline">Infrastructure without the hassle</span>
+                <div class="logo-brand">
+                    <div>
+                        <span class="logo-text">unhazzle</span>
+                        <span class="logo-tagline">Infrastructure without the hassle</span>
+                    </div>
                 </div>
                 <ul class="nav-links">
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                    <li><button class="theme-toggle" aria-label="Toggle dark theme">
-                        <span class="theme-icon"></span>
-                    </button></li>
-                    <li><a href="http://localhost:3000" class="cta-button">Get Started</a></li>
+                    <li><a href="#why">Why unhazzle</a></li>
+                    <li><a href="#problems">The problem we solve</a></li>
+                    <li><a href="/unhazzle.io/" class="cta-button">Try our Demo</a></li>
                 </ul>
                 <button class="mobile-menu-toggle" aria-label="Toggle menu">
                     <span></span>
@@ -38,403 +37,177 @@
     <main>
         <!-- Hero Section -->
         <section class="hero">
+            <div class="hero-stars"></div>
             <div class="container">
                 <div class="hero-content">
+                    <div class="hero-badge">The infrastructure layer your team has been waiting for</div>
                     <h1 class="hero-title">
-                        Infrastructure
-                        <span class="highlight">without the hassle</span>
+                        Ship production 
+                        <span class="gradient-text">infrastructure in minutes</span>,
+                        not weeks
                     </h1>
                     <p class="hero-subtitle">
-                        Deploy your apps to production-grade infrastructure in minutes. A developer-first platform that lets your team focus on <strong>building features, not managing infrastructure</strong>.
-                    </p> 
+                        Stop hiring DevOps consultants. Stop your developers spending +25% of their time managing servers. 
+                        Deploy from git to production. Let <strong>unhazzle</strong> handle the complexity.
+                    </p>
                     <div class="hero-actions">
-                        <a href="http://localhost:3000" class="btn btn-primary">Start Building</a>
-                        <a href="#features" class="btn btn-secondary">Learn More</a>
+                        <a href="/unhazzle.io/" class="btn btn-ghost btn-large btn-glow">Try our Demo</a>
+                        <a href="#why" class="btn btn-ghost btn-large">See How It Works</a>
+                    </div>
+                    <div class="hero-trust">
+                        <span>Trusted by European startups</span>
+                        <div class="trust-badges">
+                            <span class="badge">🇪🇺 GDPR Ready</span>
+                            <span class="badge">40 min deploy</span>
+                            <span class="badge">Enterprise security</span>
+                        </div>
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <div class="deployment-flow">
-                        <div class="flow-step" id="local-dev">
-                            <div class="step-icon">💻</div>
-                            <div class="step-content">
-                                <h3>Local Development</h3>
-                                <div class="terminal">
-                                    <div class="terminal-header">
-                                        <div class="terminal-dots">
-                                            <span></span><span></span><span></span>
-                                        </div>
-                                        <span class="terminal-title">Terminal</span>
-                                    </div>
-                                    <div class="terminal-body">
-                                        <div class="command-line">
-                                            <span class="prompt">$</span>
-                                            <span class="command" id="git-command">git push origin main</span>
-                                            <span class="cursor">|</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flow-connector">
-                            <div class="data-packet" id="packet1"></div>
-                            <div class="connection-line"></div>
-                        </div>
-
-                        <div class="flow-step" id="git-repo">
-                            <div class="step-icon">🌐</div>
-                            <div class="step-content">
-                                <h3>Git Repository</h3>
-                                <div class="git-visual">
-                                    <div class="commit-indicator" id="commit-pulse"></div>
-                                    <div class="repo-name">your-app.git</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flow-connector">
-                            <div class="data-packet" id="packet2"></div>
-                            <div class="connection-line"></div>
-                        </div>
-
-                        <div class="flow-step" id="unhazzle-platform">
-                            <div class="step-icon">⚡</div>
-                            <div class="step-content">
-                                <!-- <h3>Unhazzle Platform</h3> -->
-                                <div class="platform-visual">
-                                    <div class="logo-container">
-                                        <span class="logo-text">unhazzle</span>
-                                    </div>
-                                    <div class="deployment-status">
-                                        <div class="status-item">
-                                            <div class="status-dot building" id="build-status"></div>
-                                            <span>Building...</span>
-                                        </div>
-                                        <div class="status-item">
-                                            <div class="status-dot deploying" id="deploy-status"></div>
-                                            <span>Deploying...</span>
-                                        </div>
-                                        <div class="status-item">
-                                            <div class="status-dot live" id="live-status"></div>
-                                            <span>Live!</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flow-connector final">
-                            <div class="data-packet" id="packet3"></div>
-                            <div class="connection-line"></div>
-                        </div>
-
-                        <div class="flow-step" id="production">
-                            <div class="step-icon">🚀</div>
-                            <div class="step-content">
-                                <h3>Production</h3>
-                                <div class="production-visual">
-                                    <div class="url-bar">
-                                        <div class="url-content">
-                                            <span class="protocol">https://</span>
-                                            <span class="domain">your-app.com</span>
-                                            <div class="ssl-indicator">🔒</div>
-                                        </div>
-                                    </div>
-                                    <div class="global-indicators">
-                                        <div class="region-dot active" title="Europe"></div>
-                                        <div class="region-dot active" title="US East"></div>
-                                        <div class="region-dot active" title="Asia"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="floating-card card-1">
+                        <div class="card-header">Applications</div>
+                        <div class="card-icon">◈</div>
+                        <p>Deploy your long-running apps effortlessly</p>
                     </div>
+                    <div class="floating-card card-2">
+                        <div class="card-header">Databases</div>
+                        <div class="card-icon">⚡</div>
+                        <p>Managed database services</p>
+                    </div>
+                    <div class="floating-card card-3">
+                        <div class="card-header">Cache Services</div>
+                        <div class="card-icon">📈</div>
+                        <p>Boost performance with caching</p>
+                    </div>
+                    <div class="floating-card card-4">
+                        <div class="card-header">Functions as a Service</div>
+                        <div class="card-icon">📈</div>
+                        <p>Short-lived, event-driven functions</p>
+                    </div>
+                    <div class="floating-card card-5">
+                        <div class="card-header">Intelligent Sizing</div>
+                        <div class="card-icon">⚙️</div>
+                        <p>Automatically optimize resource allocation</p>
+                    </div>
+                    <div class="floating-card card-6">
+                        <div class="card-header">Infra as Code</div>
+                        <div class="card-icon">📝</div>
+                        <p>Define infrastructure using code</p>
+                    </div>
+                    <div class="glow-orb orb-1"></div>
+                    <div class="glow-orb orb-2"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Infrastructure Canvas Section -->
-        <section class="infrastructure-canvas">
+        <!-- Problems Section -->
+        <section id="problems" class="problems">
             <div class="container">
                 <div class="section-header">
-                    <h2>Visual Infrastructure Canvas</h2>
-                    <p>Design your infrastructure visually and see the code update in real-time. Changes sync automatically between canvas and YAML.</p>
+                    <h2>The DevOps Problem Nobody Talks About</h2>
+                    <p>Your developers are drowning in infrastructure work</p>
                 </div>
-                <div class="canvas-demo">
-                    <div class="canvas-container">
-                        <div class="canvas-header">
-                            <h3>Infrastructure Canvas</h3>
-                            <div class="canvas-controls">
-                                <button class="canvas-btn add-resource">+ Add Resource</button>
-                                <button class="canvas-btn apply-changes">Apply Changes</button>
-                            </div>
-                        </div>
-                        <div class="canvas-workspace">
-                            <div class="resource-node app-node" id="app-resource">
-                                <div class="resource-icon">🚀</div>
-                                <div class="resource-info">
-                                    <h4>web-app</h4>
-                                    <p>Next.js Application</p>
-                                </div>
-                                <div class="resource-status">Ready</div>
-                            </div>
-                            
-                            <div class="connection-line horizontal"></div>
-                            
-                            <div class="resource-node db-node" id="db-resource">
-                                <div class="resource-icon">🗄️</div>
-                                <div class="resource-info">
-                                    <h4>postgres-db</h4>
-                                    <p>PostgreSQL Database</p>
-                                </div>
-                                <div class="resource-status">Ready</div>
-                            </div>
-                            
-                            <div class="connection-line vertical"></div>
-                            
-                            <div class="resource-node cache-node" id="cache-resource">
-                                <div class="resource-icon">⚡</div>
-                                <div class="resource-info">
-                                    <h4>redis-cache</h4>
-                                    <p>Redis Cache</p>
-                                </div>
-                                <div class="resource-status">Ready</div>
-                            </div>
-                        </div>
+                <div class="problems-grid">
+                    <div class="problem-card problem-card-1">
+                        <div class="problem-icon">🧠</div>
+                        <h3>Kubernetes Complexity</h3>
+                        <p>Your team doesn't have deep K8s expertise, so they waste cycles learning container orchestration instead of shipping features.</p>
                     </div>
-                    
-                    <div class="yaml-editor-container">
-                        <div class="editor-header">
-                            <h3>unhazzle.yaml</h3>
-                            <div class="editor-controls">
-                                <span class="sync-indicator">
-                                    <div class="sync-dot"></div>
-                                    Auto-sync enabled
-                                </span>
-                                <button class="editor-btn export">Export</button>
-                            </div>
-                        </div>
-                        <div class="yaml-editor">
-                            <div class="line-numbers">
-                                <span>1</span>
-                                <span>2</span>
-                                <span>3</span>
-                                <span>4</span>
-                                <span>5</span>
-                                <span>6</span>
-                                <span>7</span>
-                                <span>8</span>
-                                <span>9</span>
-                                <span>10</span>
-                                <span>11</span>
-                                <span>12</span>
-                                <span>13</span>
-                                <span>14</span>
-                                <span>15</span>
-                                <span>16</span>
-                                <span>17</span>
-                                <span>18</span>
-                                <span>19</span>
-                                <span>20</span>
-                            </div>
-                            <div class="yaml-content">
-<pre><code><span class="yaml-key">project:</span> <span class="yaml-value">tavo-portfolio</span>
-<span class="yaml-key">environment:</span> <span class="yaml-value">dev</span>
-
-<span class="yaml-key">resources:</span>
-  <span class="yaml-key">applications:</span>
-    - <span class="yaml-key">name:</span> <span class="yaml-value">web-app</span>
-      <span class="yaml-key">type:</span> <span class="yaml-value">nextjs</span>
-      <span class="yaml-key">repo:</span> <span class="yaml-value">github.com/tavo/portfolio</span>
-      <span class="yaml-key">cpu:</span> <span class="yaml-value">0.5</span>
-      <span class="yaml-key">memory:</span> <span class="yaml-value">512Mi</span>
-      <span class="yaml-key">public:</span> <span class="yaml-value">true</span>
-
-  <span class="yaml-key">databases:</span>
-    - <span class="yaml-key">name:</span> <span class="yaml-value">postgres-db</span>
-      <span class="yaml-key">engine:</span> <span class="yaml-value">postgresql</span>
-      <span class="yaml-key">size:</span> <span class="yaml-value">small</span>
-
-  <span class="yaml-key">cache:</span>
-    - <span class="yaml-key">name:</span> <span class="yaml-value">redis-cache</span>
-      <span class="yaml-key">engine:</span> <span class="yaml-value">redis</span>
-      <span class="yaml-key">size:</span> <span class="yaml-value">small</span></code></pre>
-                            </div>
-                        </div>
+                    <div class="problem-card problem-card-2">
+                        <div class="problem-icon">💸</div>
+                        <h3>DevOps Tax</h3>
+                        <p>Hiring specialized DevOps engineers is expensive and slow. Your budget doesn't justify a full-time ops person yet.</p>
                     </div>
-                </div>
-                
-                <div class="canvas-features">
-                    <div class="feature-highlight">
-                        <div class="highlight-icon">🔄</div>
-                        <div class="highlight-content">
-                            <h4>Bidirectional Sync</h4>
-                            <p>Changes in the visual canvas automatically update the YAML code, and vice versa. No manual syncing required.</p>
-                        </div>
+                    <div class="problem-card problem-card-3">
+                        <div class="problem-icon">⏰</div>
+                        <h3>Lost Productivity</h3>
+                        <p>Engineers spend 25%+ of their time on infrastructure, CI/CD, and deployment pipelines instead of building your product.</p>
                     </div>
-                    <div class="feature-highlight">
-                        <div class="highlight-icon">🎯</div>
-                        <div class="highlight-content">
-                            <h4>Drag & Drop Resources</h4>
-                            <p>Simply drag resources onto the canvas and configure them visually. Perfect for developers who prefer visual tools.</p>
-                        </div>
+                    <div class="problem-card problem-card-4">
+                        <div class="problem-icon">🔗</div>
+                        <h3>Fragmented Tooling</h3>
+                        <p>Database, cache, DNS, SSL, monitoring, logging—you're stitching together 6+ separate tools and learning curves.</p>
                     </div>
-                    <div class="feature-highlight">
-                        <div class="highlight-icon">📝</div>
-                        <div class="highlight-content">
-                            <h4>Code-First Flexibility</h4>
-                            <p>Prefer writing YAML? Edit the code directly and watch your infrastructure update in the visual canvas in real-time.</p>
-                        </div>
+                    <div class="problem-card problem-card-5">
+                        <div class="problem-icon">🚨</div>
+                        <h3>Security Gaps</h3>
+                        <p>Configuring networking, firewalls, and compliance correctly is hard. One mistake and you're exposed.</p>
                     </div>
-                    <div class="feature-highlight">
-                        <div class="highlight-icon">💰</div>
-                        <div class="highlight-content">
-                            <h4>Cost Preview</h4>
-                            <p>See estimated costs before deploying. No surprise bills - complete transparency in resource pricing.</p>
-                        </div>
+                    <div class="problem-card problem-card-6">
+                        <div class="problem-icon">🌍</div>
+                        <h3>GDPR Headaches</h3>
+                        <p>US hyperscalers expose you to CLOUD Act jurisdiction. European customers demand data sovereignty.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Features Section -->
-        <section id="features" class="features">
+        <!-- Solution Section -->
+        <section id="why" class="solution">
             <div class="container">
                 <div class="section-header">
-                    <h2>Reduce Infrastructure Complexity</h2>
-                    <p>Simplify your infrastructure management while maintaining production-grade standards. Developers can focus more on building features.</p>
+                    <h2>The <span class="logo-text">unhazzle</span> Solution</h2>
+                    <p>Infrastructure provisioned seamlessly. Deploy like you're using Vercel, but for backends.</p>
                 </div>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Git-Push to Production</h3>
-                        <p>Developer experience-first platform. Deploy from git to production in minutes, not weeks. No complex CI/CD configurations required.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🛠️</div>
-                        <h3>Minimal Infrastructure Management</h3>
-                        <p>Focus on coding and shipping features. We handle the infrastructure complexity so you don't have to hire expensive DevOps consultants.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🤝</div>
-                        <h3>Collaborative Infrastructure Management</h3>
-                        <p>Work with our platform to simplify complex infrastructure tasks. Some setup and configuration may be needed, but we handle the heavy lifting.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⏱️</div>
-                        <h3>Reclaim 25% Developer Time</h3>
-                        <p>Stop having developers spend 25%+ of their time on infrastructure. Let them focus on building features that drive business value.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🇪🇺</div>
-                        <h3>European Data Sovereignty</h3>
-                        <p>Your data stays in European soil, ensuring GDPR compliance and EU regulations. No concerns about the US CLOUD Act.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🛡️</div>
-                        <h3>Enterprise Security Built-In</h3>
-                        <p>Security best practices, compliance, and monitoring included without the overhead or complexity.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- European Advantage Section -->
-        <section class="european-advantage">
-            <div class="container">
-                <div class="advantage-content">
-                    <div class="advantage-visual">
-                        <div class="eu-flag">🇪🇺</div>
-                        <div class="compliance-badges">
-                            <div class="badge">GDPR Compliant</div>
-                            <div class="badge">EU Regulations</div>
-                            <div class="badge">European Data Centers</div>
+                <div class="solution-grid">
+                    <div class="solution-card">
+                        <div class="solution-icon icon-git">→</div>
+                        <h3>Painless infrastructure configuration</h3>
+                        <p>Quickly tell us about your application.</p>
+                        <div class="check-list">
+                            <span>Answer 4 simple questions. Well do the rest.</span>
+                            <span>Connect your OCI (docker image) registry.</span>
+                            <span>Developer-first experience.</span>
                         </div>
                     </div>
-                    <div class="advantage-text">
-                        <h2>Your Data Stays in Europe</h2>
-                        <p class="advantage-subtitle">
-                            Unlike US hyperscalers, your infrastructure runs exclusively on European soil, ensuring complete data sovereignty and regulatory compliance.
-                        </p>
-                        <div class="advantage-points">
-                            <div class="point">
-                                <span class="point-icon">✓</span>
-                                <div>
-                                    <strong>GDPR Guaranteed</strong>
-                                    <p>Full compliance with European data protection regulations built into every service.</p>
-                                </div>
-                            </div>
-                            <div class="point">
-                                <span class="point-icon">✓</span>
-                                <div>
-                                    <strong>No CLOUD Act Concerns</strong>
-                                    <p>Your data is protected from US government access requests that affect other cloud providers.</p>
-                                </div>
-                            </div>
-                            <div class="point">
-                                <span class="point-icon">✓</span>
-                                <div>
-                                    <strong>EU Regulatory Compliance</strong>
-                                    <p>Designed from the ground up to meet European regulatory standards and requirements.</p>
-                                </div>
-                            </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-magic">✨</div>
+                        <h3>Smart Preconfiguration</h3>
+                        <p>unhazzle analyzes your answers and container image metadata to infer what you need: CPU, memory, ports, health checks, scaling thresholds.</p>
+                        <div class="check-list">
+                            <span>Intelligent defaults.</span>
+                            <span>Customizable anytime. You are in control.</span>
+                            <span>Industry best practice standards.</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- About Section -->
-        <section id="about" class="about">
-            <div class="container">
-                <div class="about-content">
-                    <div class="about-text">
-                        <h2>Built by Developers, for Growth-Stage Teams</h2>
-                        <p>
-                            We created Unhazzle because we've experienced the infrastructure pain firsthand. Our team has deep understanding of developer productivity bottlenecks and has solved infrastructure challenges at different scales.
-                        </p>
-                        <p>
-                            Designed specifically for growth-stage startups with 10-40 engineers who currently spend 25%+ of their time on infrastructure instead of building features. Stop using expensive DevOps consultants or struggling with internal ops burden - focus on what drives your business forward.
-                        </p>
-                        <div class="stats">
-                            <div class="stat">
-                                <div class="stat-number">Reduced</div>
-                                <div class="stat-label">Infrastructure Complexity</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-number">More</div>
-                                <div class="stat-label">Time for Features</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-number">Faster</div>
-                                <div class="stat-label">Deployment Process</div>
-                            </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-database">◎</div>
+                        <h3>Managed Databases and in-memory caching</h3>
+                        <p>Support for the most popular open source database engines and in-memory caching systems.</p>
+                        <div class="check-list">
+                            <span>Auto-scaling storage.</span>
+                            <span>Daily backups. Point-in-time recovery.</span>
+                            <span>Intelligent right sizing.</span>
                         </div>
                     </div>
-                    <div class="about-visual">
-                        <div class="platform-preview">
-                            <div class="preview-header">
-                                <div class="preview-dots">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                                <span class="preview-title">Unhazzle Dashboard</span>
-                            </div>
-                            <div class="preview-content">
-                                <div class="preview-item">
-                                    <span class="status-green">●</span> Production Environment
-                                </div>
-                                <div class="preview-item">
-                                    <span class="status-blue">●</span> API Service (3 instances)
-                                </div>
-                                <div class="preview-item">
-                                    <span class="status-green">●</span> Database (Auto-backup)
-                                </div>
-                                <div class="preview-item">
-                                    <span class="status-yellow">●</span> Cache Layer
-                                </div>
-                            </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-scale">⇌</div>
+                        <h3>Auto-Scaling Built-In</h3>
+                        <p>Your app scales based on CPU, memory, and request count. No manual intervention. Handles traffic spikes automatically.</p>
+                        <div class="check-list">
+                            <span>Configurable thresholds</span>
+                            <span>Cost-optimized</span>
+                            <span>Zero-downtime scaling</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-lock">🔐</div>
+                        <h3>Enterprise Security</h3>
+                        <p>SSL/TLS by default, network isolation, DDoS protection, compliance configurations, and firewall rules automatically applied.</p>
+                        <div class="check-list">
+                            <span>SSL certificates</span>
+                            <span>WAF included</span>
+                            <span>Encryption at rest and in transit</span>
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon icon-europe">🇪🇺</div>
+                        <h3>European Sovereignty</h3>
+                        <p>Your infrastructure lives in Europe. Full GDPR compliance. No CLOUD Act exposure. Your data, protected.</p>
+                        <div class="check-list">
+                            <span>EU data residency</span>
+                            <span>GDPR pre-configured</span>
+                            <span>Privacy first</span>
                         </div>
                     </div>
                 </div>
@@ -442,64 +215,18 @@
         </section>
 
         <!-- CTA Section -->
-        <section class="cta">
+        <section class="cta-hero">
             <div class="container">
                 <div class="cta-content">
-                    <h2>Ready to Simplify Your Infrastructure?</h2>
-                    <p>Join growth-stage startups who've reduced infrastructure complexity and streamlined their deployment processes with our platform.</p>
+                    <h2>Ready to <strong>unhazzle</strong> your infrastructure?</h2>
+                    <p>Join growth-stage startups and indie developers building on Unhazzle</p>
                     <div class="cta-actions">
-                        <a href="http://localhost:3000" class="btn btn-primary btn-large">Start Building Today</a>
-                        <a href="#contact" class="btn btn-outline btn-large">Talk to Sales</a>
+                        <a href="/unhazzle.io/" class="btn btn-primary btn-large btn-glow">Try our Demo</a>
                     </div>
                 </div>
             </div>
         </section>
     </main>
-
-    <!-- Contact Section -->
-    <section id="contact" class="contact">
-        <div class="container">
-            <div class="contact-content">
-                <div class="contact-info">
-                    <h2>Get in Touch</h2>
-                    <p>Ready to simplify your infrastructure? We're here to help.</p>
-                    <div class="contact-methods">
-                        <div class="contact-method">
-                            <strong>Email</strong>
-                            <a href="mailto:hello@unhazzle.io">hello@unhazzle.io</a>
-                        </div>
-                        <div class="contact-method">
-                            <strong>Sales</strong>
-                            <a href="mailto:sales@unhazzle.io">sales@unhazzle.io</a>
-                        </div>
-                        <div class="contact-method">
-                            <strong>Support</strong>
-                            <a href="mailto:support@unhazzle.io">support@unhazzle.io</a>
-                        </div>
-                    </div>
-                </div>
-                <form class="contact-form">
-                    <div class="form-group">
-                        <label for="name">Name</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="company">Company</label>
-                        <input type="text" id="company" name="company">
-                    </div>
-                    <div class="form-group">
-                        <label for="message">Message</label>
-                        <textarea id="message" name="message" rows="4" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
-                </form>
-            </div>
-        </div>
-    </section>
 
     <footer class="footer">
         <div class="container">
@@ -512,19 +239,14 @@
                     <div class="footer-section">
                         <h4>Product</h4>
                         <ul>
-                            <li><a href="#features">Features</a></li>
-                            <li><a href="#">Pricing</a></li>
-                            <li><a href="#">Documentation</a></li>
-                            <li><a href="#">Status</a></li>
+                            <li><a href="#why">Why Unhazzle</a></li>
+                            <li><a href="#problems">The problem we solve</a></li>
                         </ul>
                     </div>
                     <div class="footer-section">
                         <h4>Company</h4>
                         <ul>
-                            <li><a href="#about">About</a></li>
-                            <li><a href="#">Blog</a></li>
-                            <li><a href="#">Careers</a></li>
-                            <li><a href="#contact">Contact</a></li>
+                            <li><a href="/unhazzle.io/">Launch App</a></li>
                         </ul>
                     </div>
                     <div class="footer-section">
@@ -538,7 +260,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Unhazzle. All rights reserved.</p>
+                <p>&copy; 2025 Unhazzle. All rights reserved. 🇪🇺 Built in Europe.</p>
             </div>
         </div>
     </footer>
