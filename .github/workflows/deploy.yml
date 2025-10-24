@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          working-directory: prototype-app
+          cache-dependency-path: prototype-app/package-lock.json
 
       - name: Create deployment directory
         run: mkdir -p deploy
