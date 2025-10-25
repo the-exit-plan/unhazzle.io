@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         {
             title: "Step 2: Initialize Project",
-             description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health</code><br><small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image, --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --with-github-actions (false).</small>",
-             command: "unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health --public true",
+             description: "Create a new Unhazzle project:<br><code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health --min-instances 1 --max-instances 3</code><br><small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image, --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --min-instances (1, app only), --max-instances (3, app only), --with-github-actions (false).</small>",
+             command: "unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health --min-instances 1 --max-instances 3 --public true",
             completed: false
         },
         {
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
       --name NAME              Project name (default: my-project)
       --env ENV                Environment: dev/staging/prod (default: dev)
       --app-name NAME          Application name (default: my-app)
-        --app-image IMAGE        Application Docker image (default: ghcr.io/my-org/my-app:v2.1.4)
+      --app-image IMAGE        Application Docker image (required)
       --app-cpu CPU            CPU cores: 0.25/0.5/1.0/2.0 (default: 0.5)
       --app-memory MEM         Memory: 256Mi/512Mi/1Gi/2Gi/4Gi (default: 512Mi)
       --public                 Make application publicly accessible (default: true)
@@ -144,9 +144,11 @@ document.addEventListener('DOMContentLoaded', function() {
       --db-size SIZE           Database size: small/medium/large (default: small)
       --with-cache             Include cache service (default: false)
       --cache-engine ENGINE    Cache engine: redis/memcached (default: redis)
-        --cache-size SIZE        Cache size: small/medium/large (default: small)
-        --health-check PATH      Health check endpoint path (default: /health)
-        --with-github-actions    Generate GitHub Actions workflows (default: false)
+      --cache-size SIZE        Cache size: small/medium/large (default: small)
+      --health-check PATH      Health check endpoint path (default: /health)
+      --min-instances INSTANCES Minimum instances for application autoscaling (default: 1, requires --with-app)
+       --max-instances INSTANCES Maximum instances for application autoscaling (default: 3, requires --with-app)
+         --with-github-actions    Generate GitHub Actions workflows (default: false)
     unhazzle logs          - Fetch application logs
     unhazzle metrics       - Show application performance metrics
     unhazzle application   - Manage applications
@@ -250,33 +252,49 @@ GitHub Login
                      return `Error: Invalid cache size '${cacheSize}'. Must be small, medium, or large.`;
                  }
 
-                 const healthCheckPath = flags['health-check'] || '/health';
+                  const healthCheckPath = flags['health-check'] || '/health';
 
-                 const addGitHubActions = flags['with-github-actions'] === true || flags['with-github-actions'] === 'true';
+                  // Autoscaling flags are only applicable when creating an application
+                  let minInstances = '1';
+                  let maxInstances = '3';
+                  if (addApp) {
+                      minInstances = flags['min-instances'] || '1';
+                      maxInstances = flags['max-instances'] || '3';
+                      if (parseInt(minInstances) < 1 || parseInt(maxInstances) < parseInt(minInstances) || parseInt(maxInstances) > 10) {
+                          return `Error: Invalid autoscaling values. min-instances must be >= 1, max-instances must be >= min-instances and <= 10.`;
+                      }
+                  } else if (flags['min-instances'] || flags['max-instances']) {
+                      return `Error: Autoscaling flags (--min-instances, --max-instances) are only applicable when creating an application. Use --with-app or --app-image.`;
+                  }
+
+                  const addGitHubActions = flags['with-github-actions'] === true || flags['with-github-actions'] === 'true';
                 const isPublic = flags['public'] !== false && flags['public'] !== 'false';
 
                 // Store configuration
                  loginData = {
-                     projectName,
-                     environment,
-                     addApp,
-                     appName,
-                     appCpu,
-                     appMemory,
-                     appImage,
-                     isPublic,
-                     addDb,
-                     dbEngine,
-                     dbSize,
-                     addCache,
-                     cacheEngine,
-                     cacheSize,
-                     healthCheckPath,
-                     addGitHubActions
-                 };
+                      projectName,
+                      environment,
+                      addApp,
+                      appName,
+                      appCpu,
+                      appMemory,
+                      appImage,
+                      isPublic,
+                      addDb,
+                      dbEngine,
+                      dbSize,
+                      addCache,
+                      cacheEngine,
+                      cacheSize,
+                      healthCheckPath,
+                      minInstances,
+                      maxInstances,
+                      addGitHubActions
+                  };
 
                 // Generate YAML
-                let yaml = `project: ${projectName.replace(/'/g, "\\'")}
+                let yaml = `# unhazzle.yaml
+project: ${projectName.replace(/'/g, "\\'")}
 environment: ${environment}
 
 resources:`;
@@ -290,54 +308,103 @@ resources:`;
       cpu: ${appCpu}
       memory: ${appMemory}
       public: ${isPublic}
-      health_check: ${healthCheckPath}`;
+      health_check: ${healthCheckPath}
+      autoscaling:
+        min_instances: ${minInstances}
+        max_instances: ${maxInstances}`;
+                }
+
+                // Add services section under resources for databases and caches
+                let hasServices = addDb || addCache;
+                if (hasServices) {
+                    yaml += `
+
+  services:`;
                 }
 
                 if (addDb) {
                     yaml += `
-
-  databases:
-    - name: ${projectName.replace(/'/g, "\\'")}-db
-      engine: ${dbEngine}
-      size: ${dbSize}`;
+    databases:
+      - name: ${projectName.replace(/'/g, "\\'")}-db
+        engine: ${dbEngine}
+        size: ${dbSize}`;
                 }
 
                 if (addCache) {
                     yaml += `
 
-  caches:
-    - name: ${projectName.replace(/'/g, "\\'")}-cache
-      engine: ${cacheEngine}
-      size: ${cacheSize}`;
+    caches:
+      - name: ${projectName.replace(/'/g, "\\'")}-cache
+        engine: ${cacheEngine}
+        size: ${cacheSize}`;
                 }
 
                 if (addGitHubActions) {
                     yaml += `
 
+# .github/workflows/deploy.yml
 github_actions:
   enabled: true
   workflows:
-    - deploy`;
+    deploy:
+      name: deploy
+      on:
+        push:
+          branches: [ main ]
+          tags: [ 'v*' ]
+        pull_request:
+          branches: [ main ]
+      jobs:
+        deploy:
+          runs-on: ubuntu-latest
+          permissions:
+            contents: 'read'
+            id-token: 'write'
+          steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Authenticate to Unhazzle
+              uses: unhazzle/cli-action@v1
+              with:
+                command: login
+                token: \${{ secrets.UNHAZZLE_TOKEN }}
+            - name: Deploy to Unhazzle
+              id: deploy
+              uses: unhazzle/cli-action@v1
+              with:
+                command: apply
+                config: unhazzle.yaml
+                environment: \${{ github.ref_name }}
+                wait: true
+            - name: Get deployment status
+              if: steps.deploy.outcome == 'success'
+              uses: unhazzle/cli-action@v1
+              with:
+                command: status
+                environment: \${{ github.ref_name }}
+                token: \${{ secrets.UNHAZZLE_TOKEN }}`;
                 }
 
                  projectConfig = {
-                     projectName,
-                     environment,
-                     hasApp: addApp,
-                     appName,
-                     appCpu,
-                     appMemory,
-                     appImage,
-                     isPublic,
-                     hasDb: addDb,
-                     dbEngine,
-                     dbSize,
-                     hasCache: addCache,
-                     cacheEngine,
-                     cacheSize,
-                     healthCheckPath,
-                     hasGitHubActions: addGitHubActions
-                 };
+                      projectName,
+                      environment,
+                      hasApp: addApp,
+                      appName,
+                      appCpu,
+                      appMemory,
+                      appImage,
+                      isPublic,
+                      hasDb: addDb,
+                      dbEngine,
+                      dbSize,
+                      hasCache: addCache,
+                      cacheEngine,
+                      cacheSize,
+                      healthCheckPath,
+                      minInstances,
+                      maxInstances,
+                      hasGitHubActions: addGitHubActions
+                  };
                 generatedYaml = yaml;
 
                 return `🚀 Initialized unhazzle project '${projectName.replace(/'/g, "\\'")}'
@@ -611,7 +678,7 @@ ${resourcesText}
                     let statusLines = [`Environment: ${projectConfig.environment}`];
 
                     if (projectConfig.hasApp) {
-                        statusLines.push(`Applications: 1 running (${projectConfig.appCpu} CPU, ${projectConfig.appMemory})`);
+                        statusLines.push(`Applications: 1 running (${projectConfig.appCpu} CPU, ${projectConfig.appMemory}, autoscaling: ${projectConfig.minInstances}-${projectConfig.maxInstances} instances)`);
                     }
                     if (projectConfig.hasDb) {
                         statusLines.push(`Databases: 1 running (${projectConfig.dbEngine}, ${projectConfig.dbSize})`);

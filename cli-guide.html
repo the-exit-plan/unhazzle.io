@@ -55,9 +55,9 @@
                     <div class="step-item" id="step-2">
                         <div class="step-header">Step 2: Initialize Project</div>
                         <div class="step-details">
-                            <p>Create a new Unhazzle project:</p>
-                             <code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health</code>
-                             <small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:v2.1.4), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --with-github-actions (false).</small>
+                             <p>Create a new Unhazzle project:</p>
+                              <code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health --min-instances 1 --max-instances 3</code>
+                              <small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:v2.1.4), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --min-instances (1, app only), --max-instances (3, app only), --with-github-actions (false).</small>
                         </div>
                     </div>
                      <div class="step-item" id="step-3">
