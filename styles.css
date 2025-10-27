@@ -420,7 +420,8 @@ strong {
     border-radius: var(--radius-xl);
     padding: var(--space-6);
     backdrop-filter: blur(10px);
-    animation: float 1.5s ease-in-out infinite;
+    /* Animation disabled per feedback */
+    animation: none;
     width: 100%;
 }
 
