@@ -1067,8 +1067,41 @@ Your application, databases, and cache services are no longer available.`);
             }
         });
 
-
+        // Update navigation button states
+        updateNavigationButtons();
     }
+
+    // Function to update navigation button states
+    function updateNavigationButtons() {
+        const prevBtn = document.getElementById('prev-step');
+        const nextBtn = document.getElementById('next-step');
+        if (prevBtn) {
+            prevBtn.disabled = currentStep === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = currentStep === steps.length - 1;
+        }
+    }
+
+    // Function to go to previous step
+    function goToPreviousStep() {
+        if (currentStep > 0) {
+            currentStep--;
+            updateStepUI();
+        }
+    }
+
+    // Function to go to next step
+    function goToNextStep() {
+        if (currentStep < steps.length - 1) {
+            currentStep++;
+            updateStepUI();
+        }
+    }
+
+    // Make functions globally accessible
+    window.goToPreviousStep = goToPreviousStep;
+    window.goToNextStep = goToNextStep;
 
     // Add click handlers for step headers
     document.querySelectorAll('.step-header').forEach((header, index) => {

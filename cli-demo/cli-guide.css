@@ -157,6 +157,13 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.step-navigation {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
 /* Improve readability inside the light instruction panel */
 .instruction-panel .step-header {
     color: #0f172a;
@@ -338,6 +345,14 @@ body {
     border: 2px solid transparent;
 }
 
+.btn:disabled {
+    background-color: var(--white);
+    color: var(--gray-700);
+    border-color: var(--gray-600);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #7c3aed, #7c3aed);
     color: #ffffff;
@@ -357,6 +372,18 @@ body {
 .btn-outline:hover {
     background-color: var(--primary-blue);
     color: var(--white);
+}
+
+.btn-secondary {
+    background-color: var(--gray-700);
+    color: var(--white);
+    border-color: var(--gray-600);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--gray-600);
+    border-color: var(--gray-500);
+    color: var(--gray-900);
 }
 
 /* Marketing hero secondary button style */
