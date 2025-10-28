@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unhazzle CLI Guide - Experience the Flow</title>
+    <link rel="stylesheet" href="cli-guide.css?v=20251027">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="cli-guide-container">
+        <header class="guide-header">
+            <div class="header-content">
+                <div class="header-main">
+                    <div class="header-icon">🚀</div>
+                    <div class="header-text">
+                        <h1>Experience Unhazzle CLI Flow</h1>
+                        <p>Master infrastructure deployment through our interactive terminal guide</p>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="step-counter">Step <span id="current-step">1</span> of <span id="total-steps">7</span></div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="guide-content">
+            <div class="instruction-panel" id="instruction-panel">
+                <h2>CLI User Journey</h2>
+                <div class="steps-list">
+                     <div class="step-item active" id="step-0">
+                         <div class="step-header">Welcome to Unhazzle CLI - Ecommerce App Deployment Guide</div>
+                         <div class="step-details">
+                             <p>This guided tutorial will walk you through deploying a complete ecommerce application with database and cache services.</p>
+                             <p>Let's get started with: <code>unhazzle help</code></p>
+                             <small>This will show you all available commands to get started.</small>
+                         </div>
+                     </div>
+                    <div class="step-item" id="step-1">
+                        <div class="step-header">Step 1: Login with GitHub</div>
+                        <div class="step-details">
+                            <p>Authenticate with your GitHub account:</p>
+                            <code>unhazzle login</code>
+                            <small>This connects your GitHub repositories for deployment.</small>
+                        </div>
+                    </div>
+                    <div class="step-item" id="step-2">
+                        <div class="step-header">Step 2: Initialize Project</div>
+                        <div class="step-details">
+                             <p>Create a new Unhazzle project:</p>
+                              <code>unhazzle init --name my-project --env dev --app-name my-app --with-db --with-cache --app-image ghcr.io/my-org/my-app:v2.1.4 --health-check /health --min-instances 1 --max-instances 3</code>
+                              <small>Available flags with defaults:<br>--name (my-project), --env (dev), --app-name (my-app), --app-image (ghcr.io/my-org/my-app:v2.1.4), --app-cpu (0.5), --app-memory (512Mi), --public (true), --with-db (false), --db-engine (postgres), --db-size (small), --with-cache (false), --cache-engine (redis), --cache-size (small), --health-check (/health), --min-instances (1, app only), --max-instances (3, app only), --with-github-actions (false).</small>
+                        </div>
+                    </div>
+                     <div class="step-item" id="step-3">
+                         <div class="step-header">Step 3: Deploy Infrastructure</div>
+                         <div class="step-details">
+                             <p>Apply all infrastructure changes:</p>
+                             <code>unhazzle apply</code>
+                             <small>This deploys everything to production with cost estimation.</small>
+                         </div>
+                     </div>
+                     <div class="step-item" id="step-4">
+                         <div class="step-header">Step 4: Check Status</div>
+                         <div class="step-details">
+                             <p>Verify your deployment:</p>
+                             <code>unhazzle status</code>
+                             <small>This shows the health and status of all your services.</small>
+                         </div>
+                     </div>
+                      <div class="step-item" id="step-5">
+                          <div class="step-header">Step 5: Monitor Application Logs</div>
+                          <div class="step-details">
+                              <p>Start monitoring application logs:</p>
+                              <code>unhazzle logs</code>
+                              <small>This starts streaming application logs in real-time. Run the command again to stop log streaming.</small>
+                          </div>
+                      </div>
+                      <div class="step-item" id="step-6">
+                          <div class="step-header">Step 6: Check Application Metrics</div>
+                          <div class="step-details">
+                              <p>Monitor your application's performance metrics:</p>
+                              <code>unhazzle metrics</code>
+                              <small>This displays real-time metrics for your application, database, and cache services.</small>
+                          </div>
+                      </div>
+                      <div class="step-item" id="step-7">
+                          <div class="step-header">Step 7: Destroy Infrastructure</div>
+                          <div class="step-details">
+                              <p>Destroy all infrastructure resources:</p>
+                              <code>unhazzle destroy</code>
+                              <small>This will prompt for confirmation by requiring you to type the project name. Use with extreme caution!</small>
+                          </div>
+                      </div>
+                      <div class="step-item" id="step-8">
+                          <div class="step-header">Tutorial Complete!</div>
+                            <div class="step-details">
+                                <p>🎉 You've successfully completed the Unhazzle CLI journey!</p>
+                                <small>You can now explore more commands. Or give our UI a spin!</small>
+                            </div>
+                      </div>
+                </div>
+             </div>
+
+             <div class="step-navigation">
+                 <button id="prev-step" class="btn btn-secondary" onclick="goToPreviousStep()">← Previous</button>
+                 <button id="next-step" class="btn btn-secondary" onclick="goToNextStep()">Next →</button>
+             </div>
+
+             <div class="terminal-container">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="terminal-title">Unhazzle CLI Guide</span>
+                    </div>
+                     <div class="terminal-body">
+                         <div id="terminal-output" class="terminal-output"></div>
+                          <div class="terminal-input-line">
+                              <span class="prompt">$</span>
+                              <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false">
+                              <span class="cursor">|</span>
+                          </div>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="guide-footer">
+            <button class="btn btn-primary" onclick="window.open('/', '_blank')">Experience the UI</button>
+            <button class="btn btn-ghost" onclick="window.location.href='/'">← Back to Unhazzle</button>
+        </div>
+
+    </div>
+    
+    <script src="cli-guide.js"></script>
+</body>
+</html>
