@@ -101,42 +101,106 @@ const initialState: DeploymentState = {
 };
 
 export function DeploymentProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DeploymentState>(initialState);
+  const [state, setState] = useState<DeploymentState>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('unhazzle-deployment-state');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Failed to parse saved state:', e);
+        }
+      }
+    }
+    return initialState;
+  });
 
   const updateUser = (user: UserInfo) => {
-    setState(prev => ({ ...prev, user }));
+    setState(prev => {
+      const newState = { ...prev, user };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateQuestionnaire = (answers: QuestionnaireAnswers) => {
-    setState(prev => ({ ...prev, questionnaire: answers }));
+    setState(prev => {
+      const newState = { ...prev, questionnaire: answers };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateApplication = (config: ApplicationConfig) => {
-    setState(prev => ({ ...prev, application: config }));
+    setState(prev => {
+      const newState = { ...prev, application: config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateResources = (config: ResourceConfig) => {
-    setState(prev => ({ ...prev, resources: config }));
+    setState(prev => {
+      const newState = { ...prev, resources: config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateEnvironment = (env: EnvironmentVariables) => {
-    setState(prev => ({ ...prev, environment: env }));
+    setState(prev => {
+      const newState = { ...prev, environment: env };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateDomain = (domain: DomainConfig) => {
-    setState(prev => ({ ...prev, domain: domain }));
+    setState(prev => {
+      const newState = { ...prev, domain: domain };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const updateCost = (cost: CostBreakdown) => {
-    setState(prev => ({ ...prev, cost }));
+    setState(prev => {
+      const newState = { ...prev, cost };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const markDeployed = () => {
-    setState(prev => ({ ...prev, deployed: true }));
+    setState(prev => {
+      const newState = { ...prev, deployed: true };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const resetState = () => {
     setState(initialState);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('unhazzle-deployment-state');
+    }
   };
 
   return (
