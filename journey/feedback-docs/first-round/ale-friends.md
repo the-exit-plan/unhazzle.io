@@ -1,10 +1,10 @@
-Andre de Boer (Procurement)
+### Andre de Boer (Procurement)
 
-During testing I noticed a few things that could improve the demo experience: a short onboarding video (beginner/pro), a simple EU language selector, and a built-in FAQ or chatbot for support. These should be relatively easy to implement in the demo and would make the platform more accessible to new users.
+- During testing I noticed a few things that could improve the demo experience: a short onboarding video (beginner/pro), a simple EU language selector, and a built-in FAQ or chatbot for support. These should be relatively easy to implement in the demo and would make the platform more accessible to new users.
 
-A simple scoring list or checklist for further testing could be helpful. This would make it easy to evaluate each area—performance, usability, compliance, and support—in a consistent way and track improvements over time.
+- A simple scoring list or checklist for further testing could be helpful. This would make it easy to evaluate each area—performance, usability, compliance, and support—in a consistent way and track improvements over time.
 
-One more lightweight, strategic idea: embed sustainability into the platform through efficiency and transparency. For example, host in EU-based data centers powered by renewable energy, use autoscaling and caching to limit unnecessary compute, and apply data lifecycle management to reduce digital waste. This helps the platform operate efficiently while enabling customers to make greener digital choices.
+- One more lightweight, strategic idea: embed sustainability into the platform through efficiency and transparency. For example, host in EU-based data centers powered by renewable energy, use autoscaling and caching to limit unnecessary compute, and apply data lifecycle management to reduce digital waste. This helps the platform operate efficiently while enabling customers to make greener digital choices.
 
 - Editing in the pricing page to see the change in price
 - Show the maximum money to be paid in case they scale up
@@ -13,7 +13,24 @@ One more lightweight, strategic idea: embed sustainability into the platform thr
 - AI to provide a report of the feedback users are asking for
 - New features or missing info
 
-Viviana (Non-technical — UI feedback)
+- A simple technical question you can ask the team is: Which features do our competitors offer that we also want to provide to our users?
+
+
+This part is text related to the Word document Andre shared:
+
+I’ve put together an overview of the things I’d consider from a legal and commercial point of view for your platform. If you take a look, I’d suggest starting with the definition list and the self-assessment questions.
+They’ll quickly show where things are already solid and where a bit more work might be needed.
+
+The framework itself is more for the next phase to structure everything once those first points are clear. Hope this gives you something useful to work with
+
+I asked him: Will this document be part of the terms and conditions or is more an internal framework for us to start collecting all necessary requirements to eventually become compliant with all this framworks?
+He Answered:
+The document serves as an internal framework and starting point for you to organise and assess all requirements needed for compliance with European legal, data-protection and governance standards. It is not part of the terms and conditions, but helps identify what should be formalised in customer-facing documents such as the SLA and DPA. The final versions of those documents should always be reviewed by a qualified legal expert to ensure full compliance with EU and national laws.
+
+My main concern is around European laws and regulations and making sure all potential risks are properly covered.
+
+
+### Viviana (Non-technical — UI feedback)
 
 1. On mobile, when selecting options on the first screen, it could jump to the next question as soon as an option is chosen.
 2. When asking for the password there are letters suggesting the password will be auto-generated; the password field could be marked with an asterisk (*) to indicate it’s required to continue.
@@ -21,7 +38,7 @@ Viviana (Non-technical — UI feedback)
 4. On every screen I’d like to see a chat button 💬 so if I have questions I know I can contact an AI or an advisor.
 5. When generating charges, I’d like options to edit my selections without having to go back to the first screen.
 
-Jeroen and Eveline (DevOps/Cloud Engineer - Storefront Principal Engineer on an ecommerce company)
+### Jeroen and Eveline (DevOps/Cloud Engineer - Storefront Principal Engineer on an ecommerce company)
 
 - Ability to add more than one container for an application, one project can be composed of multiple containers (frontend/backend)
 - Ability to attach volumes (stateful). Figure out easy access to this.
