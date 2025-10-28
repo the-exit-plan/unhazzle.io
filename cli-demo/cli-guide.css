@@ -59,7 +59,7 @@ body {
 .header-main {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     margin-bottom: 1.5rem;
 }
 
