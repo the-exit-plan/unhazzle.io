@@ -32,6 +32,9 @@ jobs:
           cp script.js deploy/
           cp favicon.ico deploy/ 2>/dev/null || true
           cp *.svg deploy/ 2>/dev/null || true
+      
+      - name: Copy CLI demo to deploy directory
+        run: cp -r cli-demo deploy/cli-demo
 
       - name: Install prototype-app dependencies
         working-directory: prototype-app

@@ -385,6 +385,18 @@ export default function Dashboard() {
                   <p className="text-slate-600">
                     Your application is now live! The next step is to enable automatic deployments from your GitHub repository using the Unhazzle CLI and GitHub Actions.
                   </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <a
+                      href="/cli-demo/cli-guide.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                    >
+                      Experience the Unhazzle CLI
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                    <span className="text-sm text-slate-600">Simulate the same deployment flow directly from your terminal.</span>
+                  </div>
                 </div>
 
                 {/* Step 1: YAML Export */}
