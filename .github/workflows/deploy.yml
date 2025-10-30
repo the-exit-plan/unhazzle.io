@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'cli-demo/**'
+      - 'index.html'
+      - 'styles.css'
+      - 'script.js'
+      - 'prototype-app/**'
 
 permissions:
   contents: write
