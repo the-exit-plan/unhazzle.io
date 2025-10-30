@@ -1,6 +1,6 @@
 # feedback (25th October 2025)
 
-**Mahya**
+**Mahya** (Senior Software Engineer working on a big Bank)
 
 ---
 
@@ -26,7 +26,7 @@ Settings tab is misguiding, settings here doesn’t allow me to check my current
 
 **Mahya’s** final verdict: it is really good and if you can solve these challenges, I think you have something cool here and it will actually make my life easier if I want to just focus on the code. I liked that it takes care of backups, autoscales, and all infra headaches. most of it is on the right track, but again I’ve dealt with so many incidents and I think of worst case scenarios immediately when I’m checking a product like this, also you need to provide migration tools/ways too, if I’m considering this platform as a startup developer even, I still have some my code running on somewhere probably with my pipelines setup, but I assume you already thought about that. 
 
-**Inaki**
+**Inaki** (Senior Software Engineer working on a big Bank)
 
 ---
 
