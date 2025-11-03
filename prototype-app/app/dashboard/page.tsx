@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [cpuUsage, setCpuUsage] = useState(42);
   const [memoryUsage, setMemoryUsage] = useState(58);
   const [requestsPerMinute, setRequestsPerMinute] = useState(1240);
+  const [selectedContainer, setSelectedContainer] = useState<string>('all');
 
   // Scroll to top on mount
   useEffect(() => {
@@ -179,77 +180,224 @@ export default function Dashboard() {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
+                {/* Container Cards */}
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Deployment Summary</h3>
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">
+                    Application Containers ({state.containers.length})
+                  </h3>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-sm text-slate-600 mb-1">Container Image</p>
-                      <code className="text-sm font-mono text-slate-900">{state.application?.imageUrl}</code>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-sm text-slate-600 mb-1">Auto-scaling</p>
-                      <p className="text-sm font-mono text-slate-900">
-                        {state.resources?.replicas.min}-{state.resources?.replicas.max} replicas
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-sm text-slate-600 mb-1">Database</p>
-                      <p className="text-sm font-mono text-slate-900">
-                        {state.resources?.database ? 
-                          `${state.resources.database.engine.toUpperCase()} (${state.resources.database.storage})` 
-                          : 'None'}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-sm text-slate-600 mb-1">Cache</p>
-                      <p className="text-sm font-mono text-slate-900">
-                        {state.resources?.cache ? `${state.resources.cache.engine} (${state.resources.cache.memory})` : 'None'}
-                      </p>
-                    </div>
+                    {state.containers.map((container, index) => {
+                      const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+                      return (
+                        <div key={container.id} className="bg-white border-2 border-purple-200 rounded-lg p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900">{displayName}</h4>
+                                <p className="text-xs text-slate-500">
+                                  {container.exposure === 'public' ? '🌐 Public' : '🔒 Private'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
+                              <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                              Running
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm mb-3">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Replicas:</span>
+                              <span className="font-semibold text-slate-900">
+                                {container.resources.replicas.min}/{container.resources.replicas.min} healthy
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Resources:</span>
+                              <span className="font-mono text-xs text-slate-900">
+                                {container.resources.cpu} CPU, {container.resources.memory}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Port:</span>
+                              <span className="font-mono text-xs text-slate-900">{container.port}</span>
+                            </div>
+                            {container.exposure === 'public' && state.domain?.customDomain && (
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">URL:</span>
+                                <a 
+                                  href={`https://${state.domain.customDomain}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-purple-600 hover:text-purple-700 text-xs underline"
+                                >
+                                  {state.domain.customDomain}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Service Connections */}
+                          {(container.serviceAccess.database || container.serviceAccess.cache) && (
+                            <div className="pt-3 border-t border-slate-200">
+                              <p className="text-xs text-slate-600 mb-2">Connected to:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {container.serviceAccess.database && (
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">🐘 PostgreSQL</span>
+                                )}
+                                {container.serviceAccess.cache && (
+                                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">⚡ Redis</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Health Status</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                      <span className="text-sm font-medium text-green-900">Application</span>
-                      <span className="text-green-600 font-semibold">✓ Healthy</span>
+                {/* Infrastructure Services */}
+                {(state.resources?.database || state.resources?.cache) && (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Infrastructure Services</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {state.resources?.database && (
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">🐘</span>
+                              <h4 className="font-bold text-green-900">PostgreSQL</h4>
+                            </div>
+                            <span className="inline-flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                              Connected
+                            </span>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-green-700">Storage:</span>
+                              <span className="font-mono text-xs text-green-900">{state.resources.database.storage}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-green-700">Resources:</span>
+                              <span className="font-mono text-xs text-green-900">
+                                {state.resources.database.cpu}, {state.resources.database.memory}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-green-700">Backups:</span>
+                              <span className="text-xs text-green-900">{state.resources.database.backups.retention}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {state.resources?.cache && (
+                        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">⚡</span>
+                              <h4 className="font-bold text-red-900">Redis Cache</h4>
+                            </div>
+                            <span className="inline-flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                              Connected
+                            </span>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-red-700">Memory:</span>
+                              <span className="font-mono text-xs text-red-900">{state.resources.cache.memory}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-red-700">Persistence:</span>
+                              <span className="text-xs text-red-900">{state.resources.cache.persistence}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {state.resources?.database && (
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                        <span className="text-sm font-medium text-green-900">Database</span>
-                        <span className="text-green-600 font-semibold">✓ Connected</span>
-                      </div>
-                    )}
-                    {state.resources?.cache && (
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                        <span className="text-sm font-medium text-green-900">Cache</span>
-                        <span className="text-green-600 font-semibold">✓ Connected</span>
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {/* Logs Tab */}
             {activeTab === 'logs' && (
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Recent Logs</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-900">Recent Logs</h3>
+                  {state.containers.length > 1 && (
+                    <select
+                      value={selectedContainer}
+                      onChange={(e) => setSelectedContainer(e.target.value)}
+                      className="px-4 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="all">All Containers</option>
+                      {state.containers.map((container, index) => {
+                        const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+                        return (
+                          <option key={container.id} value={container.id}>
+                            {displayName}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+                </div>
                 <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
-                  <div>[2025-10-21 14:32:15] Application started successfully</div>
-                  <div>[2025-10-21 14:32:16] ✓ Database connection established</div>
-                  <div>[2025-10-21 14:32:16] ✓ Redis cache connected</div>
-                  <div>[2025-10-21 14:32:17] → HTTP server listening on port 3000</div>
-                  <div>[2025-10-21 14:32:18] ✓ Health check passed</div>
-                  <div>[2025-10-21 14:32:19] → Replica 1 reporting healthy</div>
-                  <div>[2025-10-21 14:32:20] → Replica 2 reporting healthy</div>
-                  <div>[2025-10-21 14:35:42] GET /api/products 200 45ms</div>
-                  <div>[2025-10-21 14:35:43] POST /api/cart 201 52ms</div>
-                  <div>[2025-10-21 14:35:44] GET /api/checkout 200 38ms</div>
-                  <div>[2025-10-21 14:35:45] POST /api/orders 201 127ms</div>
-                  <div>[2025-10-21 14:35:46] GET / 200 15ms (cached)</div>
+                  {(() => {
+                    const allLogs: { container: string; message: string }[] = [];
+                    
+                    state.containers.forEach((container, index) => {
+                      const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+                      
+                      if (selectedContainer === 'all' || selectedContainer === container.id) {
+                        allLogs.push(
+                          { container: displayName, message: '[2025-11-02 14:32:15] Application started successfully' },
+                          { container: displayName, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${container.port}` },
+                          { container: displayName, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
+                          { container: displayName, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
+                          { container: displayName, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
+                        );
+                        
+                        if (container.serviceAccess.database) {
+                          allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
+                        }
+                        if (container.serviceAccess.cache) {
+                          allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
+                        }
+                        
+                        if (container.exposure === 'public') {
+                          allLogs.push(
+                            { container: displayName, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
+                            { container: displayName, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
+                            { container: displayName, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
+                            { container: displayName, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
+                            { container: displayName, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
+                          );
+                        } else {
+                          allLogs.push(
+                            { container: displayName, message: '[2025-11-02 14:35:42] Processing background job #1234' },
+                            { container: displayName, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
+                            { container: displayName, message: '[2025-11-02 14:35:44] Handling internal API call' }
+                          );
+                        }
+                      }
+                    });
+                    
+                    return allLogs.map((log, i) => (
+                      <div key={i}>
+                        {selectedContainer === 'all' && (
+                          <span className="text-purple-400">[{log.container}] </span>
+                        )}
+                        {log.message}
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             )}
@@ -654,10 +802,20 @@ resources:
     target_cpu: 70
     target_memory: 80
 
-${hasDatabase ? `services:
+${state.containers && state.containers.length > 0 && state.containers[0].volume ? `# Persistent Volume
+volume:
+  mount_path: ${state.containers[0].volume.mountPath}
+  size: ${state.containers[0].volume.sizeGB}GB
+  auto_scale: ${state.containers[0].volume.autoScale}
+  backup_frequency: ${state.containers[0].volume.backupFrequency}
+  delete_with_container: ${state.containers[0].volume.deleteWithContainer}
+
+` : ''}${hasDatabase ? `services:
   database:
     type: ${state.resources.database.engine}
     version: "${state.resources.database.engine === 'postgres' ? '16' : '8.0'}"
+    cpu: ${state.resources.database.cpu}
+    memory: ${state.resources.database.memory}
     storage: ${state.resources.database.storage}
     backups:
       enabled: true

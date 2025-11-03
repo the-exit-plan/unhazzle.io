@@ -16,6 +16,8 @@ export function generateResourceConfig(answers: QuestionnaireAnswers): ResourceC
     baseConfig.database = {
       engine: database,
       version: getDatabaseVersion(database),
+      cpu: getDatabaseCPU(traffic),
+      memory: getDatabaseMemory(traffic),
       storage: getStorageSize(traffic),
       backups: {
         enabled: true,
@@ -92,6 +94,28 @@ function getBackupRetention(traffic: string): string {
 
 function getDatabaseReplicas(traffic: string): string {
   return traffic === 'global' ? 'Multi-region read replicas' : 'Single instance with HA';
+}
+
+function getDatabaseCPU(traffic: string): string {
+  switch (traffic) {
+    case 'global':
+      return '4 vCPU';
+    case 'burst':
+      return '2 vCPU';
+    default:
+      return '2 vCPU';
+  }
+}
+
+function getDatabaseMemory(traffic: string): string {
+  switch (traffic) {
+    case 'global':
+      return '8GB';
+    case 'burst':
+      return '4GB';
+    default:
+      return '4GB';
+  }
 }
 
 function getCacheMemory(traffic: string, appType: string): string {

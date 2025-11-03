@@ -7,12 +7,12 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
 
   // Make Next produce a full static export
-  output: 'export',
+  // output: 'export',
 
   // Disable image optimization (not available on GitHub Pages)
-  images: {
-    unoptimized: true,
-  },
+  // images: {
+  //   unoptimized: true,
+  // },
 };
 
 export default nextConfig;

@@ -17,9 +17,9 @@ export default function DomainSetup() {
     window.scrollTo(0, 0);
   }, []);
 
-  // Redirect if no environment configured
+  // Redirect if no resources configured
   useEffect(() => {
-    if (!state.environment) {
+    if (!state.resources) {
       router.push('/');
       return;
     }
@@ -28,7 +28,7 @@ export default function DomainSetup() {
     const appName = state.application?.imageUrl.split('/').pop()?.split(':')[0] || 'app';
     const cleanName = appName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
     setDefaultSubdomain(`${cleanName}-${Math.random().toString(36).substring(2, 6)}.unhazzle.app`);
-  }, [state.environment, state.application, router]);
+  }, [state.resources, state.application, router]);
 
   const handleContinue = () => {
     // Save domain configuration
@@ -48,7 +48,7 @@ CNAME ${customDomain} → ${defaultSubdomain}
 TXT _acme-challenge.${customDomain} → [Will be provided after deployment]`;
   };
 
-  if (!state.environment) {
+  if (!state.resources) {
     return null;
   }
 

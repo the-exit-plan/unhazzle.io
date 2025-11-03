@@ -9,7 +9,24 @@
 
 | Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
 |------|-------------|--------|-----|-----------|--------------|----------|
-| Cache selection mismatch | Selected memcached but deployment shows Redis | Inaki | ✓ | | | |
+| Cache selection mismatch | Selected memcached but deployment shows Redis. The mocked logs in the deploying page should not use services brands. Lets keep it simple by using generic terms. | Inaki | ✓ | | | |
+
+---
+
+## **CONFIGURATION & SETTINGS**
+
+| Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
+|------|-------------|--------|-----|-----------|--------------|----------|
+| View current deployment config | Settings tab should show complete current configuration at a glance and allow to edit it. | Mahya | ✓ | | | |
+| Edit replicas/resources inline | Allow editing replicas, CPU, RAM in place | Mahya | ✓ | | | |
+| Editable auto-generated env var names | Users need to customize env var names or rebuild app to match. Add the UNHAZZLE prefix  | Jeroen/Eveline | ✓ | | | |
+| Edit selections on pricing page | Allow editing configuration choices on review/pricing page without going back | Viviana | ✓ | | | |
+| Multi-container support | Support multiple containers per application (frontend/backend separation). Think on a way to select which containers have access to what | Jeroen/Eveline | ✓ | | | |
+| Init Container | Think how it can be included | Sep | ? | | | |
+| Volume/stateful storage | Ability to attach persistent volumes for stateful applications | Inaki/Jeroen/Eveline | ✓ | | | |
+| Static content hosting (Need more investigation) | Solution for hosting static assets (CDN, object storage) | Matija, Jeroen/Eveline | ? | | | |
+| Private endpoints | Configure private endpoints for third-party services (no internet exposure) | Inaki | | | ✓ | |
+| Scheduled scaling | Schedule scaling based on time/date (e.g., scale up during business hours) | Jeroen/Eveline | | | ✓ | |
 
 ---
 
@@ -20,24 +37,6 @@
 | Mask secrets in UI | Secrets should be write-once, not visible after creation (security risk) | Mahya | | | | ✓ |
 | Sensitive data in logs | Define policy for handling sensitive data in logs | Mahya | | | | ✓ |
 | Team permissions & RBAC | Define different permission levels for team members and Unhazzle platform access | Mahya | ✓ | | | |
-
----
-
-## **CONFIGURATION & SETTINGS**
-
-| Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
-|------|-------------|--------|-----|-----------|--------------|----------|
-| View current deployment config | Settings tab should show complete current configuration at a glance | Mahya | ✓ | | | |
-| Environment context in toggles | Show which environment (dev/prod) when toggling settings like autoscaling | Mahya | ✓ | | | |
-| Edit replicas/resources inline | When autoscaling is disabled, allow editing replicas, CPU, RAM in place | Mahya | ✓ | | | |
-| Editable auto-generated env var names | Users need to customize env var names or rebuild app to match. Add the UNHAZZLE prefix  | Jeroen/Eveline | ✓ | | | |
-| Edit selections on pricing page | Allow editing configuration choices on review/pricing page without going back | Viviana | ✓ | | | |
-| Multi-container support | Support multiple containers per application (frontend/backend separation). Think on a way to select which containers have access to what | Jeroen/Eveline | ✓ | | | |
-| Init Container | Think how it can be included | Sep | ? | | | |
-| Volume/stateful storage | Ability to attach persistent volumes for stateful applications | Inaki/Jeroen/Eveline | ✓ | | | |
-| Static content hosting (Need more investigation) | Solution for hosting static assets (CDN, object storage) | Matija, Jeroen/Eveline | ? | | | |
-| Private endpoints | Configure private endpoints for third-party services (no internet exposure) | Inaki | | | ✓ | |
-| Scheduled scaling | Schedule scaling based on time/date (e.g., scale up during business hours) | Jeroen/Eveline | | | ✓ | |
 
 ---
 
