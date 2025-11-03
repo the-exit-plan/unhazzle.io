@@ -17,6 +17,12 @@ export default function Resources() {
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
+      // If hash targets a container, expand it
+      if (hash.startsWith('#container-')) {
+        const containerId = hash.replace('#container-', '');
+        setExpandedContainers(prev => new Set(prev).add(containerId));
+      }
+      
       setTimeout(() => {
         const element = document.querySelector(hash);
         if (element) {
@@ -253,7 +259,7 @@ export default function Resources() {
               const displayName = container.imageUrl.split('/').pop() || `Container ${index + 1}`;
               
               return (
-                <div key={container.id} id={index === 0 ? "application" : undefined} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div key={container.id} id={`container-${container.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all">
                   {/* Accordion Header */}
                   <button
                     onClick={() => toggleContainer(container.id)}
@@ -391,6 +397,107 @@ export default function Resources() {
                             />
                           </div>
                         </div>
+                      </div>
+
+                      {/* Persistent Volume */}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-slate-900 mb-3">Persistent Volume (Optional)</h4>
+                        <p className="text-xs text-slate-600 mb-4">
+                          Attach persistent storage for databases, uploads, or stateful data. Volume persists across container restarts and redeployments.
+                        </p>
+                        
+                        {!container.volume ? (
+                          <button
+                            onClick={() => updateContainerResource(container.id, 'volume', {
+                              sizeGB: 10,
+                              mountPath: '/data',
+                              autoScale: true,
+                              backupFrequency: 'daily',
+                              deleteWithContainer: false
+                            })}
+                            className="w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition font-medium text-sm"
+                          >
+                            + Add Persistent Volume
+                          </button>
+                        ) : (
+                          <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-slate-600 mb-2">Volume Size</label>
+                                <select
+                                  value={container.volume.sizeGB}
+                                  onChange={(e) => updateContainerResource(container.id, 'volume.sizeGB', parseInt(e.target.value))}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                                >
+                                  <option value="10">10 GB</option>
+                                  <option value="20">20 GB</option>
+                                  <option value="50">50 GB</option>
+                                  <option value="100">100 GB</option>
+                                  <option value="250">250 GB</option>
+                                  <option value="500">500 GB</option>
+                                </select>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs text-slate-600 mb-2">Mount Path</label>
+                                <input
+                                  type="text"
+                                  value={container.volume.mountPath}
+                                  onChange={(e) => updateContainerResource(container.id, 'volume.mountPath', e.target.value)}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm font-mono"
+                                  placeholder="/data"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={container.volume.autoScale}
+                                  onChange={(e) => updateContainerResource(container.id, 'volume.autoScale', e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-sm text-slate-700">Auto-scale volume when nearing capacity</span>
+                              </label>
+                              
+                              <div>
+                                <label className="block text-xs text-slate-600 mb-2">Backup Frequency</label>
+                                <select
+                                  value={container.volume.backupFrequency}
+                                  onChange={(e) => updateContainerResource(container.id, 'volume.backupFrequency', e.target.value)}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                                >
+                                  <option value="disabled">Disabled</option>
+                                  <option value="daily">Daily</option>
+                                  <option value="weekly">Weekly</option>
+                                </select>
+                              </div>
+                              
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={container.volume.deleteWithContainer}
+                                  onChange={(e) => updateContainerResource(container.id, 'volume.deleteWithContainer', e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-sm text-slate-700">Delete volume when container is deleted</span>
+                              </label>
+                            </div>
+                            
+                            <button
+                              onClick={() => updateContainerResource(container.id, 'volume', undefined)}
+                              className="text-sm text-red-600 hover:text-red-700 font-medium"
+                            >
+                              Remove Volume
+                            </button>
+                            
+                            <div className="text-xs text-slate-500 bg-white p-3 rounded border border-slate-200">
+                              💡 <strong>Cost:</strong> €{(container.volume.sizeGB * 0.044).toFixed(2)}/mo for storage
+                              {container.volume.backupFrequency !== 'disabled' && ' + backup costs'}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Service Access */}

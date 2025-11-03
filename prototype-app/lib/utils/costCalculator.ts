@@ -167,3 +167,35 @@ function estimateBandwidth(traffic: string): number {
       return 10;
   }
 }
+
+// Calculate monthly cost impact for resource changes
+export function calculateContainerCostImpact(
+  currentCpu: string,
+  currentMemory: string,
+  currentReplicas: { min: number; max: number },
+  newCpu: string,
+  newMemory: string,
+  newReplicas: { min: number; max: number }
+): number {
+  const currentCost = calculateApplicationCost(currentReplicas, currentCpu, currentMemory);
+  const newCost = calculateApplicationCost(newReplicas, newCpu, newMemory);
+  return Math.round((newCost - currentCost) * 100) / 100;
+}
+
+export function calculateDatabaseCostImpact(
+  currentDb: { cpu: string; memory: string; storage: string; replicas: string },
+  newDb: { cpu: string; memory: string; storage: string; replicas: string }
+): number {
+  const currentCost = calculateDatabaseCost(currentDb.cpu, currentDb.memory, currentDb.storage, currentDb.replicas);
+  const newCost = calculateDatabaseCost(newDb.cpu, newDb.memory, newDb.storage, newDb.replicas);
+  return Math.round((newCost - currentCost) * 100) / 100;
+}
+
+export function calculateCacheCostImpact(
+  currentMemory: string,
+  newMemory: string
+): number {
+  const currentCost = calculateCacheCost(currentMemory);
+  const newCost = calculateCacheCost(newMemory);
+  return Math.round((newCost - currentCost) * 100) / 100;
+}

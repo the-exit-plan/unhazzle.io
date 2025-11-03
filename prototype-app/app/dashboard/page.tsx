@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
+import { calculateContainerCostImpact, calculateDatabaseCostImpact, calculateCacheCostImpact } from '@/lib/utils/costCalculator';
 
 type TabType = 'overview' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSteps';
 
@@ -174,233 +175,85 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
+              <div className="p-6">
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                  <OverviewConfig />
+                )}
 
-          {/* Tab Content */}
-          <div className="p-8">
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                {/* Container Cards */}
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">
-                    Application Containers ({state.containers.length})
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {state.containers.map((container, index) => {
-                      const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
-                      return (
-                        <div key={container.id} className="bg-white border-2 border-purple-200 rounded-lg p-5">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-900">{displayName}</h4>
-                                <p className="text-xs text-slate-500">
-                                  {container.exposure === 'public' ? '🌐 Public' : '🔒 Private'}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
-                              <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
-                              Running
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2 text-sm mb-3">
-                            <div className="flex justify-between">
-                              <span className="text-slate-600">Replicas:</span>
-                              <span className="font-semibold text-slate-900">
-                                {container.resources.replicas.min}/{container.resources.replicas.min} healthy
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-600">Resources:</span>
-                              <span className="font-mono text-xs text-slate-900">
-                                {container.resources.cpu} CPU, {container.resources.memory}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-600">Port:</span>
-                              <span className="font-mono text-xs text-slate-900">{container.port}</span>
-                            </div>
-                            {container.exposure === 'public' && state.domain?.customDomain && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">URL:</span>
-                                <a 
-                                  href={`https://${state.domain.customDomain}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-purple-600 hover:text-purple-700 text-xs underline"
-                                >
-                                  {state.domain.customDomain}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Service Connections */}
-                          {(container.serviceAccess.database || container.serviceAccess.cache) && (
-                            <div className="pt-3 border-t border-slate-200">
-                              <p className="text-xs text-slate-600 mb-2">Connected to:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {container.serviceAccess.database && (
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">🐘 PostgreSQL</span>
-                                )}
-                                {container.serviceAccess.cache && (
-                                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">⚡ Redis</span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Infrastructure Services */}
-                {(state.resources?.database || state.resources?.cache) && (
+                {/* Logs Tab */}
+                {activeTab === 'logs' && (
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4">Infrastructure Services</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {state.resources?.database && (
-                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-5">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">🐘</span>
-                              <h4 className="font-bold text-green-900">PostgreSQL</h4>
-                            </div>
-                            <span className="inline-flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                              Connected
-                            </span>
+                    <div className="mb-4 flex items-center gap-3">
+                      <label className="text-sm font-medium text-slate-600">Container:</label>
+                      <select
+                        value={selectedContainer}
+                        onChange={(e) => setSelectedContainer(e.target.value)}
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      >
+                        <option value="all">All Containers</option>
+                        {state.containers.map((container, index) => {
+                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+                          return (
+                            <option key={container.id} value={container.id}>{displayName}</option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
+                      {(() => {
+                        const allLogs: { container: string; message: string }[] = [];
+
+                        state.containers.forEach((container, index) => {
+                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+
+                          if (selectedContainer === 'all' || selectedContainer === container.id) {
+                            allLogs.push(
+                              { container: displayName, message: '[2025-11-02 14:32:15] Application started successfully' },
+                              { container: displayName, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${container.port}` },
+                              { container: displayName, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
+                              { container: displayName, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
+                              { container: displayName, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
+                            );
+
+                            if (container.serviceAccess.database) {
+                              allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
+                            }
+                            if (container.serviceAccess.cache) {
+                              allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
+                            }
+
+                            if (container.exposure === 'public') {
+                              allLogs.push(
+                                { container: displayName, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
+                                { container: displayName, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
+                                { container: displayName, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
+                                { container: displayName, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
+                                { container: displayName, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
+                              );
+                            } else {
+                              allLogs.push(
+                                { container: displayName, message: '[2025-11-02 14:35:42] Processing background job #1234' },
+                                { container: displayName, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
+                                { container: displayName, message: '[2025-11-02 14:35:44] Handling internal API call' }
+                              );
+                            }
+                          }
+                        });
+
+                        return allLogs.map((log, i) => (
+                          <div key={i}>
+                            {selectedContainer === 'all' && (
+                              <span className="text-purple-400">[{log.container}] </span>
+                            )}
+                            {log.message}
                           </div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-green-700">Storage:</span>
-                              <span className="font-mono text-xs text-green-900">{state.resources.database.storage}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-green-700">Resources:</span>
-                              <span className="font-mono text-xs text-green-900">
-                                {state.resources.database.cpu}, {state.resources.database.memory}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-green-700">Backups:</span>
-                              <span className="text-xs text-green-900">{state.resources.database.backups.retention}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {state.resources?.cache && (
-                        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-5">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">⚡</span>
-                              <h4 className="font-bold text-red-900">Redis Cache</h4>
-                            </div>
-                            <span className="inline-flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-medium">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                              Connected
-                            </span>
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-red-700">Memory:</span>
-                              <span className="font-mono text-xs text-red-900">{state.resources.cache.memory}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-red-700">Persistence:</span>
-                              <span className="text-xs text-red-900">{state.resources.cache.persistence}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Logs Tab */}
-            {activeTab === 'logs' && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">Recent Logs</h3>
-                  {state.containers.length > 1 && (
-                    <select
-                      value={selectedContainer}
-                      onChange={(e) => setSelectedContainer(e.target.value)}
-                      className="px-4 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="all">All Containers</option>
-                      {state.containers.map((container, index) => {
-                        const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
-                        return (
-                          <option key={container.id} value={container.id}>
-                            {displayName}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
-                </div>
-                <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
-                  {(() => {
-                    const allLogs: { container: string; message: string }[] = [];
-                    
-                    state.containers.forEach((container, index) => {
-                      const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
-                      
-                      if (selectedContainer === 'all' || selectedContainer === container.id) {
-                        allLogs.push(
-                          { container: displayName, message: '[2025-11-02 14:32:15] Application started successfully' },
-                          { container: displayName, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${container.port}` },
-                          { container: displayName, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
-                          { container: displayName, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
-                          { container: displayName, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
-                        );
-                        
-                        if (container.serviceAccess.database) {
-                          allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
-                        }
-                        if (container.serviceAccess.cache) {
-                          allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
-                        }
-                        
-                        if (container.exposure === 'public') {
-                          allLogs.push(
-                            { container: displayName, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
-                            { container: displayName, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
-                            { container: displayName, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
-                            { container: displayName, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
-                            { container: displayName, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
-                          );
-                        } else {
-                          allLogs.push(
-                            { container: displayName, message: '[2025-11-02 14:35:42] Processing background job #1234' },
-                            { container: displayName, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
-                            { container: displayName, message: '[2025-11-02 14:35:44] Handling internal API call' }
-                          );
-                        }
-                      }
-                    });
-                    
-                    return allLogs.map((log, i) => (
-                      <div key={i}>
-                        {selectedContainer === 'all' && (
-                          <span className="text-purple-400">[{log.container}] </span>
-                        )}
-                        {log.message}
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
 
             {/* Metrics Tab */}
             {activeTab === 'metrics' && (
@@ -475,49 +328,20 @@ export default function Dashboard() {
             {/* Settings Tab */}
             {activeTab === 'settings' && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Configuration</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div>
-                        <p className="font-medium text-slate-900">Auto-scaling</p>
-                        <p className="text-sm text-slate-600">Automatically scale based on demand</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div>
-                        <p className="font-medium text-slate-900">Auto-deployment on push</p>
-                        <p className="text-sm text-slate-600">Deploy on GitHub push to main</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div>
-                        <p className="font-medium text-slate-900">Email alerts</p>
-                        <p className="text-sm text-slate-600">Get notified of deployment and issues</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Danger Zone</h3>
-                  <button className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
-                    🗑️ Delete Deployment
+                <div className="bg-purple-50 border border-purple-200 p-6 rounded-lg">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Settings moved to Overview</h3>
+                  <p className="text-slate-700 mb-4">
+                    Edit your current deployment configuration in the Overview tab. Use the left sidebar to pick a resource and the right panel to edit. You can preview and apply staged changes.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                  >
+                    Go to Overview
                   </button>
+                </div>
+                <div className="text-xs text-slate-500">
+                  Looking for advanced settings? We’ll surface them here soon. For now, everything configurable is available in Overview.
                 </div>
               </div>
             )}
@@ -726,6 +550,1185 @@ export default function Dashboard() {
   );
 }
 
+// ======================
+// Overview Config Panel
+// ======================
+
+type ResourceKind = 'application' | 'database' | 'cache';
+
+function OverviewConfig() {
+  const { state, updateContainer, updateResources } = useDeployment();
+  const [selected, setSelected] = useState<{ kind: ResourceKind; id?: string }>(() => ({
+    kind: 'application',
+    id: state.containers[0]?.id,
+  }));
+
+  // Draft state for staged edits (per selected resource)
+  const selectedContainer = selected.kind === 'application'
+    ? state.containers.find(c => c.id === selected.id)
+    : undefined;
+
+  const [draftContainer, setDraftContainer] = useState<typeof selectedContainer | null>(selectedContainer || null);
+  const [draftDatabase, setDraftDatabase] = useState<any>(state.resources?.database || null);
+  const [draftCache, setDraftCache] = useState<any>(state.resources?.cache || null);
+  const [showChanges, setShowChanges] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+
+  // Keep draft in sync when selection changes
+  useEffect(() => {
+    if (selected.kind === 'application') {
+      const c = state.containers.find(x => x.id === selected.id);
+      if (c) {
+        const deep = JSON.parse(JSON.stringify(c));
+        if (!Array.isArray(deep.environmentVariables)) deep.environmentVariables = [];
+        setDraftContainer(deep);
+      } else {
+        setDraftContainer(null);
+      }
+    } else if (selected.kind === 'database') {
+      setDraftContainer(null);
+      setDraftDatabase(state.resources?.database ? JSON.parse(JSON.stringify(state.resources.database)) : null);
+    } else if (selected.kind === 'cache') {
+      setDraftContainer(null);
+      setDraftCache(state.resources?.cache ? JSON.parse(JSON.stringify(state.resources.cache)) : null);
+    } else {
+      setDraftContainer(null);
+    }
+  }, [selected, state.containers, state.resources]);
+
+  const hasContainerChanges = () => {
+    if (!selectedContainer || !draftContainer) return false;
+    return JSON.stringify({
+      resources: draftContainer.resources,
+      healthCheck: draftContainer.healthCheck,
+      exposure: draftContainer.exposure,
+      serviceAccess: draftContainer.serviceAccess,
+      environmentVariables: draftContainer.environmentVariables,
+    }) !== JSON.stringify({
+      resources: selectedContainer.resources,
+      healthCheck: selectedContainer.healthCheck,
+      exposure: selectedContainer.exposure,
+      serviceAccess: selectedContainer.serviceAccess,
+      environmentVariables: selectedContainer.environmentVariables,
+    });
+  };
+
+  const hasDatabaseChanges = () => {
+    if (!state.resources?.database || !draftDatabase) return false;
+    return JSON.stringify(draftDatabase) !== JSON.stringify(state.resources.database);
+  };
+
+  const hasCacheChanges = () => {
+    if (!state.resources?.cache || !draftCache) return false;
+    return JSON.stringify(draftCache) !== JSON.stringify(state.resources.cache);
+  };
+
+  const initiateContainerApply = () => {
+    setShowConfirmation(true);
+    setShowChanges(false);
+  };
+
+  const applyContainerChanges = () => {
+    if (!selectedContainer || !draftContainer) return;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateContainer(selectedContainer.id, {
+        resources: draftContainer.resources,
+        healthCheck: draftContainer.healthCheck,
+        exposure: draftContainer.exposure,
+        serviceAccess: draftContainer.serviceAccess,
+        environmentVariables: draftContainer.environmentVariables,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  const initiateDatabaseApply = () => {
+    setShowConfirmation(true);
+    setShowChanges(false);
+  };
+
+  const applyDatabaseChanges = () => {
+    if (!draftDatabase || !state.resources) return;
+    const res = state.resources;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateResources({
+        replicas: res.replicas,
+        cpu: res.cpu,
+        memory: res.memory,
+        database: draftDatabase,
+        cache: res.cache,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  const initiateCacheApply = () => {
+    setShowConfirmation(true);
+    setShowChanges(false);
+  };
+
+  const applyCacheChanges = () => {
+    if (!draftCache || !state.resources) return;
+    const res = state.resources;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateResources({
+        replicas: res.replicas,
+        cpu: res.cpu,
+        memory: res.memory,
+        database: res.database,
+        cache: draftCache,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  return (
+    <div className="grid grid-cols-12 gap-6">
+      {/* Left Sidebar */}
+      <div className="col-span-12 lg:col-span-4 xl:col-span-3">
+        <div className="bg-white rounded-xl shadow-lg p-4 space-y-5 sticky top-4">
+          {/* Applications */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-bold text-slate-900">Applications</h4>
+              <span className="text-xs text-slate-500">{state.containers.length}</span>
+            </div>
+            <div className="space-y-2">
+              {state.containers.map((c, idx) => {
+                const displayName = c.imageUrl.split('/').pop()?.split(':')[0] || `container-${idx + 1}`;
+                const isSelected = selected.kind === 'application' && selected.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelected({ kind: 'application', id: c.id })}
+                    className={`w-full text-left px-3 py-2 rounded-lg border transition flex items-center justify-between ${
+                      isSelected ? 'border-purple-400 bg-purple-50' : 'border-slate-200 hover:border-purple-300'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">{displayName}</div>
+                      <div className="text-xs text-slate-500">{c.resources.replicas.min}/{c.resources.replicas.min} replicas</div>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                      <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                      Running
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Databases */}
+          {state.resources?.database && (
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 mb-2">Databases</h4>
+              <button
+                onClick={() => setSelected({ kind: 'database' })}
+                className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                  selected.kind === 'database' ? 'border-green-400 bg-green-50' : 'border-slate-200 hover:border-green-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-900">PostgreSQL</span>
+                  <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Connected</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">{state.resources.database.storage} storage</div>
+              </button>
+            </div>
+          )}
+
+          {/* Caches */}
+          {state.resources?.cache && (
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 mb-2">Caches</h4>
+              <button
+                onClick={() => setSelected({ kind: 'cache' })}
+                className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                  selected.kind === 'cache' ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-red-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-900">Redis</span>
+                  <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">Connected</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">{state.resources.cache.memory} memory</div>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Panel */}
+      <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          {selected.kind === 'application' && selectedContainer && draftContainer && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">{selectedContainer.name || 'Application Container'}</h3>
+                  <p className="text-xs text-slate-500">Image: {selectedContainer.imageUrl}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowChanges(true)}
+                    disabled={!hasContainerChanges() || isApplying}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                      hasContainerChanges() ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                    } disabled:opacity-50`}
+                  >
+                    Show Changes
+                  </button>
+                  <button
+                    onClick={initiateContainerApply}
+                    disabled={!hasContainerChanges() || isApplying}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {isApplying ? 'Applying…' : 'Apply'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Section: Resources */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">CPU</label>
+                    <select
+                      value={draftContainer.resources.cpu}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        resources: { ...draftContainer.resources, cpu: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="0.25">0.25</option>
+                      <option value="0.5">0.5</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Memory</label>
+                    <select
+                      value={draftContainer.resources.memory}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        resources: { ...draftContainer.resources, memory: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="0.5GB">0.5GB</option>
+                      <option value="1GB">1GB</option>
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Replicas (min)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={draftContainer.resources.replicas.min}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        resources: {
+                          ...draftContainer.resources,
+                          replicas: { ...draftContainer.resources.replicas, min: Math.max(1, parseInt(e.target.value) || 1) }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Set min=max for fixed scaling. Different values enable auto-scaling.</p>
+              </div>
+
+              {/* Section: Environment Variables (editable) */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Environment Variables</h4>
+                <div className="space-y-3">
+                  {draftContainer.environmentVariables.length === 0 && (
+                    <div className="text-xs text-slate-500">No variables defined yet.</div>
+                  )}
+                  {draftContainer.environmentVariables.map((env, idx) => (
+                    <div key={idx} className="grid md:grid-cols-12 gap-3 items-start">
+                      <div className="md:col-span-4">
+                        <label className="block text-xs text-slate-600 mb-1">Key</label>
+                        <input
+                          type="text"
+                          value={env.key}
+                          onChange={(e) => {
+                            const next = [...draftContainer.environmentVariables];
+                            next[idx] = { ...next[idx], key: e.target.value };
+                            setDraftContainer({ ...draftContainer, environmentVariables: next });
+                          }}
+                          placeholder="KEY"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                        />
+                      </div>
+                      <div className="md:col-span-6">
+                        <label className="block text-xs text-slate-600 mb-1">Value</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type={env.masked === false ? 'text' : 'password'}
+                            value={env.value}
+                            onChange={(e) => {
+                              const next = [...draftContainer.environmentVariables];
+                              next[idx] = { ...next[idx], value: e.target.value };
+                              setDraftContainer({ ...draftContainer, environmentVariables: next });
+                            }}
+                            placeholder="••••••••"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...draftContainer.environmentVariables];
+                              const currentMasked = next[idx].masked !== false; // treat undefined as masked=true
+                              next[idx] = { ...next[idx], masked: !currentMasked };
+                              setDraftContainer({ ...draftContainer, environmentVariables: next });
+                            }}
+                            className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
+                            aria-label={env.masked === false ? 'Hide value' : 'Show value'}
+                            title={env.masked === false ? 'Hide value' : 'Show value'}
+                          >
+                            {env.masked === false ? (
+                              // Eye-off icon
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <ellipse cx="12" cy="12" rx="9" ry="6" />
+                                <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+                                <line x1="4" y1="20" x2="20" y2="4" />
+                              </svg>
+                            ) : (
+                              // Eye icon
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <ellipse cx="12" cy="12" rx="9" ry="6" />
+                                <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs mb-1 invisible">Action</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = draftContainer.environmentVariables.filter((_, i) => i !== idx);
+                            setDraftContainer({ ...draftContainer, environmentVariables: next });
+                          }}
+                          className="w-full md:w-auto px-3 py-2 text-xs rounded-lg border border-red-300 text-red-700 hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-slate-500 flex items-center gap-2">
+                      <span>🔐</span>
+                      <span>Values are masked by default and stored encrypted.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [
+                          ...draftContainer.environmentVariables,
+                          { key: '', value: '', masked: true },
+                        ];
+                        setDraftContainer({ ...draftContainer, environmentVariables: next });
+                      }}
+                      className="px-3 py-2 text-xs rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
+                    >
+                      + Add variable
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Health Check */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Health Check</h4>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Protocol</label>
+                    <select
+                      value={draftContainer.healthCheck.protocol}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, protocol: e.target.value as any }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="HTTP">HTTP</option>
+                      <option value="TCP">TCP</option>
+                      <option value="gRPC">gRPC</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Port</label>
+                    <input
+                      type="number"
+                      value={draftContainer.healthCheck.port}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, port: parseInt(e.target.value) || draftContainer.port }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Path</label>
+                    <input
+                      type="text"
+                      value={draftContainer.healthCheck.path || ''}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, path: e.target.value }
+                      })}
+                      placeholder="/health"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4 mt-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Interval</label>
+                    <input
+                      type="text"
+                      value={draftContainer.healthCheck.interval}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, interval: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Timeout</label>
+                    <input
+                      type="text"
+                      value={draftContainer.healthCheck.timeout}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, timeout: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Retries</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={draftContainer.healthCheck.retries}
+                      onChange={(e) => setDraftContainer({
+                        ...draftContainer,
+                        healthCheck: { ...draftContainer.healthCheck, retries: Math.max(0, parseInt(e.target.value) || 0) }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Using recommended values.</p>
+              </div>
+
+              {/* Section: Networking */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Networking</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Visibility</label>
+                    <div className="flex items-center gap-4 text-sm">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={draftContainer.exposure === 'public'}
+                          onChange={() => setDraftContainer({ ...draftContainer, exposure: 'public' })}
+                        />
+                        <span className="text-slate-900">Public</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={draftContainer.exposure === 'private'}
+                          onChange={() => setDraftContainer({ ...draftContainer, exposure: 'private' })}
+                        />
+                        <span className="text-slate-900">Private</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Domain</label>
+                    <div className="text-sm text-slate-900">
+                      {state.domain?.customDomain || `${state.domain?.defaultSubdomain}.unhazzle.app`}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Port</label>
+                    <div className="text-sm font-mono text-slate-900">{draftContainer.port}</div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Internal DNS is auto-configured.</p>
+              </div>
+
+              {/* Section: Service Access */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Service Access</h4>
+                <div className="space-y-2 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={draftContainer.serviceAccess.database}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        const envVarKey = 'UNHAZZLE_POSTGRES_URL';
+                        let updatedEnvVars = [...draftContainer.environmentVariables];
+
+                        if (enabled) {
+                          // Add the infrastructure env var if it doesn't exist
+                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                          if (!exists) {
+                            updatedEnvVars.push({
+                              key: envVarKey,
+                              value: '',
+                              masked: false
+                            });
+                          }
+                        } else {
+                          // Remove the infrastructure env var
+                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                        }
+
+                        setDraftContainer({
+                          ...draftContainer,
+                          serviceAccess: { ...draftContainer.serviceAccess, database: enabled },
+                          environmentVariables: updatedEnvVars
+                        });
+                      }}
+                    />
+                    <span className="text-slate-900">PostgreSQL</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={draftContainer.serviceAccess.cache}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        const envVarKey = 'UNHAZZLE_REDIS_URL';
+                        let updatedEnvVars = [...draftContainer.environmentVariables];
+
+                        if (enabled) {
+                          // Add the infrastructure env var if it doesn't exist
+                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                          if (!exists) {
+                            updatedEnvVars.push({
+                              key: envVarKey,
+                              value: '',
+                              masked: false
+                            });
+                          }
+                        } else {
+                          // Remove the infrastructure env var
+                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                        }
+
+                        setDraftContainer({
+                          ...draftContainer,
+                          serviceAccess: { ...draftContainer.serviceAccess, cache: enabled },
+                          environmentVariables: updatedEnvVars
+                        });
+                      }}
+                    />
+                    <span className="text-slate-900">Redis</span>
+                  </label>
+                  <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+                </div>
+              </div>
+
+              {/* Changes Preview */}
+              {showChanges && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+                    <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
+                  </div>
+                  <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+                    {selectedContainer.resources.cpu !== draftContainer.resources.cpu && (
+                      <li>CPU: {selectedContainer.resources.cpu} → {draftContainer.resources.cpu}</li>
+                    )}
+                    {selectedContainer.resources.memory !== draftContainer.resources.memory && (
+                      <li>Memory: {selectedContainer.resources.memory} → {draftContainer.resources.memory}</li>
+                    )}
+                    {selectedContainer.resources.replicas.min !== draftContainer.resources.replicas.min && (
+                      <li>Replicas (min): {selectedContainer.resources.replicas.min} → {draftContainer.resources.replicas.min}</li>
+                    )}
+                    {selectedContainer.healthCheck.protocol !== draftContainer.healthCheck.protocol && (
+                      <li>Health Check Protocol: {selectedContainer.healthCheck.protocol} → {draftContainer.healthCheck.protocol}</li>
+                    )}
+                    {selectedContainer.healthCheck.port !== draftContainer.healthCheck.port && (
+                      <li>Health Check Port: {selectedContainer.healthCheck.port} → {draftContainer.healthCheck.port}</li>
+                    )}
+                    {(selectedContainer.healthCheck.path || '') !== (draftContainer.healthCheck.path || '') && (
+                      <li>Health Check Path: {selectedContainer.healthCheck.path || '—'} → {draftContainer.healthCheck.path || '—'}</li>
+                    )}
+                    {selectedContainer.exposure !== draftContainer.exposure && (
+                      <li>Visibility: {selectedContainer.exposure} → {draftContainer.exposure}</li>
+                    )}
+                    {selectedContainer.serviceAccess.database !== draftContainer.serviceAccess.database && (
+                      <li>PostgreSQL access: {selectedContainer.serviceAccess.database ? 'On' : 'Off'} → {draftContainer.serviceAccess.database ? 'On' : 'Off'}</li>
+                    )}
+                    {selectedContainer.serviceAccess.cache !== draftContainer.serviceAccess.cache && (
+                      <li>Redis access: {selectedContainer.serviceAccess.cache ? 'On' : 'Off'} → {draftContainer.serviceAccess.cache ? 'On' : 'Off'}</li>
+                    )}
+                    {JSON.stringify(selectedContainer.environmentVariables) !== JSON.stringify(draftContainer.environmentVariables) && (
+                      <li>Environment variables updated</li>
+                    )}
+                  </ul>
+                  <div className="text-xs text-amber-800 mt-3">
+                    Impact: CPU/RAM changes require rolling restart. Estimated duration: ~2 minutes. Zero-downtime ensured.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Database Panel */}
+          {selected.kind === 'database' && draftDatabase && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">PostgreSQL Database</h3>
+                  <p className="text-xs text-slate-500">Managed {draftDatabase.engine} instance</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowChanges(true)}
+                    disabled={!hasDatabaseChanges() || isApplying}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                      hasDatabaseChanges() ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                    } disabled:opacity-50`}
+                  >
+                    Show Changes
+                  </button>
+                  <button
+                    onClick={initiateDatabaseApply}
+                    disabled={!hasDatabaseChanges() || isApplying}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {isApplying ? 'Applying…' : 'Apply'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Connection URL */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Connection URL</h4>
+                <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 flex items-center justify-between">
+                  <code className="break-all">postgres://unhazzle_user:***@db-prod-{state.domain?.defaultSubdomain || 'app'}.internal:5432/main</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`postgres://unhazzle_user:secret@db-prod-${state.domain?.defaultSubdomain || 'app'}.internal:5432/main`);
+                      alert('Connection URL copied to clipboard!');
+                    }}
+                    className="ml-3 px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 flex-shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Injected as DATABASE_URL environment variable.</p>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">CPU</label>
+                    <select
+                      value={draftDatabase.cpu}
+                      onChange={(e) => setDraftDatabase({ ...draftDatabase, cpu: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="0.5">0.5</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                      <option value="8">8</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Memory</label>
+                    <select
+                      value={draftDatabase.memory}
+                      onChange={(e) => setDraftDatabase({ ...draftDatabase, memory: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="1GB">1GB</option>
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                      <option value="16GB">16GB</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Storage</label>
+                    <select
+                      value={draftDatabase.storage}
+                      onChange={(e) => setDraftDatabase({ ...draftDatabase, storage: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="10GB">10GB</option>
+                      <option value="20GB">20GB</option>
+                      <option value="50GB">50GB</option>
+                      <option value="100GB">100GB</option>
+                      <option value="200GB">200GB</option>
+                      <option value="500GB">500GB</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Backups */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Backups</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Frequency</label>
+                    <select
+                      value={draftDatabase.backups.frequency}
+                      onChange={(e) => setDraftDatabase({
+                        ...draftDatabase,
+                        backups: { ...draftDatabase.backups, frequency: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="hourly">Hourly</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Retention</label>
+                    <select
+                      value={draftDatabase.backups.retention}
+                      onChange={(e) => setDraftDatabase({
+                        ...draftDatabase,
+                        backups: { ...draftDatabase.backups, retention: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="7 days">7 days</option>
+                      <option value="14 days">14 days</option>
+                      <option value="30 days">30 days</option>
+                      <option value="90 days">90 days</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Enabled</label>
+                    <label className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        checked={draftDatabase.backups.enabled}
+                        onChange={(e) => setDraftDatabase({
+                          ...draftDatabase,
+                          backups: { ...draftDatabase.backups, enabled: e.target.checked }
+                        })}
+                      />
+                      <span className="text-sm text-slate-900">Automatic backups</span>
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Point-in-time recovery available for all plans.</p>
+              </div>
+
+              {/* High Availability */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">High Availability</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Replicas</label>
+                    <select
+                      value={draftDatabase.replicas}
+                      onChange={(e) => setDraftDatabase({ ...draftDatabase, replicas: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="none">None (Single instance)</option>
+                      <option value="1">1 Standby Replica</option>
+                      <option value="2">2 Standby Replicas</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <div className="text-xs text-slate-600">
+                      <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded">✓ Connection pooling enabled</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Changes Preview */}
+              {showChanges && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+                    <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
+                  </div>
+                  <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+                    {state.resources?.database && draftDatabase.cpu !== state.resources.database.cpu && (
+                      <li>CPU: {state.resources.database.cpu} → {draftDatabase.cpu}</li>
+                    )}
+                    {state.resources?.database && draftDatabase.memory !== state.resources.database.memory && (
+                      <li>Memory: {state.resources.database.memory} → {draftDatabase.memory}</li>
+                    )}
+                    {state.resources?.database && draftDatabase.storage !== state.resources.database.storage && (
+                      <li>Storage: {state.resources.database.storage} → {draftDatabase.storage}</li>
+                    )}
+                    {state.resources?.database && draftDatabase.backups.frequency !== state.resources.database.backups.frequency && (
+                      <li>Backup frequency: {state.resources.database.backups.frequency} → {draftDatabase.backups.frequency}</li>
+                    )}
+                    {state.resources?.database && draftDatabase.backups.retention !== state.resources.database.backups.retention && (
+                      <li>Backup retention: {state.resources.database.backups.retention} → {draftDatabase.backups.retention}</li>
+                    )}
+                    {state.resources?.database && draftDatabase.replicas !== state.resources.database.replicas && (
+                      <li>Replicas: {state.resources.database.replicas} → {draftDatabase.replicas}</li>
+                    )}
+                  </ul>
+                  <div className="text-xs text-amber-800 mt-3">
+                    Impact: Storage changes are instant. CPU/Memory changes require brief maintenance window (~3 min). Zero data loss guaranteed.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cache (Redis) Panel */}
+          {selected.kind === 'cache' && draftCache && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Redis Cache</h3>
+                  <p className="text-xs text-slate-500">Managed {draftCache.engine} instance</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowChanges(true)}
+                    disabled={!hasCacheChanges() || isApplying}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                      hasCacheChanges() ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                    } disabled:opacity-50`}
+                  >
+                    Show Changes
+                  </button>
+                  <button
+                    onClick={initiateCacheApply}
+                    disabled={!hasCacheChanges() || isApplying}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {isApplying ? 'Applying…' : 'Apply'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Connection URL */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Connection URL</h4>
+                <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 flex items-center justify-between">
+                  <code className="break-all">redis://:***@redis-prod-{state.domain?.defaultSubdomain || 'app'}.internal:6379/0</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`redis://:secret@redis-prod-${state.domain?.defaultSubdomain || 'app'}.internal:6379/0`);
+                      alert('Connection URL copied to clipboard!');
+                    }}
+                    className="ml-3 px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 flex-shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Injected as REDIS_URL environment variable.</p>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Memory</label>
+                    <select
+                      value={draftCache.memory}
+                      onChange={(e) => setDraftCache({ ...draftCache, memory: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="256MB">256MB</option>
+                      <option value="512MB">512MB</option>
+                      <option value="1GB">1GB</option>
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Version</label>
+                    <select
+                      value={draftCache.version}
+                      onChange={(e) => setDraftCache({ ...draftCache, version: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="7.2">7.2 (Latest)</option>
+                      <option value="7.0">7.0</option>
+                      <option value="6.2">6.2</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Configuration */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Configuration</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Eviction Policy</label>
+                    <select
+                      value={draftCache.evictionPolicy}
+                      onChange={(e) => setDraftCache({ ...draftCache, evictionPolicy: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="allkeys-lru">allkeys-lru (Recommended)</option>
+                      <option value="volatile-lru">volatile-lru</option>
+                      <option value="allkeys-lfu">allkeys-lfu</option>
+                      <option value="volatile-lfu">volatile-lfu</option>
+                      <option value="noeviction">noeviction</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Persistence</label>
+                    <select
+                      value={draftCache.persistence}
+                      onChange={(e) => setDraftCache({ ...draftCache, persistence: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="aof">AOF (Append-only file)</option>
+                      <option value="rdb">RDB (Snapshots)</option>
+                      <option value="both">Both (AOF + RDB)</option>
+                      <option value="none">None (In-memory only)</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">AOF persistence recommended for durability.</p>
+              </div>
+
+              {/* Changes Preview */}
+              {showChanges && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+                    <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
+                  </div>
+                  <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+                    {state.resources?.cache && draftCache.memory !== state.resources.cache.memory && (
+                      <li>Memory: {state.resources.cache.memory} → {draftCache.memory}</li>
+                    )}
+                    {state.resources?.cache && draftCache.version !== state.resources.cache.version && (
+                      <li>Version: {state.resources.cache.version} → {draftCache.version}</li>
+                    )}
+                    {state.resources?.cache && draftCache.evictionPolicy !== state.resources.cache.evictionPolicy && (
+                      <li>Eviction Policy: {state.resources.cache.evictionPolicy} → {draftCache.evictionPolicy}</li>
+                    )}
+                    {state.resources?.cache && draftCache.persistence !== state.resources.cache.persistence && (
+                      <li>Persistence: {state.resources.cache.persistence} → {draftCache.persistence}</li>
+                    )}
+                  </ul>
+                  <div className="text-xs text-amber-800 mt-3">
+                    Impact: Memory changes require restart (~30 sec). Data persisted if AOF/RDB enabled.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Apply Configuration Changes?</h3>
+                
+                {/* Container Changes Summary */}
+                {selected.kind === 'application' && selectedContainer && draftContainer && (
+                  <>
+                    <div className="text-sm text-slate-700 mb-4">
+                      <p className="font-medium mb-2">Summary:</p>
+                      <p className="text-slate-600">Container: <span className="font-mono">{selectedContainer.name || selectedContainer.imageUrl.split('/').pop()?.split(':')[0]}</span></p>
+                      <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                        {selectedContainer.resources.cpu !== draftContainer.resources.cpu && (
+                          <li>CPU: {selectedContainer.resources.cpu} → {draftContainer.resources.cpu} cores</li>
+                        )}
+                        {selectedContainer.resources.memory !== draftContainer.resources.memory && (
+                          <li>Memory: {selectedContainer.resources.memory} → {draftContainer.resources.memory}</li>
+                        )}
+                        {selectedContainer.resources.replicas.min !== draftContainer.resources.replicas.min && (
+                          <li>Min replicas: {selectedContainer.resources.replicas.min} → {draftContainer.resources.replicas.min}</li>
+                        )}
+                        {JSON.stringify(selectedContainer.environmentVariables) !== JSON.stringify(draftContainer.environmentVariables) && (
+                          <li>Environment variables updated</li>
+                        )}
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                      <p className="font-medium text-slate-900">Impact Assessment:</p>
+                      <p className="text-slate-600">⚠️ Rolling restart required</p>
+                      <p className="text-slate-600">⏱️ Estimated time: ~2 minutes</p>
+                      <p className="text-slate-600">✅ No expected traffic disruption</p>
+                      {(() => {
+                        const costImpact = calculateContainerCostImpact(
+                          selectedContainer.resources.cpu,
+                          selectedContainer.resources.memory,
+                          selectedContainer.resources.replicas,
+                          draftContainer.resources.cpu,
+                          draftContainer.resources.memory,
+                          draftContainer.resources.replicas
+                        );
+                        return costImpact !== 0 ? (
+                          <p className="text-slate-600 font-medium">
+                            📊 Cost impact: {costImpact > 0 ? '+' : ''}€{Math.abs(costImpact)}/month
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                {/* Database Changes Summary */}
+                {selected.kind === 'database' && state.resources?.database && draftDatabase && (
+                  <>
+                    <div className="text-sm text-slate-700 mb-4">
+                      <p className="font-medium mb-2">Summary:</p>
+                      <p className="text-slate-600">Resource: <span className="font-mono">PostgreSQL Database</span></p>
+                      <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                        {state.resources.database.cpu !== draftDatabase.cpu && (
+                          <li>CPU: {state.resources.database.cpu} → {draftDatabase.cpu} cores</li>
+                        )}
+                        {state.resources.database.memory !== draftDatabase.memory && (
+                          <li>Memory: {state.resources.database.memory} → {draftDatabase.memory}</li>
+                        )}
+                        {state.resources.database.storage !== draftDatabase.storage && (
+                          <li>Storage: {state.resources.database.storage} → {draftDatabase.storage}</li>
+                        )}
+                        {state.resources.database.replicas !== draftDatabase.replicas && (
+                          <li>Replicas: {state.resources.database.replicas} → {draftDatabase.replicas}</li>
+                        )}
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                      <p className="font-medium text-slate-900">Impact Assessment:</p>
+                      <p className="text-slate-600">⚠️ Maintenance window required for CPU/Memory changes</p>
+                      <p className="text-slate-600">⏱️ Estimated time: ~3 minutes</p>
+                      <p className="text-slate-600">✅ Zero data loss guaranteed</p>
+                      {(() => {
+                        const costImpact = calculateDatabaseCostImpact(
+                          state.resources.database,
+                          draftDatabase
+                        );
+                        return costImpact !== 0 ? (
+                          <p className="text-slate-600 font-medium">
+                            📊 Cost impact: {costImpact > 0 ? '+' : ''}€{Math.abs(costImpact)}/month
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                {/* Cache Changes Summary */}
+                {selected.kind === 'cache' && state.resources?.cache && draftCache && (
+                  <>
+                    <div className="text-sm text-slate-700 mb-4">
+                      <p className="font-medium mb-2">Summary:</p>
+                      <p className="text-slate-600">Resource: <span className="font-mono">Redis Cache</span></p>
+                      <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                        {state.resources.cache.memory !== draftCache.memory && (
+                          <li>Memory: {state.resources.cache.memory} → {draftCache.memory}</li>
+                        )}
+                        {state.resources.cache.version !== draftCache.version && (
+                          <li>Version: {state.resources.cache.version} → {draftCache.version}</li>
+                        )}
+                        {state.resources.cache.evictionPolicy !== draftCache.evictionPolicy && (
+                          <li>Eviction policy: {state.resources.cache.evictionPolicy} → {draftCache.evictionPolicy}</li>
+                        )}
+                        {state.resources.cache.persistence !== draftCache.persistence && (
+                          <li>Persistence: {state.resources.cache.persistence} → {draftCache.persistence}</li>
+                        )}
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                      <p className="font-medium text-slate-900">Impact Assessment:</p>
+                      <p className="text-slate-600">⚠️ Restart required (~30 seconds)</p>
+                      <p className="text-slate-600">✅ Data persisted if AOF/RDB enabled</p>
+                      {(() => {
+                        const costImpact = calculateCacheCostImpact(
+                          state.resources.cache.memory,
+                          draftCache.memory
+                        );
+                        return costImpact !== 0 ? (
+                          <p className="text-slate-600 font-medium">
+                            📊 Cost impact: {costImpact > 0 ? '+' : ''}€{Math.abs(costImpact)}/month
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                <p className="text-sm text-slate-600 mt-4">Are you sure you want to apply these changes?</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t">
+              <button
+                onClick={() => setShowConfirmation(false)}
+                className="px-5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (selected.kind === 'application') applyContainerChanges();
+                  else if (selected.kind === 'database') applyDatabaseChanges();
+                  else if (selected.kind === 'cache') applyCacheChanges();
+                }}
+                className="px-5 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 font-medium"
+              >
+                Apply Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Helper functions
 function generateYAML(state: any): string {
   const appType = state.questionnaire?.appType || 'web';
@@ -770,6 +1773,36 @@ function generateYAML(state: any): string {
     envSection += `  NODE_ENV: production\n`;
     envSection += `  LOG_LEVEL: info\n`;
   }
+  
+  // Generate containers section
+  let containersSection = '';
+  if (state.containers && state.containers.length > 0) {
+    containersSection = 'containers:\n';
+    state.containers.forEach((container: any, index: number) => {
+      const containerName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+      containersSection += `  - name: ${containerName}\n`;
+      containersSection += `    image: ${container.imageUrl}\n`;
+      containersSection += `    port: ${container.port}\n`;
+      containersSection += `    exposure: ${container.exposure}\n`;
+      containersSection += `    resources:\n`;
+      containersSection += `      cpu: ${container.resources.cpu}\n`;
+      containersSection += `      memory: ${container.resources.memory}\n`;
+      containersSection += `      replicas:\n`;
+      containersSection += `        min: ${container.resources.replicas.min}\n`;
+      containersSection += `        max: ${container.resources.replicas.max}\n`;
+      
+      if (container.volume) {
+        containersSection += `    volume:\n`;
+        containersSection += `      mount_path: ${container.volume.mountPath}\n`;
+        containersSection += `      size: ${container.volume.sizeGB}GB\n`;
+        containersSection += `      auto_scale: ${container.volume.autoScale}\n`;
+        containersSection += `      backup_frequency: ${container.volume.backupFrequency}\n`;
+        containersSection += `      delete_with_container: ${container.volume.deleteWithContainer}\n`;
+      }
+      
+      containersSection += '\n';
+    });
+  }
 
   return `# Unhazzle Deployment Configuration
 # Generated from your application setup
@@ -778,39 +1811,10 @@ function generateYAML(state: any): string {
 project: ${state.user?.name?.toLowerCase().replace(/\s+/g, '-') || 'my-app'}
 environment: production
 
-application:
-  image: ${state.application?.imageUrl || 'ghcr.io/yourorg/your-app:latest'}
-  type: ${appType}
-  port: 3000
-  healthcheck:
-    endpoint: /health
-    interval: 30s
-    timeout: 10s
-    unhealthy_threshold: 3
-
 domain: ${state.domain?.customDomain || state.domain?.defaultSubdomain || 'your-app.unhazzle.io'}
 ssl: true  # Auto-provisioned with Let's Encrypt
 
-resources:
-  replicas:
-    min: ${state.resources?.replicas.min || 2}
-    max: ${state.resources?.replicas.max || 10}
-  cpu: ${state.resources?.cpu || 1}
-  memory: ${state.resources?.memory || '2GB'}
-  auto_scaling:
-    enabled: true
-    target_cpu: 70
-    target_memory: 80
-
-${state.containers && state.containers.length > 0 && state.containers[0].volume ? `# Persistent Volume
-volume:
-  mount_path: ${state.containers[0].volume.mountPath}
-  size: ${state.containers[0].volume.sizeGB}GB
-  auto_scale: ${state.containers[0].volume.autoScale}
-  backup_frequency: ${state.containers[0].volume.backupFrequency}
-  delete_with_container: ${state.containers[0].volume.deleteWithContainer}
-
-` : ''}${hasDatabase ? `services:
+${containersSection}${hasDatabase ? `services:
   database:
     type: ${state.resources.database.engine}
     version: "${state.resources.database.engine === 'postgres' ? '16' : '8.0'}"

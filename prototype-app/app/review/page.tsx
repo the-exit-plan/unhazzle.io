@@ -93,7 +93,17 @@ export default function ReviewAndDeploy() {
         const memoryGB = parseFloat(container.resources.memory);
         const memoryCost = memoryGB * 3.5;
         const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
-        const volumeCost = container.volume ? container.volume.sizeGB * 0.044 : 0;
+        
+        // Volume cost: storage + backups
+        let volumeCost = 0;
+        if (container.volume) {
+          const storageCost = container.volume.sizeGB * 0.044;
+          const backupCost = container.volume.backupFrequency !== 'disabled' 
+            ? replicaCost * 0.20 
+            : 0;
+          volumeCost = storageCost + backupCost;
+        }
+        
         totalApplicationCost += replicaCost + volumeCost;
       });
 
@@ -225,6 +235,8 @@ export default function ReviewAndDeploy() {
           </div>
         </div>
 
+        
+
         {/* Architecture Diagram */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -267,7 +279,17 @@ export default function ReviewAndDeploy() {
                   const memoryGB = parseFloat(container.resources.memory);
                   const memoryCost = memoryGB * 3.5;
                   const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
-                  const volumeCost = container.volume ? container.volume.sizeGB * 0.044 : 0;
+                  
+                  // Volume cost: storage + backups
+                  let volumeCost = 0;
+                  if (container.volume) {
+                    const storageCost = container.volume.sizeGB * 0.044;
+                    const backupCost = container.volume.backupFrequency !== 'disabled' 
+                      ? replicaCost * 0.20 
+                      : 0;
+                    volumeCost = storageCost + backupCost;
+                  }
+                  
                   const totalContainerCost = replicaCost + volumeCost;
 
                   return (
@@ -381,9 +403,34 @@ export default function ReviewAndDeploy() {
                           <span className="font-mono text-slate-900">{container.port}</span>
                         </div>
                         {container.volume && (
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-slate-600">Volume:</span>
-                            <span className="font-mono text-slate-900">{container.volume.sizeGB}GB</span>
+                            <select
+                              value={container.volume.sizeGB}
+                              onChange={(e) => {
+                                const newVolume = {
+                                  ...container.volume!,
+                                  sizeGB: parseInt(e.target.value)
+                                };
+                                updateContainer(container.id, { volume: newVolume });
+                                const updatedContainers = state.containers.map(c => 
+                                  c.id === container.id 
+                                    ? { ...c, volume: newVolume }
+                                    : c
+                                );
+                                const newConfig = { ...resources, application: { containers: updatedContainers } };
+                                recalculateAndUpdateCost(newConfig);
+                              }}
+                              disabled={isRecalculating}
+                              className="px-1.5 py-0.5 border border-purple-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
+                            >
+                              <option value="10">10GB</option>
+                              <option value="20">20GB</option>
+                              <option value="50">50GB</option>
+                              <option value="100">100GB</option>
+                              <option value="250">250GB</option>
+                              <option value="500">500GB</option>
+                            </select>
                           </div>
                         )}
                         <div className="pt-2 border-t border-purple-200 mt-2">
@@ -409,7 +456,7 @@ export default function ReviewAndDeploy() {
                       )}
                       {/* Edit Button */}
                       <button
-                        onClick={() => router.push('/resources')}
+                        onClick={() => router.push(`/resources#container-${container.id}`)}
                         className="mt-3 w-full text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-3 py-1.5 rounded hover:bg-purple-50 transition"
                       >
                         Edit Configuration
@@ -509,7 +556,7 @@ export default function ReviewAndDeploy() {
                         </div>
                       </div>
                       <button
-                        onClick={() => router.push('/resources')}
+                        onClick={() => router.push('/resources#database')}
                         className="mt-4 w-full text-sm text-green-600 hover:text-green-700 font-medium border border-green-200 px-3 py-2 rounded-lg hover:bg-green-50 transition"
                       >
                         Edit Configuration
@@ -554,7 +601,7 @@ export default function ReviewAndDeploy() {
                         </div>
                       </div>
                       <button
-                        onClick={() => router.push('/resources')}
+                        onClick={() => router.push('/resources#cache')}
                         className="mt-4 w-full text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50 transition"
                       >
                         Edit Configuration
@@ -606,48 +653,75 @@ export default function ReviewAndDeploy() {
           </div>
         </div>
 
-        {/* What's Included Section */}
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-8 border border-purple-100">
-          <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+        {/* What's Included */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          <h3 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span>✨</span>
             <span>Benefit from these built-in unhazzle features</span>
           </h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-purple-600">🔒</span>
-              </div>
-              <div>
-                <p className="font-medium text-slate-900 text-sm">SSL/TLS Certificates</p>
-                <p className="text-xs text-slate-600">Automatic HTTPS with Let's Encrypt</p>
-              </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">Infrastructure</h4>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Hetzner enterprise servers (Germany)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>NVMe SSD storage (RAID 10)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>10 Gbit/s network</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>20 TB bandwidth included</span>
+                </li>
+              </ul>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600">⚡</span>
-              </div>
-              <div>
-                <p className="font-medium text-slate-900 text-sm">Auto-scaling</p>
-                <p className="text-xs text-slate-600">Scales based on CPU/memory usage</p>
-              </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">High Availability</h4>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Auto-scaling (min-max replicas)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Zero-downtime deployments</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Health check monitoring</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Automatic failover</span>
+                </li>
+              </ul>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-600">❤️</span>
-              </div>
-              <div>
-                <p className="font-medium text-slate-900 text-sm">Health Monitoring</p>
-                <p className="text-xs text-slate-600">Automatic health checks and restarts</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-orange-600">📊</span>
-              </div>
-              <div>
-                <p className="font-medium text-slate-900 text-sm">Observability</p>
-                <p className="text-xs text-slate-600">Logs, metrics, and performance insights</p>
-              </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">Security & Compliance</h4>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Free SSL certificates</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>DDoS protection</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Secrets encryption (AES-256)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>GDPR compliant (EU data)</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
