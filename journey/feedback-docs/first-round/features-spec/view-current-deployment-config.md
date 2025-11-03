@@ -1,6 +1,6 @@
 ## View Current Deployment Config Specification
 
-**Status**: 🔴 TO_DO
+**Status**: ✅ DONE
 
 **Feature**: Display and edit complete resource configuration in Overview tab with visual consistency and change preview
 
