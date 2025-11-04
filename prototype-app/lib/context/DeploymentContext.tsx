@@ -15,6 +15,49 @@ export interface QuestionnaireAnswers {
   cache: 'redis' | 'memcached' | 'none';
 }
 
+export interface VolumeConfig {
+  mountPath: string;
+  sizeGB: number;
+  autoScale: boolean;
+  backupFrequency: 'disabled' | 'hourly' | 'daily' | 'weekly';
+  deleteWithContainer: boolean;
+}
+
+export interface ContainerConfig {
+  id: string;
+  name: string;
+  imageUrl: string;
+  registryUsername?: string;
+  registryToken?: string;
+  port: number;
+  healthCheck: {
+    protocol: 'HTTP' | 'TCP' | 'gRPC';
+    port: number;
+    path?: string;
+    interval: string;
+    timeout: string;
+    retries: number;
+  };
+  exposure: 'public' | 'private';
+  customDomain?: string;
+  resources: {
+    cpu: string;
+    memory: string;
+    replicas: { min: number; max: number };
+  };
+  volume?: VolumeConfig;
+  serviceAccess: {
+    database: boolean;
+    cache: boolean;
+  };
+  environmentVariables: {
+    key: string;
+    value: string;
+    masked?: boolean;
+  }[];
+}
+
+// Legacy single container support (deprecated but maintained for backward compatibility)
 export interface ApplicationConfig {
   imageUrl: string;
   registryUsername?: string;
@@ -30,6 +73,8 @@ export interface ResourceConfig {
   database?: {
     engine: string;
     version: string;
+    cpu: string;
+    memory: string;
     storage: string;
     backups: { enabled: boolean; retention: string; frequency: string };
     replicas: string;
@@ -66,7 +111,8 @@ export interface CostBreakdown {
 export interface DeploymentState {
   user: UserInfo | null;
   questionnaire: QuestionnaireAnswers | null;
-  application: ApplicationConfig | null;
+  application: ApplicationConfig | null; // Legacy support
+  containers: ContainerConfig[]; // New multi-container support
   resources: ResourceConfig | null;
   environment: EnvironmentVariables | null;
   domain: DomainConfig | null;
@@ -78,7 +124,10 @@ interface DeploymentContextType {
   state: DeploymentState;
   updateUser: (user: UserInfo) => void;
   updateQuestionnaire: (answers: QuestionnaireAnswers) => void;
-  updateApplication: (config: ApplicationConfig) => void;
+  updateApplication: (config: ApplicationConfig) => void; // Legacy
+  addContainer: (container: ContainerConfig) => void;
+  updateContainer: (id: string, container: Partial<ContainerConfig>) => void;
+  removeContainer: (id: string) => void;
   updateResources: (config: ResourceConfig) => void;
   updateEnvironment: (env: EnvironmentVariables) => void;
   updateDomain: (domain: DomainConfig) => void;
@@ -93,6 +142,7 @@ const initialState: DeploymentState = {
   user: null,
   questionnaire: null,
   application: null,
+  containers: [],
   resources: null,
   environment: null,
   domain: null,
@@ -107,7 +157,12 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('unhazzle-deployment-state');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          // Ensure containers array exists for backward compatibility
+          return {
+            ...parsed,
+            containers: parsed.containers || []
+          };
         } catch (e) {
           console.error('Failed to parse saved state:', e);
         }
@@ -139,6 +194,47 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
   const updateApplication = (config: ApplicationConfig) => {
     setState(prev => {
       const newState = { ...prev, application: config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const addContainer = (container: ContainerConfig) => {
+    setState(prev => {
+      const existingContainers = prev.containers || [];
+      const newState = { ...prev, containers: [...existingContainers, container] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const updateContainer = (id: string, updates: Partial<ContainerConfig>) => {
+    setState(prev => {
+      const existingContainers = prev.containers || [];
+      const newState = {
+        ...prev,
+        containers: existingContainers.map(c => 
+          c.id === id ? { ...c, ...updates } : c
+        )
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const removeContainer = (id: string) => {
+    setState(prev => {
+      const existingContainers = prev.containers || [];
+      const newState = {
+        ...prev,
+        containers: existingContainers.filter(c => c.id !== id)
+      };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
@@ -210,6 +306,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         updateUser,
         updateQuestionnaire,
         updateApplication,
+        addContainer,
+        updateContainer,
+        removeContainer,
         updateResources,
         updateEnvironment,
         updateDomain,

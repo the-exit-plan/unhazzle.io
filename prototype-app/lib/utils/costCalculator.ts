@@ -1,16 +1,31 @@
 // Utility to calculate cost based on resource configuration
-import { ResourceConfig, CostBreakdown, QuestionnaireAnswers } from '../context/DeploymentContext';
+import { ResourceConfig, CostBreakdown, QuestionnaireAnswers, VolumeConfig, DeploymentState } from '../context/DeploymentContext';
 
 export function calculateCost(
   resources: ResourceConfig,
-  answers: QuestionnaireAnswers
+  answers: QuestionnaireAnswers,
+  volumeConfig?: VolumeConfig,
+  applicationCostForBackup?: number
 ): CostBreakdown {
   // Base application cost (per replica range)
-  const applicationCost = calculateApplicationCost(resources.replicas, resources.cpu, resources.memory);
+  const baseApplicationCost = calculateApplicationCost(resources.replicas, resources.cpu, resources.memory);
+
+  // Volume cost (if configured)
+  const volumeCost = volumeConfig 
+    ? calculateVolumeCost(volumeConfig, applicationCostForBackup || baseApplicationCost)
+    : 0;
+
+  // Total application cost (compute + volume)
+  const applicationCost = baseApplicationCost + volumeCost;
 
   // Database cost
   const databaseCost = resources.database
-    ? calculateDatabaseCost(resources.database.storage, resources.database.replicas)
+    ? calculateDatabaseCost(
+        resources.database.cpu,
+        resources.database.memory,
+        resources.database.storage,
+        resources.database.replicas
+      )
     : undefined;
 
   // Cache cost
@@ -35,6 +50,19 @@ export function calculateCost(
     bandwidth: bandwidthCost,
     total,
   };
+}
+
+function calculateVolumeCost(volume: VolumeConfig, containerCost: number): number {
+  // Base storage cost: €0.044/GB/month
+  const storageCost = volume.sizeGB * 0.044;
+  
+  // Backup cost: 20% of container compute cost (if enabled)
+  let backupCost = 0;
+  if (volume.backupFrequency !== 'disabled') {
+    backupCost = containerCost * 0.20;
+  }
+  
+  return Math.round((storageCost + backupCost) * 100) / 100;
 }
 
 function calculateApplicationCost(
@@ -70,13 +98,32 @@ function calculateApplicationCost(
   return Math.round(serversNeeded * monthlyPerInstance);
 }
 
-function calculateDatabaseCost(storage: string, replicas: string): number {
-  const storageGB = parseFloat(storage);
+function calculateDatabaseCost(cpu: string, memory: string, storage: string, replicas: string): number {
+  const cpuCores = parseFloat(cpu);
+  const memoryGB = parseFloat(memory);
+  
+  // Convert storage to GB (handle TB suffix)
+  let storageGB: number;
+  if (storage.includes('TB')) {
+    storageGB = parseFloat(storage) * 1000;
+  } else {
+    storageGB = parseFloat(storage);
+  }
 
-  // Database runs as container on shared server
-  // CX22 (2 vCPU, 4 GB) for small DB: €4.99/month
-  // CX33 (4 vCPU, 8 GB) for medium DB: €5.49/month
-  let computeCost = storageGB >= 50 ? 5.49 : 4.99;
+  // Map to Hetzner CX instance type based on CPU and memory resources
+  let computeCost: number;
+  
+  if (cpuCores <= 1 && memoryGB <= 2) {
+    computeCost = 4.99; // CX22: 2 vCPU, 4 GB
+  } else if (cpuCores <= 2 && memoryGB <= 4) {
+    computeCost = 5.49; // CX33: 4 vCPU, 8 GB
+  } else if (cpuCores <= 4 && memoryGB <= 8) {
+    computeCost = 9.49; // CX43: 8 vCPU, 16 GB
+  } else if (cpuCores <= 8 && memoryGB <= 16) {
+    computeCost = 17.49; // CX53: 16 vCPU, 32 GB
+  } else {
+    computeCost = 34.49; // CX63: 32 vCPU, 64 GB
+  }
 
   // Storage cost: Hetzner Block Storage @ €0.044/GB/month
   const storageCost = storageGB * 0.044;
@@ -119,4 +166,36 @@ function estimateBandwidth(traffic: string): number {
     default:
       return 10;
   }
+}
+
+// Calculate monthly cost impact for resource changes
+export function calculateContainerCostImpact(
+  currentCpu: string,
+  currentMemory: string,
+  currentReplicas: { min: number; max: number },
+  newCpu: string,
+  newMemory: string,
+  newReplicas: { min: number; max: number }
+): number {
+  const currentCost = calculateApplicationCost(currentReplicas, currentCpu, currentMemory);
+  const newCost = calculateApplicationCost(newReplicas, newCpu, newMemory);
+  return Math.round((newCost - currentCost) * 100) / 100;
+}
+
+export function calculateDatabaseCostImpact(
+  currentDb: { cpu: string; memory: string; storage: string; replicas: string },
+  newDb: { cpu: string; memory: string; storage: string; replicas: string }
+): number {
+  const currentCost = calculateDatabaseCost(currentDb.cpu, currentDb.memory, currentDb.storage, currentDb.replicas);
+  const newCost = calculateDatabaseCost(newDb.cpu, newDb.memory, newDb.storage, newDb.replicas);
+  return Math.round((newCost - currentCost) * 100) / 100;
+}
+
+export function calculateCacheCostImpact(
+  currentMemory: string,
+  newMemory: string
+): number {
+  const currentCost = calculateCacheCost(currentMemory);
+  const newCost = calculateCacheCost(newMemory);
+  return Math.round((newCost - currentCost) * 100) / 100;
 }

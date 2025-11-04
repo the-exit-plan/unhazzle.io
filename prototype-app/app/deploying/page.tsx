@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
+import { DeploymentState } from '@/lib/context/DeploymentContext';
 
 interface DeploymentStep {
   id: string;
@@ -13,86 +14,202 @@ interface DeploymentStep {
   logs?: string[];
 }
 
+// Generate deployment steps dynamically based on selected resources (multi-container support)
+const generateDeploymentSteps = (state: DeploymentState): DeploymentStep[] => {
+  const steps: DeploymentStep[] = [];
+
+  // 1. Validate (always included)
+  steps.push({
+    id: 'validate',
+    label: 'Validating configuration',
+    description: 'Checking resources and dependencies',
+    duration: 2,
+    status: 'pending',
+    logs: []
+  });
+
+  // 2. Provision infrastructure (always included)
+  steps.push({
+    id: 'provision',
+    label: 'Provisioning infrastructure',
+    description: 'Setting up servers and networking',
+    duration: 8,
+    status: 'pending',
+    logs: []
+  });
+
+  // 3. Database (only if database was selected)
+  if (state.resources?.database) {
+    steps.push({
+      id: 'database',
+      label: 'Configuring database',
+      description: 'Setting up database instance with backups',
+      duration: 6,
+      status: 'pending',
+      logs: []
+    });
+  }
+
+  // 4. Cache (only if cache was selected)
+  if (state.resources?.cache) {
+    steps.push({
+      id: 'cache',
+      label: 'Setting up cache',
+      description: 'Deploying cache service',
+      duration: 4,
+      status: 'pending',
+      logs: []
+    });
+  }
+
+  // 5-N. Container deployment (one step per container)
+  state.containers.forEach((container, index) => {
+    const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+    steps.push({
+      id: `container-${container.id}`,
+      label: `Deploying ${displayName}`,
+      description: `Pulling image and starting ${container.resources.replicas.min} replicas`,
+      duration: 7,
+      status: 'pending',
+      logs: []
+    });
+  });
+
+  // N+1. Load Balancer (always included)
+  steps.push({
+    id: 'loadbalancer',
+    label: 'Configuring load balancer',
+    description: 'Setting up SSL and routing rules',
+    duration: 4,
+    status: 'pending',
+    logs: []
+  });
+
+  // N+2. Health (always included)
+  steps.push({
+    id: 'health',
+    label: 'Running health checks',
+    description: 'Verifying all services are responding',
+    duration: 5,
+    status: 'pending',
+    logs: []
+  });
+
+  // N+3. Complete (always included)
+  steps.push({
+    id: 'complete',
+    label: 'Deployment complete',
+    description: 'Your application is live!',
+    duration: 1,
+    status: 'pending',
+    logs: []
+  });
+
+  return steps;
+};
+
+// Get generic logs for each step (multi-container support)
+const getLogsForStep = (stepId: string, state: DeploymentState): string[] => {
+  switch (stepId) {
+    case 'validate':
+      return [
+        '✓ Configuration validated',
+        '✓ Resource quotas checked',
+        '✓ Dependencies resolved'
+      ];
+
+    case 'provision':
+      return [
+        '→ Allocating compute resources',
+        '→ Creating network infrastructure',
+        '→ Configuring firewall rules',
+        '→ Setting up internal DNS',
+        '✓ Infrastructure provisioned',
+        '✓ Network established'
+      ];
+
+    case 'database':
+      return [
+        '→ Creating database instance',
+        '→ Allocating storage',
+        '→ Enabling automated backups',
+        '→ Configuring replication',
+        '✓ Database ready'
+      ];
+
+    case 'cache':
+      return [
+        '→ Deploying cache service',
+        '→ Configuring memory allocation',
+        '→ Setting up persistence',
+        '✓ Cache service ready'
+      ];
+
+    case 'loadbalancer':
+      return [
+        '→ Creating load balancer',
+        '→ Provisioning SSL certificate',
+        '→ Configuring routing rules',
+        '✓ Load balancer active'
+      ];
+
+    case 'health':
+      return [
+        '→ Waiting for services to start',
+        '→ Running health checks',
+        '→ Verifying SSL certificate',
+        '✓ All health checks passed'
+      ];
+
+    case 'complete':
+      return [
+        '🎉 Deployment successful!'
+      ];
+
+    default:
+      // Handle per-container steps
+      if (stepId.startsWith('container-')) {
+        const containerId = stepId.replace('container-', '');
+        const container = state.containers.find(c => c.id === containerId);
+        if (container) {
+          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || 'container';
+          const logs = [
+            `→ Authenticating with registry`,
+            `→ Pulling image: ${container.imageUrl}`,
+            `→ Extracting layers`,
+            `→ Configuring DNS: ${displayName}.internal`
+          ];
+          
+          // Add service connection logs
+          if (container.serviceAccess.database) {
+            logs.push(`→ Injecting DATABASE_URL`);
+          }
+          if (container.serviceAccess.cache) {
+            logs.push(`→ Injecting CACHE_URL`);
+          }
+          
+          logs.push(`→ Starting ${container.resources.replicas.min} replicas`);
+          logs.push(`→ Health checks on port ${container.port}`);
+          logs.push(`✓ ${displayName} running (${container.exposure})`);
+          
+          return logs;
+        }
+      }
+      return [];
+  }
+};
+
+// Calculate total deployment duration
+const calculateTotalDuration = (steps: DeploymentStep[]): number => {
+  return steps.reduce((total, step) => total + step.duration, 0);
+};
+
 export default function Deploying() {
   const router = useRouter();
   const { state, markDeployed } = useDeployment();
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [steps, setSteps] = useState<DeploymentStep[]>([
-    {
-      id: 'validate',
-      label: 'Validating configuration',
-      description: 'Checking resources and dependencies',
-      duration: 2,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'provision',
-      label: 'Provisioning infrastructure',
-      description: 'Setting up servers and networking',
-      duration: 8,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'database',
-      label: 'Configuring database',
-      description: 'Creating PostgreSQL instance with backups',
-      duration: 6,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'cache',
-      label: 'Setting up cache',
-      description: 'Deploying Redis with persistence',
-      duration: 4,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'container',
-      label: 'Pulling container image',
-      description: 'Fetching and verifying image layers',
-      duration: 5,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'deploy',
-      label: 'Deploying application',
-      description: 'Starting containers across replicas',
-      duration: 7,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'loadbalancer',
-      label: 'Configuring load balancer',
-      description: 'Setting up SSL and routing rules',
-      duration: 4,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'health',
-      label: 'Running health checks',
-      description: 'Verifying application is responding',
-      duration: 5,
-      status: 'pending',
-      logs: []
-    },
-    {
-      id: 'complete',
-      label: 'Deployment complete',
-      description: 'Your application is live!',
-      duration: 1,
-      status: 'pending',
-      logs: []
-    }
-  ]);
-
+  const [steps, setSteps] = useState<DeploymentStep[]>(() => generateDeploymentSteps(state));
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isDeploymentComplete, setIsDeploymentComplete] = useState(false);
 
@@ -129,9 +246,7 @@ export default function Deploying() {
           setCurrentStepIndex(index);
 
           // Get all logs for this step
-          const allLogs = Array.from({ length: getLogCountForStep(steps[index].id) }, (_, i) => 
-            getLogForStep(steps[index].id, i)
-          );
+          const allLogs = getLogsForStep(steps[index].id, state);
 
           // Add logs at intervals
           let logIndex = 0;
@@ -182,131 +297,6 @@ export default function Deploying() {
     };
   }, [state.cost, isDeploymentComplete, markDeployed]);
 
-  const getLogCountForStep = (stepId: string): number => {
-    const logs: Record<string, string[]> = {
-      validate: [
-        '✓ Configuration schema validated',
-        '✓ Resource quotas checked',
-        '✓ Dependencies resolved',
-        '✓ Security policies verified'
-      ],
-      provision: [
-        '→ Allocating compute resources in FSN1',
-        '→ Creating virtual private network',
-        '→ Configuring firewall rules',
-        '✓ Infrastructure provisioned (CX43 instances)',
-        '✓ Network topology established'
-      ],
-      database: [
-        '→ Creating PostgreSQL 16 instance',
-        '→ Allocating 20GB block storage',
-        '→ Enabling automated backups (7-day retention)',
-        '→ Configuring HA standby replica',
-        '✓ Database ready: postgresql://...unhazzle.io:5432'
-      ],
-      cache: [
-        '→ Deploying Redis 7.2 container',
-        '→ Configuring 512MB memory limit',
-        '→ Enabling daily persistence (AOF)',
-        '✓ Cache ready: redis://...unhazzle.io:6379'
-      ],
-      container: [
-        '→ Authenticating with ghcr.io',
-        '→ Pulling image layers (3/3)',
-        '→ Verifying image signature',
-        '✓ Image pulled: ghcr.io/acme/ecommerce-shop:v2.1.0'
-      ],
-      deploy: [
-        '→ Injecting environment variables',
-        '→ Starting replica 1/2',
-        '→ Starting replica 2/2',
-        '→ Configuring auto-scaling (2-10 replicas)',
-        '✓ All replicas running and healthy'
-      ],
-      loadbalancer: [
-        '→ Creating load balancer',
-        '→ Provisioning SSL certificate',
-        '→ Configuring health check: GET /health',
-        '✓ Load balancer active with HTTPS'
-      ],
-      health: [
-        '→ Waiting for application to be ready',
-        '→ Health check passed (200 OK)',
-        '→ Testing SSL certificate',
-        '→ Verifying DNS resolution',
-        '✓ All health checks passed'
-      ],
-      complete: [
-        '🎉 Deployment successful!'
-      ]
-    };
-
-    return (logs[stepId] || []).length;
-  };
-
-  const getLogForStep = (stepId: string, logIndex: number): string => {
-    const logs: Record<string, string[]> = {
-      validate: [
-        '✓ Configuration schema validated',
-        '✓ Resource quotas checked',
-        '✓ Dependencies resolved',
-        '✓ Security policies verified'
-      ],
-      provision: [
-        '→ Allocating compute resources in FSN1',
-        '→ Creating virtual private network',
-        '→ Configuring firewall rules',
-        '✓ Infrastructure provisioned (CX43 instances)',
-        '✓ Network topology established'
-      ],
-      database: [
-        '→ Creating PostgreSQL 16 instance',
-        '→ Allocating 20GB block storage',
-        '→ Enabling automated backups (7-day retention)',
-        '→ Configuring HA standby replica',
-        '✓ Database ready: postgresql://...unhazzle.io:5432'
-      ],
-      cache: [
-        '→ Deploying Redis 7.2 container',
-        '→ Configuring 512MB memory limit',
-        '→ Enabling daily persistence (AOF)',
-        '✓ Cache ready: redis://...unhazzle.io:6379'
-      ],
-      container: [
-        '→ Authenticating with ghcr.io',
-        '→ Pulling image layers (3/3)',
-        '→ Verifying image signature',
-        '✓ Image pulled: ghcr.io/acme/ecommerce-shop:v2.1.0'
-      ],
-      deploy: [
-        '→ Injecting environment variables',
-        '→ Starting replica 1/2',
-        '→ Starting replica 2/2',
-        '→ Configuring auto-scaling (2-10 replicas)',
-        '✓ All replicas running and healthy'
-      ],
-      loadbalancer: [
-        '→ Creating load balancer',
-        '→ Provisioning SSL certificate',
-        '→ Configuring health check: GET /health',
-        '✓ Load balancer active with HTTPS'
-      ],
-      health: [
-        '→ Waiting for application to be ready',
-        '→ Health check passed (200 OK)',
-        '→ Testing SSL certificate',
-        '→ Verifying DNS resolution',
-        '✓ All health checks passed'
-      ],
-      complete: [
-        '🎉 Deployment successful!'
-      ]
-    };
-
-    const stepLogs = logs[stepId] || [];
-    return stepLogs[Math.min(logIndex, stepLogs.length - 1)] || '...';
-  };
-
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -338,6 +328,7 @@ export default function Deploying() {
   const completedSteps = steps.filter(s => s.status === 'completed').length;
   const totalSteps = steps.length;
   const progress = (completedSteps / totalSteps) * 100;
+  const totalDuration = calculateTotalDuration(steps);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
@@ -352,7 +343,10 @@ export default function Deploying() {
             Deploying Your Application
           </h1>
           <p className="text-lg text-slate-600">
-            Sit back and relax. This typically takes 40-50 seconds.
+            {state.containers.length > 1 
+              ? `Deploying ${state.containers.length} containers and infrastructure.` 
+              : 'Deploying your container and infrastructure.'
+            } This typically takes {totalDuration}-{totalDuration + 10} seconds.
           </p>
         </div>
 
@@ -457,19 +451,39 @@ export default function Deploying() {
           <ul className="space-y-2 text-sm text-slate-700">
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">•</span>
-              <span>Spinning up enterprise-grade Hetzner servers in Germany</span>
+              <span>Provisioning servers in Germany</span>
             </li>
+            
+            {state.resources?.database && (
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600 mt-0.5">•</span>
+                <span>Setting up database with automated backups</span>
+              </li>
+            )}
+            
+            {state.resources?.cache && (
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600 mt-0.5">•</span>
+                <span>Deploying cache service</span>
+              </li>
+            )}
+            
+            {state.containers.map((container, index) => {
+              const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+              return (
+                <li key={container.id} className="flex items-start gap-2">
+                  <span className="text-purple-600 mt-0.5">•</span>
+                  <span>
+                    Deploying <strong>{displayName}</strong>: {container.resources.replicas.min}-{container.resources.replicas.max} replicas 
+                    {container.exposure === 'public' ? ' (public)' : ' (private)'}
+                  </span>
+                </li>
+              );
+            })}
+            
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">•</span>
-              <span>Configuring high-availability database with automated backups</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-purple-600 mt-0.5">•</span>
-              <span>Setting up auto-scaling from {state.resources?.replicas.min} to {state.resources?.replicas.max} replicas</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-purple-600 mt-0.5">•</span>
-              <span>Provisioning free SSL certificate for HTTPS</span>
+              <span>Provisioning SSL certificate for HTTPS</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">•</span>
