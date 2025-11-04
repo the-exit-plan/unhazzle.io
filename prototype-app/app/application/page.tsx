@@ -146,7 +146,7 @@ export default function ApplicationSetup() {
     const totalContainers = selectedPrivateImages.length + publicImages.filter(p => p.url.trim()).length;
     
     if (totalContainers === 0) {
-      alert('Please select at least one container image');
+      alert('Please select at least one application image');
       return;
     }
 
@@ -284,14 +284,14 @@ export default function ApplicationSetup() {
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Select Your Container Images
+            Select Your Application Images
           </h1>
           <p className="text-lg text-slate-600">
-            Choose from private GitHub images or add public registry URLs (up to 5 containers)
+            Choose from private GitHub images or add public registry URLs (up to 5 applications)
           </p>
           {totalSelected > 0 && (
             <p className="text-sm text-purple-600 font-medium mt-2">
-              {totalSelected} of 5 containers selected
+              {totalSelected} of 5 applications selected
             </p>
           )}
         </div>
@@ -415,7 +415,7 @@ export default function ApplicationSetup() {
           <div className="flex items-center gap-3 mb-6">
             <div className="text-3xl">🌍</div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Public Container Registries</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Public Registries</h2>
               <p className="text-sm text-slate-600">Add images from Docker Hub, public registries, etc.</p>
             </div>
           </div>
@@ -481,11 +481,11 @@ export default function ApplicationSetup() {
           <ul className="space-y-2 text-sm text-slate-700">
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">→</span>
-              <span>Configure resources (CPU, memory, replicas) for each container</span>
+              <span>Configure resources (CPU, memory, replicas) for each application</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">→</span>
-              <span>Set environment variables per container</span>
+              <span>Set environment variables per application</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">→</span>
@@ -513,7 +513,7 @@ export default function ApplicationSetup() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Processing {totalSelected} container{totalSelected > 1 ? 's' : ''}...</span>
+                <span>Processing {totalSelected} application{totalSelected > 1 ? 's' : ''}...</span>
               </>
             ) : (
               <>

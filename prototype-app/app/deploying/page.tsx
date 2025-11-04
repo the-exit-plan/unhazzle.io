@@ -43,7 +43,7 @@ const generateDeploymentSteps = (state: DeploymentState): DeploymentStep[] => {
     steps.push({
       id: 'database',
       label: 'Configuring database',
-      description: 'Setting up PostgreSQL with backups',
+      description: 'Setting up database instance with backups',
       duration: 6,
       status: 'pending',
       logs: []
@@ -55,7 +55,7 @@ const generateDeploymentSteps = (state: DeploymentState): DeploymentStep[] => {
     steps.push({
       id: 'cache',
       label: 'Setting up cache',
-      description: 'Deploying Redis service',
+      description: 'Deploying cache service',
       duration: 4,
       status: 'pending',
       logs: []
@@ -130,19 +130,19 @@ const getLogsForStep = (stepId: string, state: DeploymentState): string[] => {
 
     case 'database':
       return [
-        '→ Creating PostgreSQL instance',
+        '→ Creating database instance',
         '→ Allocating storage',
         '→ Enabling automated backups',
         '→ Configuring replication',
-        '✓ Database ready at postgres.internal:5432'
+        '✓ Database ready'
       ];
 
     case 'cache':
       return [
-        '→ Deploying Redis service',
+        '→ Deploying cache service',
         '→ Configuring memory allocation',
         '→ Setting up persistence',
-        '✓ Cache service ready at redis.internal:6379'
+        '✓ Cache service ready'
       ];
 
     case 'loadbalancer':
@@ -182,10 +182,10 @@ const getLogsForStep = (stepId: string, state: DeploymentState): string[] => {
           
           // Add service connection logs
           if (container.serviceAccess.database) {
-            logs.push(`→ Injecting UNHAZZLE_POSTGRES_URL`);
+            logs.push(`→ Injecting DATABASE_URL`);
           }
           if (container.serviceAccess.cache) {
-            logs.push(`→ Injecting UNHAZZLE_REDIS_URL`);
+            logs.push(`→ Injecting CACHE_URL`);
           }
           
           logs.push(`→ Starting ${container.resources.replicas.min} replicas`);
@@ -457,14 +457,14 @@ export default function Deploying() {
             {state.resources?.database && (
               <li className="flex items-start gap-2">
                 <span className="text-purple-600 mt-0.5">•</span>
-                <span>Setting up PostgreSQL with automated backups</span>
+                <span>Setting up database with automated backups</span>
               </li>
             )}
             
             {state.resources?.cache && (
               <li className="flex items-start gap-2">
                 <span className="text-purple-600 mt-0.5">•</span>
-                <span>Deploying Redis cache service</span>
+                <span>Deploying cache service</span>
               </li>
             )}
             

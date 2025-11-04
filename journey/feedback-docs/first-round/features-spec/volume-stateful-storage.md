@@ -34,99 +34,25 @@ Enable users to attach persistent volumes to containers for stateful data storag
 
 **Current behavior**: Container configuration shows CPU, RAM, replicas, health checks, service access
 
-**New behavior**: Add "Persistent Volume" section for each container
+**New behavior**: Do not expose a "Persistent Volume" section on the Resources page (MVP). Volumes remain implicit for database and cache containers.
 
-**Location**: After Health Check section, before Service Access
+**Location**: N/A on Resources page in MVP
 
 ---
 
-**Container Configuration with Volume Section**:
+**Container Configuration (MVP - no Volume section on Resources page)**:
 
 ```
 Container: backend
 ├─ Resources (CPU, RAM, Replicas)
 ├─ Exposure (Public/Private, Domain)
 ├─ Health Check
-├─ Persistent Volume [+ Add Volume]    ← NEW SECTION
 └─ Service Access
 ```
 
 ---
 
-**Volume Configuration Form**:
-
-**Initial State (No Volume)**:
-```
-┌─────────────────────────────────────────────┐
-│ Persistent Volume                  [+ Add]  │
-├─────────────────────────────────────────────┤
-│ No volume configured                        │
-│                                             │
-│ 💡 Add a volume to persist data across     │
-│    container restarts and redeployments    │
-└─────────────────────────────────────────────┘
-```
-
-**After clicking [+ Add]**:
-
-**For Application/Function Containers**:
-```
-┌─────────────────────────────────────────────┐
-│ Persistent Volume                  [Remove] │
-├─────────────────────────────────────────────┤
-│                                             │
-│ Mount Path: [/app/data            ] 📁     │
-│ Example: /app/uploads, /app/cache          │
-│                                             │
-│ Size: [50] GB                              │
-│ Range: 10 GB - 500 GB                      │
-│ Cost: €2.20/month                          │
-│                                             │
-│ ☑ Auto-scale when 80% full                │
-│   Automatically increases size by 20%      │
-│                                             │
-│ Backups: [Disabled ▾]                      │
-│   • Disabled (default)                     │
-│   • Hourly (last 24h) +€X/mo              │
-│   • Daily (last 7d) +€X/mo                │
-│   • Weekly (last 4w) +€X/mo               │
-│                                             │
-│ ☐ Delete volume with container            │
-│   ⚠️ If unchecked, volume persists and    │
-│      continues to incur costs              │
-└─────────────────────────────────────────────┘
-```
-
-**For Database Containers**:
-```
-┌─────────────────────────────────────────────┐
-│ Persistent Volume                  [Remove] │
-├─────────────────────────────────────────────┤
-│                                             │
-│ Mount Path: [/var/lib/postgresql/data] 📁  │
-│ Recommended for PostgreSQL                 │
-│                                             │
-│ Size: [100] GB                             │
-│ Range: 10 GB - 10 TB                       │
-│ Cost: €4.40/month                          │
-│                                             │
-│ ☑ Auto-scale when 80% full (Recommended)  │
-│   Automatically increases size by 20%      │
-│                                             │
-│ Backups: [Daily (last 7d) ▾] (Recommended)│
-│   • Disabled                               │
-│   • Hourly (last 24h) +€18/mo             │
-│   • Daily (last 7d) +€18/mo ✓             │
-│   • Weekly (last 4w) +€18/mo              │
-│   Backup cost: 20% of server cost          │
-│                                             │
-│ ☐ Delete volume with container            │
-│   ⚠️ Database volumes should typically    │
-│      persist after container deletion      │
-└─────────────────────────────────────────────┘
-```
-
-**Why**: Inline volume configuration keeps all container settings in one place. Smart defaults guide users toward best practices (databases need larger volumes and backups).
+Note: In MVP, volume configuration isn't available on the Resources page. Database and cache containers implicitly provision volumes with smart defaults; management happens elsewhere in the flow.
 
 ---
 

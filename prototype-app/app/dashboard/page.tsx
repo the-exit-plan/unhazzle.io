@@ -185,17 +185,16 @@ export default function Dashboard() {
                 {activeTab === 'logs' && (
                   <div>
                     <div className="mb-4 flex items-center gap-3">
-                      <label className="text-sm font-medium text-slate-600">Container:</label>
+                      <label className="text-sm font-medium text-slate-600">Application:</label>
                       <select
                         value={selectedContainer}
                         onChange={(e) => setSelectedContainer(e.target.value)}
                         className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                       >
-                        <option value="all">All Containers</option>
+                        <option value="all">All Applications</option>
                         {state.containers.map((container, index) => {
-                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
                           return (
-                            <option key={container.id} value={container.id}>{displayName}</option>
+                            <option key={container.id} value={container.id}>{container.name}</option>
                           );
                         })}
                       </select>
@@ -206,37 +205,35 @@ export default function Dashboard() {
                         const allLogs: { container: string; message: string }[] = [];
 
                         state.containers.forEach((container, index) => {
-                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
-
                           if (selectedContainer === 'all' || selectedContainer === container.id) {
                             allLogs.push(
-                              { container: displayName, message: '[2025-11-02 14:32:15] Application started successfully' },
-                              { container: displayName, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${container.port}` },
-                              { container: displayName, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
-                              { container: displayName, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
-                              { container: displayName, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
+                              { container: container.name, message: '[2025-11-02 14:32:15] Application started successfully' },
+                              { container: container.name, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${container.port}` },
+                              { container: container.name, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
+                              { container: container.name, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
+                              { container: container.name, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
                             );
 
                             if (container.serviceAccess.database) {
-                              allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
+                              allLogs.push({ container: container.name, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
                             }
                             if (container.serviceAccess.cache) {
-                              allLogs.push({ container: displayName, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
+                              allLogs.push({ container: container.name, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
                             }
 
                             if (container.exposure === 'public') {
                               allLogs.push(
-                                { container: displayName, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
-                                { container: displayName, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
-                                { container: displayName, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
-                                { container: displayName, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
-                                { container: displayName, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
+                                { container: container.name, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
+                                { container: container.name, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
+                                { container: container.name, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
+                                { container: container.name, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
+                                { container: container.name, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
                               );
                             } else {
                               allLogs.push(
-                                { container: displayName, message: '[2025-11-02 14:35:42] Processing background job #1234' },
-                                { container: displayName, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
-                                { container: displayName, message: '[2025-11-02 14:35:44] Handling internal API call' }
+                                { container: container.name, message: '[2025-11-02 14:35:42] Processing background job #1234' },
+                                { container: container.name, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
+                                { container: container.name, message: '[2025-11-02 14:35:44] Handling internal API call' }
                               );
                             }
                           }
@@ -554,7 +551,7 @@ export default function Dashboard() {
 // Overview Config Panel
 // ======================
 
-type ResourceKind = 'application' | 'database' | 'cache';
+type ResourceKind = 'application' | 'database' | 'cache' | 'architecture';
 
 function OverviewConfig() {
   const { state, updateContainer, updateResources } = useDeployment();
@@ -763,6 +760,23 @@ function OverviewConfig() {
               </button>
             </div>
           )}
+
+          {/* Architecture Diagram */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-bold text-slate-900 mb-2">Documentation</h4>
+            <button
+              onClick={() => setSelected({ kind: 'architecture' })}
+              className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                selected.kind === 'architecture' ? 'border-purple-400 bg-purple-50' : 'border-slate-200 hover:border-purple-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                <span className="text-xl">🏗️</span>
+                <span>Architecture Diagram</span>
+              </div>
+              <div className="text-xs text-slate-500 mt-1">View infrastructure topology</div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -796,6 +810,44 @@ function OverviewConfig() {
                   </button>
                 </div>
               </div>
+
+              {/* Public Endpoint (if applicable) */}
+              {selectedContainer.exposure === 'public' && (() => {
+                // Generate stable endpoint ID from container ID
+                const displayName = selectedContainer.imageUrl.split('/').pop()?.split(':')[0] || 'app';
+                const stableId = selectedContainer.id.substring(0, 6);
+                const domain = `${displayName}-${stableId}.unhazzle.app`;
+                
+                return (
+                  <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-slate-600 uppercase">Public Endpoint</span>
+                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Live</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm text-purple-600 font-mono">
+                            https://{domain}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`https://${domain}`);
+                            }}
+                            className="p-1 hover:bg-slate-200 rounded transition text-sm"
+                            title="Copy to clipboard"
+                          >
+                            📋
+                          </button>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Port {selectedContainer.port} • SSL Enabled • CDN Cached
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Section: Resources */}
               <div>
@@ -1559,6 +1611,129 @@ function OverviewConfig() {
               )}
             </div>
           )}
+
+          {/* Architecture Diagram View */}
+          {selected.kind === 'architecture' && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <span>🏗️</span>
+                  <span>Architecture Diagram</span>
+                </h2>
+                <p className="text-slate-600">
+                  Visual representation of your deployed infrastructure, including container connections and internal DNS.
+                </p>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">ℹ️</span>
+                  <div>
+                    <p className="text-sm text-blue-900 font-semibold mb-1">
+                      Read-Only Reference
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      This diagram shows your <strong>deployed</strong> infrastructure. 
+                      To edit resources, use the configuration panels in the left sidebar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Architecture Visualization */}
+              <ArchitectureDiagram state={state} />
+
+              {/* Internal DNS Reference Table */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <span>🔗</span>
+                  <span>Internal DNS Names</span>
+                </h3>
+
+                <div className="space-y-3 text-sm">
+                  <p className="text-slate-600 mb-4">
+                    Use these hostnames for container-to-container communication:
+                  </p>
+
+                  {/* Container DNS entries */}
+                  {state.containers.map((container: any, index: number) => {
+                    const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
+                    const serviceName = container.serviceName || `container-${container.id.substring(0, 8)}`;
+                    return (
+                      <div key={container.id} className="flex items-center justify-between py-2 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">🚀</span>
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              Container {index + 1}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {displayName}
+                            </p>
+                          </div>
+                        </div>
+                        <code className="bg-white px-3 py-1 rounded border border-slate-300 font-mono text-xs">
+                          {serviceName}.internal
+                        </code>
+                      </div>
+                    );
+                  })}
+
+                  {/* Database DNS */}
+                  {state.resources?.database && (
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">🐘</span>
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            PostgreSQL Database
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Internal network only
+                          </p>
+                        </div>
+                      </div>
+                      <code className="bg-white px-3 py-1 rounded border border-slate-300 font-mono text-xs">
+                        postgres.internal
+                      </code>
+                    </div>
+                  )}
+
+                  {/* Cache DNS */}
+                  {state.resources?.cache && (
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">⚡</span>
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            Redis Cache
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Internal network only
+                          </p>
+                        </div>
+                      </div>
+                      <code className="bg-white px-3 py-1 rounded border border-slate-300 font-mono text-xs">
+                        redis.internal
+                      </code>
+                    </div>
+                  )}
+                </div>
+
+                {/* Usage Example */}
+                <div className="mt-6 bg-white border border-slate-300 rounded-lg p-4">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">
+                    Example Connection String:
+                  </p>
+                  <code className="text-xs font-mono text-slate-900 block">
+                    postgresql://user:pass@postgres.internal:5432/dbname
+                  </code>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1725,6 +1900,188 @@ function OverviewConfig() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ======================
+// Architecture Diagram Component
+// ======================
+
+function ArchitectureDiagram({ state }: { state: any }) {
+  const publicContainers = state.containers.filter((c: any) => c.exposure === 'public');
+  const privateContainers = state.containers.filter((c: any) => c.exposure === 'private');
+  const hasLoadBalancer = publicContainers.length > 0;
+  const hasDatabase = state.resources?.database !== null;
+  const hasCache = state.resources?.cache !== null;
+
+  const getDisplayName = (imageUrl: string) => {
+    return imageUrl.split('/').pop()?.split(':')[0] || 'container';
+  };
+
+  const getServiceName = (container: any) => {
+    return container.serviceName || `container-${container.id.substring(0, 8)}`;
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 border border-slate-200">
+      <div className="flex flex-col items-center space-y-8">
+        
+        {/* Load Balancer (if public containers exist) */}
+        {hasLoadBalancer && (
+          <>
+            <div className="bg-purple-500 text-white rounded-lg p-6 shadow-lg text-center min-w-[200px]">
+              <div className="text-3xl mb-2">⚖️</div>
+              <div className="font-bold">Load Balancer</div>
+              <div className="text-sm opacity-90 mt-1">
+                {state.domain?.customDomain || `${state.domain?.defaultSubdomain}.unhazzle.io`}
+              </div>
+            </div>
+            
+            {/* Arrow down */}
+            <div className="text-slate-400">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <line x1="20" y1="0" x2="20" y2="30" stroke="currentColor" strokeWidth="3"/>
+                <polygon points="20,40 15,30 25,30" fill="currentColor"/>
+              </svg>
+            </div>
+          </>
+        )}
+        
+        {/* Public Containers Row */}
+        {publicContainers.length > 0 && (
+          <div className="flex gap-6 flex-wrap justify-center">
+            {publicContainers.map((container: any, index: number) => {
+              const displayName = getDisplayName(container.imageUrl);
+              const serviceName = getServiceName(container);
+              const containerIndex = state.containers.indexOf(container) + 1;
+              return (
+                <div 
+                  key={container.id}
+                  className="bg-blue-500 text-white rounded-lg p-4 shadow-lg text-center min-w-[160px]"
+                >
+                  <div className="text-2xl mb-2">🚀</div>
+                  <div className="font-bold text-sm">Container {containerIndex}</div>
+                  <div className="text-xs opacity-90 mt-1">
+                    {displayName}
+                  </div>
+                  <div className="text-xs opacity-75 mt-2">
+                    :{container.port}
+                  </div>
+                  <div className="text-xs font-mono bg-blue-600 rounded px-2 py-1 mt-2">
+                    {serviceName}.internal
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {/* Private Containers Row */}
+        {privateContainers.length > 0 && (
+          <>
+            {publicContainers.length > 0 && (
+              <div className="text-slate-400 text-sm">Internal Network</div>
+            )}
+            
+            <div className="flex gap-6 flex-wrap justify-center">
+              {privateContainers.map((container: any, index: number) => {
+                const displayName = getDisplayName(container.imageUrl);
+                const serviceName = getServiceName(container);
+                const containerIndex = state.containers.indexOf(container) + 1;
+                return (
+                  <div 
+                    key={container.id}
+                    className="bg-slate-500 text-white rounded-lg p-4 shadow-lg text-center min-w-[160px]"
+                  >
+                    <div className="text-2xl mb-2">🔒</div>
+                    <div className="font-bold text-sm">Container {containerIndex}</div>
+                    <div className="text-xs opacity-90 mt-1">
+                      {displayName}
+                    </div>
+                    <div className="text-xs opacity-75 mt-2">
+                      :{container.port}
+                    </div>
+                    <div className="text-xs font-mono bg-slate-600 rounded px-2 py-1 mt-2">
+                      {serviceName}.internal
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        
+        {/* Database & Cache Row */}
+        {(hasDatabase || hasCache) && (
+          <>
+            <div className="text-slate-400 text-sm">Backend Services</div>
+            
+            <div className="flex gap-6">
+              {hasDatabase && (
+                <div className="bg-green-500 text-white rounded-lg p-4 shadow-lg text-center min-w-[160px]">
+                  <div className="text-2xl mb-2">🐘</div>
+                  <div className="font-bold text-sm">PostgreSQL</div>
+                  <div className="text-xs opacity-90 mt-1">
+                    {state.resources.database.cpu} CPU
+                  </div>
+                  <div className="text-xs font-mono bg-green-600 rounded px-2 py-1 mt-2">
+                    postgres.internal
+                  </div>
+                </div>
+              )}
+              
+              {hasCache && (
+                <div className="bg-red-500 text-white rounded-lg p-4 shadow-lg text-center min-w-[160px]">
+                  <div className="text-2xl mb-2">⚡</div>
+                  <div className="font-bold text-sm">Redis</div>
+                  <div className="text-xs opacity-90 mt-1">
+                    {state.resources.cache.memory} RAM
+                  </div>
+                  <div className="text-xs font-mono bg-red-600 rounded px-2 py-1 mt-2">
+                    redis.internal
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        
+      </div>
+      
+      {/* Legend */}
+      <div className="mt-8 pt-6 border-t border-slate-300 flex flex-wrap gap-4 justify-center text-sm">
+        {hasLoadBalancer && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-purple-500 rounded"></div>
+            <span className="text-slate-700">Public Internet</span>
+          </div>
+        )}
+        {publicContainers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <span className="text-slate-700">Public Container</span>
+          </div>
+        )}
+        {privateContainers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-slate-500 rounded"></div>
+            <span className="text-slate-700">Private Container</span>
+          </div>
+        )}
+        {hasDatabase && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span className="text-slate-700">Database</span>
+          </div>
+        )}
+        {hasCache && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <span className="text-slate-700">Cache</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

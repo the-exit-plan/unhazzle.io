@@ -12,6 +12,8 @@ export default function Resources() {
   
   const [config, setConfig] = useState<ResourceConfig | null>(null);
   const [expandedContainers, setExpandedContainers] = useState<Set<string>>(new Set());
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [tempName, setTempName] = useState<string>('');
 
   // Scroll to top on mount, or to hash target if present
   useEffect(() => {
@@ -63,6 +65,25 @@ export default function Resources() {
       }
       return newSet;
     });
+  };
+
+  const startEditingName = (e: React.MouseEvent, containerId: string, currentName: string) => {
+    e.stopPropagation();
+    setEditingName(containerId);
+    setTempName(currentName);
+  };
+
+  const saveName = (containerId: string) => {
+    if (tempName.trim()) {
+      updateContainer(containerId, { name: tempName.trim() });
+    }
+    setEditingName(null);
+    setTempName('');
+  };
+
+  const cancelEditing = () => {
+    setEditingName(null);
+    setTempName('');
   };
 
   const updateContainerResource = (containerId: string, field: string, value: any) => {
@@ -207,7 +228,7 @@ export default function Resources() {
         userSecrets: []
       });
       
-      router.push('/domain');
+      router.push('/review');
     }
   };
 
@@ -229,22 +250,22 @@ export default function Resources() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
             <span>✨</span>
-            <span>Smart defaults configured • {state.containers.length} container{state.containers.length > 1 ? 's' : ''} selected</span>
+            <span>Smart defaults configured • {state.containers.length} app{state.containers.length > 1 ? 's' : ''} selected</span>
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Configure Container Resources
+            Configure your project resources
           </h1>
           <p className="text-lg text-slate-600">
-            Set resources, health checks, and environment variables for each container
+            Set resources, health checks, and environment variables for each application
           </p>
         </div>
 
-        {/* Container Configuration Sections */}
+        {/* Application Configuration Sections */}
         {state.containers.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 mb-6 text-center">
             <div className="text-6xl mb-4">📦</div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">No Containers Selected</h2>
-            <p className="text-slate-600 mb-6">Please go back and select at least one container image</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">No Applications Selected</h2>
+            <p className="text-slate-600 mb-6">Please go back and select at least one application image</p>
             <button
               onClick={() => router.back()}
               className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition"
@@ -256,7 +277,7 @@ export default function Resources() {
           <div className="space-y-4 mb-6">
             {state.containers.map((container, index) => {
               const isExpanded = expandedContainers.has(container.id);
-              const displayName = container.imageUrl.split('/').pop() || `Container ${index + 1}`;
+              const isEditing = editingName === container.id;
               
               return (
                 <div key={container.id} id={`container-${container.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all">
@@ -265,18 +286,63 @@ export default function Resources() {
                     onClick={() => toggleContainer(container.id)}
                     className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white text-lg">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0">
                         🚀
                       </div>
-                      <div className="text-left">
-                        <h3 className="text-lg font-bold text-slate-900">{displayName}</h3>
-                        <p className="text-sm text-slate-600 font-mono">{container.imageUrl}</p>
+                      <div className="text-left flex-1 min-w-0">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={tempName}
+                              onChange={(e) => setTempName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveName(container.id);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditing();
+                                }
+                              }}
+                              onBlur={() => saveName(container.id)}
+                              autoFocus
+                              className="text-lg font-bold text-slate-900 border-2 border-purple-500 rounded px-2 py-1 outline-none flex-1 min-w-0"
+                              placeholder="Application name"
+                            />
+                            <button
+                              onClick={() => saveName(container.id)}
+                              className="text-green-600 hover:text-green-700 p-1"
+                              title="Save"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="text-red-600 hover:text-red-700 p-1"
+                              title="Cancel"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="group cursor-pointer"
+                            onClick={(e) => startEditingName(e, container.id, container.name)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-bold text-slate-900 truncate">{container.name}</h3>
+                              <span className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                                ✏️
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-sm text-slate-600 font-mono truncate">{container.imageUrl}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-semibold">
-                        Container #{index + 1}
+                        App #{index + 1}
                       </span>
                       <svg 
                         className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
@@ -360,7 +426,7 @@ export default function Resources() {
                         <div className="flex items-center gap-2 mb-3">
                           <span className="text-sm">🔍</span>
                           <p className="text-xs text-blue-800">
-                            <strong>Auto-detected from image metadata</strong> • Port and health check path have been detected from your container image
+                            <strong>Auto-detected from image metadata</strong> • Port and health check path have been detected from your application image
                           </p>
                         </div>
                         <div className="grid md:grid-cols-3 gap-4">
@@ -399,113 +465,14 @@ export default function Resources() {
                         </div>
                       </div>
 
-                      {/* Persistent Volume */}
-                      <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-slate-900 mb-3">Persistent Volume (Optional)</h4>
-                        <p className="text-xs text-slate-600 mb-4">
-                          Attach persistent storage for databases, uploads, or stateful data. Volume persists across container restarts and redeployments.
-                        </p>
-                        
-                        {!container.volume ? (
-                          <button
-                            onClick={() => updateContainerResource(container.id, 'volume', {
-                              sizeGB: 10,
-                              mountPath: '/data',
-                              autoScale: true,
-                              backupFrequency: 'daily',
-                              deleteWithContainer: false
-                            })}
-                            className="w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition font-medium text-sm"
-                          >
-                            + Add Persistent Volume
-                          </button>
-                        ) : (
-                          <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-xs text-slate-600 mb-2">Volume Size</label>
-                                <select
-                                  value={container.volume.sizeGB}
-                                  onChange={(e) => updateContainerResource(container.id, 'volume.sizeGB', parseInt(e.target.value))}
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
-                                >
-                                  <option value="10">10 GB</option>
-                                  <option value="20">20 GB</option>
-                                  <option value="50">50 GB</option>
-                                  <option value="100">100 GB</option>
-                                  <option value="250">250 GB</option>
-                                  <option value="500">500 GB</option>
-                                </select>
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs text-slate-600 mb-2">Mount Path</label>
-                                <input
-                                  type="text"
-                                  value={container.volume.mountPath}
-                                  onChange={(e) => updateContainerResource(container.id, 'volume.mountPath', e.target.value)}
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm font-mono"
-                                  placeholder="/data"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-3">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={container.volume.autoScale}
-                                  onChange={(e) => updateContainerResource(container.id, 'volume.autoScale', e.target.checked)}
-                                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                                />
-                                <span className="text-sm text-slate-700">Auto-scale volume when nearing capacity</span>
-                              </label>
-                              
-                              <div>
-                                <label className="block text-xs text-slate-600 mb-2">Backup Frequency</label>
-                                <select
-                                  value={container.volume.backupFrequency}
-                                  onChange={(e) => updateContainerResource(container.id, 'volume.backupFrequency', e.target.value)}
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
-                                >
-                                  <option value="disabled">Disabled</option>
-                                  <option value="daily">Daily</option>
-                                  <option value="weekly">Weekly</option>
-                                </select>
-                              </div>
-                              
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={container.volume.deleteWithContainer}
-                                  onChange={(e) => updateContainerResource(container.id, 'volume.deleteWithContainer', e.target.checked)}
-                                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                                />
-                                <span className="text-sm text-slate-700">Delete volume when container is deleted</span>
-                              </label>
-                            </div>
-                            
-                            <button
-                              onClick={() => updateContainerResource(container.id, 'volume', undefined)}
-                              className="text-sm text-red-600 hover:text-red-700 font-medium"
-                            >
-                              Remove Volume
-                            </button>
-                            
-                            <div className="text-xs text-slate-500 bg-white p-3 rounded border border-slate-200">
-                              💡 <strong>Cost:</strong> €{(container.volume.sizeGB * 0.044).toFixed(2)}/mo for storage
-                              {container.volume.backupFrequency !== 'disabled' && ' + backup costs'}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      {/* Persistent Volume section removed for MVP */}
 
                       {/* Service Access */}
                       {(config.database || config.cache) && (
                         <div className="mb-6">
                           <h4 className="text-sm font-semibold text-slate-900 mb-3">Service Access</h4>
                           <p className="text-xs text-slate-600 mb-3">
-                            Enable this container to connect to infrastructure services. Networking and credentials will be automatically configured.
+                            Enable this application to connect to infrastructure services. Networking and credentials will be automatically configured.
                           </p>
                           <div className="space-y-3">
                             {config.database && (
@@ -519,7 +486,7 @@ export default function Resources() {
                                 <div className="flex-1">
                                   <span className="text-sm text-slate-900 font-medium">Database Access</span>
                                   <p className="text-xs text-slate-600 mt-1">
-                                    Container can connect to PostgreSQL • Connection URL injected as <code className="text-purple-600 bg-purple-50 px-1 rounded">UNHAZZLE_POSTGRES_URL</code>
+                                    Application can connect to PostgreSQL • Connection URL injected as <code className="text-purple-600 bg-purple-50 px-1 rounded">UNHAZZLE_POSTGRES_URL</code>
                                   </p>
                                 </div>
                               </label>
@@ -535,7 +502,7 @@ export default function Resources() {
                                 <div className="flex-1">
                                   <span className="text-sm text-slate-900 font-medium">Cache Access</span>
                                   <p className="text-xs text-slate-600 mt-1">
-                                    Container can connect to Redis • Connection URL injected as <code className="text-purple-600 bg-purple-50 px-1 rounded">UNHAZZLE_REDIS_URL</code>
+                                    Application can connect to Redis • Connection URL injected as <code className="text-purple-600 bg-purple-50 px-1 rounded">UNHAZZLE_REDIS_URL</code>
                                   </p>
                                 </div>
                               </label>
@@ -756,7 +723,7 @@ export default function Resources() {
             onClick={handleContinue}
             className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
           >
-            <span>Continue to Domain Setup</span>
+            <span>Review Configuration</span>
             <span>→</span>
           </button>
         </div>

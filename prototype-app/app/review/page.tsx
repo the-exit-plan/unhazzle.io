@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
-import { calculateCost } from '@/lib/utils/costCalculator';
 import { CostBreakdown } from '@/lib/context/DeploymentContext';
 
 export default function ReviewAndDeploy() {
   const router = useRouter();
-  const { state, updateCost, updateResources, updateContainer } = useDeployment();
+  const { state, updateCost, updateContainer, updateResources } = useDeployment();
   
   const [cost, setCost] = useState<CostBreakdown | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -21,47 +20,148 @@ export default function ReviewAndDeploy() {
 
   // Calculate costs for all containers
   useEffect(() => {
-    if (!state.domain || !state.resources || !state.questionnaire) {
+    if (!state.resources || !state.questionnaire) {
       router.push('/');
       return;
     }
 
+    // Small delay to ensure state has propagated from context
+    const timer = setTimeout(() => {
+      recalculateCost();
+    }, 10);
+
+    return () => clearTimeout(timer);
+  }, [state.resources, state.questionnaire, state.containers, router]);
+
+  // Helper to parse CPU values (handles numeric strings and " vCPU" suffix)
+  const parseCPU = (cpu: string | number): number => {
+    if (typeof cpu === 'number') {
+      return cpu;
+    }
+    
+    const cleanCPU = cpu.trim().replace(' vCPU', '').replace('vCPU', '');
+    const value = parseFloat(cleanCPU);
+    
+    if (isNaN(value)) {
+      console.error('Invalid CPU value:', cpu);
+      return 0;
+    }
+    
+    return value;
+  };
+
+  // Helper to parse memory values with units (MB, GB)
+  const parseMemoryToGB = (memory: string): number => {
+    const cleanMemory = memory.trim();
+    const value = parseFloat(cleanMemory);
+    
+    if (isNaN(value)) {
+      console.error('Invalid memory value:', memory);
+      return 0;
+    }
+    
+    if (cleanMemory.includes('MB')) {
+      return value / 1024; // Convert MB to GB
+    }
+    // Remove 'GB' suffix if present and return the numeric value
+    return value;
+  };
+
+  // Helper to parse storage values with units (GB, TB)
+  const parseStorageToGB = (storage: string | number): number => {
+    if (typeof storage === 'number') {
+      return storage; // Already a number in GB
+    }
+    
+    const cleanStorage = storage.trim();
+    const value = parseFloat(cleanStorage);
+    
+    if (isNaN(value)) {
+      console.error('Invalid storage value:', storage);
+      return 0;
+    }
+    
+    if (cleanStorage.includes('TB')) {
+      return value * 1000; // Convert TB to GB (1TB = 1000GB)
+    }
+    // Remove 'GB' suffix if present and return the numeric value
+    return value;
+  };
+
+  // Helper to calculate container cost (used both in display and total calculation)
+  const calculateContainerCost = (container: any) => {
+    const cpuValue = parseCPU(container.resources.cpu);
+    const cpuCost = cpuValue * 7.0; // €7/vCPU
+    const memoryGB = parseMemoryToGB(container.resources.memory);
+    const memoryCost = memoryGB * 3.5; // €3.5/GB
+    const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
+    
+    // Volume cost: storage + backups
+    let volumeCost = 0;
+    if (container.volume) {
+      const storageGB = parseStorageToGB(container.volume.sizeGB);
+      const storageCost = storageGB * 0.044; // €0.044/GB/month
+      const backupCost = container.volume.backupFrequency !== 'disabled' 
+        ? replicaCost * 0.20 
+        : 0;
+      volumeCost = storageCost + backupCost;
+    }
+    
+    return replicaCost + volumeCost;
+  };
+
+  const recalculateCost = () => {
+    if (!state.resources) return;
+
+    console.log('=== COST CALCULATION START ===');
+    
     // Calculate total cost across all containers
     let totalApplicationCost = 0;
     
-    state.containers.forEach(container => {
-      // Base cost per container based on resources
-      const cpuCost = parseFloat(container.resources.cpu) * 7.0; // €7/vCPU
-      const memoryGB = parseFloat(container.resources.memory);
-      const memoryCost = memoryGB * 3.5; // €3.5/GB
-      const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
-      
-      // Volume cost if exists
-      const volumeCost = container.volume ? container.volume.sizeGB * 0.044 : 0;
-      
-      totalApplicationCost += replicaCost + volumeCost;
+    state.containers.forEach((container, index) => {
+      const containerCost = calculateContainerCost(container);
+      console.log(`Container ${index + 1}:`, {
+        cpu: container.resources.cpu,
+        memory: container.resources.memory,
+        replicas: container.resources.replicas.min,
+        volume: container.volume?.sizeGB,
+        cost: containerCost.toFixed(2)
+      });
+      totalApplicationCost += containerCost;
     });
+
+    console.log('Total Application Cost:', totalApplicationCost.toFixed(2));
 
     // Database and cache costs (shared resources)
     let databaseCost = 0;
     if (state.resources.database) {
-      const dbCPU = parseFloat(state.resources.database.cpu || '2');
-      const dbMemory = parseFloat(state.resources.database.memory || '4');
-      let dbStorageGB = parseFloat(state.resources.database.storage);
-      
-      if (state.resources.database.storage.includes('TB')) {
-        dbStorageGB = parseFloat(state.resources.database.storage) * 1000;
-      }
+      const dbCPU = parseCPU(state.resources.database.cpu);
+      const dbMemory = parseMemoryToGB(state.resources.database.memory);
+      const dbStorageGB = parseStorageToGB(state.resources.database.storage);
       
       databaseCost = (dbCPU * 10) + (dbMemory * 4) + (dbStorageGB * 0.10);
+      
+      console.log('Database:', {
+        cpu: state.resources.database.cpu,
+        cpuParsed: dbCPU,
+        memory: state.resources.database.memory,
+        memoryGB: dbMemory.toFixed(2),
+        storage: state.resources.database.storage,
+        storageGB: dbStorageGB.toFixed(2),
+        cost: databaseCost.toFixed(2)
+      });
     }
 
     let cacheCost = 0;
     if (state.resources.cache) {
-      // Convert cache memory to GB (handle MB suffix)
-      const memoryValue = parseFloat(state.resources.cache.memory);
-      const cacheMemoryGB = state.resources.cache.memory.includes('MB') ? memoryValue / 1024 : memoryValue;
+      const cacheMemoryGB = parseMemoryToGB(state.resources.cache.memory);
       cacheCost = cacheMemoryGB * 5.0;
+      
+      console.log('Cache:', {
+        memory: state.resources.cache.memory,
+        memoryGB: cacheMemoryGB.toFixed(2),
+        cost: cacheCost.toFixed(2)
+      });
     }
 
     const loadBalancerCost = 10.0;
@@ -75,74 +175,25 @@ export default function ReviewAndDeploy() {
       total: totalApplicationCost + databaseCost + cacheCost + loadBalancerCost
     };
 
+    console.log('=== FINAL COST ===', {
+      application: calculatedCost.application.toFixed(2),
+      database: calculatedCost.database?.toFixed(2),
+      cache: calculatedCost.cache?.toFixed(2),
+      loadBalancer: calculatedCost.loadBalancer.toFixed(2),
+      total: calculatedCost.total.toFixed(2)
+    });
+
     setCost(calculatedCost);
     updateCost(calculatedCost);
-  }, [state.domain, state.resources, state.questionnaire, state.containers, router]);
+  };
 
-  const recalculateAndUpdateCost = (newConfig: typeof state.resources) => {
-    if (!state.questionnaire || !newConfig) return;
-    
+  const recalculateAndUpdateCost = () => {
+    // Just show the loading state; the useEffect will trigger recalculation
+    // when state.resources or state.containers updates
     setIsRecalculating(true);
     
+    // Clear the loading state after a short delay
     setTimeout(() => {
-      // Recalculate with new config
-      let totalApplicationCost = 0;
-      
-      state.containers.forEach(container => {
-        const cpuCost = parseFloat(container.resources.cpu) * 7.0;
-        const memoryGB = parseFloat(container.resources.memory);
-        const memoryCost = memoryGB * 3.5;
-        const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
-        
-        // Volume cost: storage + backups
-        let volumeCost = 0;
-        if (container.volume) {
-          const storageCost = container.volume.sizeGB * 0.044;
-          const backupCost = container.volume.backupFrequency !== 'disabled' 
-            ? replicaCost * 0.20 
-            : 0;
-          volumeCost = storageCost + backupCost;
-        }
-        
-        totalApplicationCost += replicaCost + volumeCost;
-      });
-
-      let databaseCost = 0;
-      if (newConfig.database) {
-        const dbCPU = parseFloat(newConfig.database.cpu || '2');
-        const dbMemory = parseFloat(newConfig.database.memory || '4');
-        let dbStorageGB = parseFloat(newConfig.database.storage);
-        
-        if (newConfig.database.storage.includes('TB')) {
-          dbStorageGB = parseFloat(newConfig.database.storage) * 1000;
-        }
-        
-        databaseCost = (dbCPU * 10) + (dbMemory * 4) + (dbStorageGB * 0.10);
-      }
-
-      let cacheCost = 0;
-      if (newConfig.cache) {
-        // Convert cache memory to GB (handle MB suffix)
-        const memoryValue = parseFloat(newConfig.cache.memory);
-        const cacheMemoryGB = newConfig.cache.memory.includes('MB') ? memoryValue / 1024 : memoryValue;
-        cacheCost = cacheMemoryGB * 5.0;
-      }
-
-      const loadBalancerCost = 10.0;
-
-      const newCost: CostBreakdown = {
-        application: totalApplicationCost,
-        database: newConfig.database ? databaseCost : undefined,
-        cache: newConfig.cache ? cacheCost : undefined,
-        loadBalancer: loadBalancerCost,
-        bandwidth: 0,
-        total: totalApplicationCost + databaseCost + cacheCost + loadBalancerCost
-      };
-      
-      setCost(newCost);
-      updateCost(newCost);
-      updateResources(newConfig);
-      
       setIsRecalculating(false);
     }, 150);
   };
@@ -163,23 +214,23 @@ export default function ReviewAndDeploy() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
             <span>📊</span>
-            <span>Review Multi-Container Architecture • {containerCount} Container{containerCount > 1 ? 's' : ''}</span>
+            <span>Review & Edit Configuration</span>
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
             Ready to Deploy
           </h1>
           <p className="text-lg text-slate-600">
-            Review your multi-container architecture and cost breakdown
+            Review and adjust resources before deployment
           </p>
         </div>
 
         {/* Cost Summary - Hero Section */}
-        <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl p-8 mb-6 text-white">
+        <div className={`bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl p-8 mb-6 text-white transition-opacity duration-150 ${isRecalculating ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           <div className="text-center mb-6">
             <p className="text-purple-100 text-sm font-medium mb-2">ESTIMATED MONTHLY COST</p>
             <div className="flex items-baseline justify-center gap-2">
@@ -187,7 +238,7 @@ export default function ReviewAndDeploy() {
               <span className="text-2xl text-purple-100">/month</span>
             </div>
             <p className="text-purple-100 text-sm mt-3">
-              💡 Go back to Resources to adjust configuration
+              💡 {isRecalculating ? 'Recalculating...' : 'Adjust resources below to see price updates'}
             </p>
           </div>
 
@@ -195,8 +246,9 @@ export default function ReviewAndDeploy() {
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm">Containers ({containerCount})</p>
+                  <p className="text-purple-100 text-sm">Application</p>
                   <p className="text-2xl font-bold">€{cost.application.toFixed(2)}</p>
+                  <p className="text-purple-200 text-xs mt-1">{containerCount} app{containerCount > 1 ? 's' : ''}</p>
                 </div>
                 <div className="text-3xl">🚀</div>
               </div>
@@ -226,7 +278,7 @@ export default function ReviewAndDeploy() {
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm">Load Balancer</p>
+                  <p className="text-purple-100 text-sm">Load Balancer & SSL</p>
                   <p className="text-2xl font-bold">€{cost.loadBalancer.toFixed(2)}</p>
                 </div>
                 <div className="text-3xl">⚖️</div>
@@ -235,422 +287,325 @@ export default function ReviewAndDeploy() {
           </div>
         </div>
 
-        
+        {/* Configuration Cards */}
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Container Cards (Dynamic - one per container) */}
+          {state.containers.map((container, index) => {
+            const totalContainerCost = calculateContainerCost(container);
 
-        {/* Architecture Diagram */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <span>🏗️</span>
-            <span>Architecture Overview</span>
-          </h2>
-          
-          {/* Visual Architecture */}
-          <div className="space-y-4">
-            {/* Internet Layer */}
-            <div className="flex items-center justify-center">
-              <div className="px-6 py-3 bg-slate-100 border-2 border-slate-300 rounded-lg text-slate-700 font-medium">
-                🌐 Internet Traffic
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <div className="w-0.5 h-8 bg-slate-300"></div>
-            </div>
-
-            {/* Load Balancer */}
-            <div className="flex items-center justify-center">
-              <div className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-semibold shadow-lg">
-                ⚖️ Load Balancer + SSL
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <div className="w-0.5 h-8 bg-slate-300"></div>
-            </div>
-
-            {/* Containers Layer */}
-            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-purple-900 mb-4 flex items-center gap-2">
-                <span>🚀</span>
-                <span>Application Containers ({containerCount})</span>
-              </h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {state.containers.map((container, index) => {
-                  const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
-                  const cpuCost = parseFloat(container.resources.cpu) * 7.0;
-                  const memoryGB = parseFloat(container.resources.memory);
-                  const memoryCost = memoryGB * 3.5;
-                  const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
-                  
-                  // Volume cost: storage + backups
-                  let volumeCost = 0;
-                  if (container.volume) {
-                    const storageCost = container.volume.sizeGB * 0.044;
-                    const backupCost = container.volume.backupFrequency !== 'disabled' 
-                      ? replicaCost * 0.20 
-                      : 0;
-                    volumeCost = storageCost + backupCost;
-                  }
-                  
-                  const totalContainerCost = replicaCost + volumeCost;
-
-                  return (
-                    <div key={container.id} className={`bg-white border-2 border-purple-300 rounded-lg p-4 transition ${isRecalculating ? 'opacity-50' : ''}`}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center text-white text-sm font-bold">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-slate-900 text-sm truncate">{displayName}</h4>
-                          <p className="text-xs text-slate-500">{container.exposure === 'public' ? '🌐 Public' : '🔒 Private'}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">CPU:</span>
-                          <select
-                            value={container.resources.cpu}
-                            onChange={(e) => {
-                              updateContainer(container.id, {
-                                resources: { ...container.resources, cpu: e.target.value }
-                              });
-                              const updatedContainers = state.containers.map(c => 
-                                c.id === container.id 
-                                  ? { ...c, resources: { ...c.resources, cpu: e.target.value } }
-                                  : c
-                              );
-                              const newConfig = { ...resources, application: { containers: updatedContainers } };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-1.5 py-0.5 border border-purple-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
-                          >
-                            <option value="0.25">0.25</option>
-                            <option value="0.5">0.5</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="4">4</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Memory:</span>
-                          <select
-                            value={container.resources.memory}
-                            onChange={(e) => {
-                              updateContainer(container.id, {
-                                resources: { ...container.resources, memory: e.target.value }
-                              });
-                              const updatedContainers = state.containers.map(c => 
-                                c.id === container.id 
-                                  ? { ...c, resources: { ...c.resources, memory: e.target.value } }
-                                  : c
-                              );
-                              const newConfig = { ...resources, application: { containers: updatedContainers } };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-1.5 py-0.5 border border-purple-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
-                          >
-                            <option value="0.5GB">0.5GB</option>
-                            <option value="1GB">1GB</option>
-                            <option value="2GB">2GB</option>
-                            <option value="4GB">4GB</option>
-                            <option value="8GB">8GB</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Replicas:</span>
-                          <select
-                            value={container.resources.replicas.min}
-                            onChange={(e) => {
-                              const newMin = parseInt(e.target.value);
-                              updateContainer(container.id, {
-                                resources: { 
-                                  ...container.resources, 
-                                  replicas: { 
-                                    ...container.resources.replicas,
-                                    min: newMin
-                                  } 
-                                }
-                              });
-                              const updatedContainers = state.containers.map(c => 
-                                c.id === container.id 
-                                  ? { 
-                                      ...c, 
-                                      resources: { 
-                                        ...c.resources, 
-                                        replicas: { 
-                                          ...c.resources.replicas,
-                                          min: newMin
-                                        } 
-                                      } 
-                                    }
-                                  : c
-                              );
-                              const newConfig = { ...resources, application: { containers: updatedContainers } };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-1.5 py-0.5 border border-purple-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
-                          >
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Port:</span>
-                          <span className="font-mono text-slate-900">{container.port}</span>
-                        </div>
-                        {container.volume && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Volume:</span>
-                            <select
-                              value={container.volume.sizeGB}
-                              onChange={(e) => {
-                                const newVolume = {
-                                  ...container.volume!,
-                                  sizeGB: parseInt(e.target.value)
-                                };
-                                updateContainer(container.id, { volume: newVolume });
-                                const updatedContainers = state.containers.map(c => 
-                                  c.id === container.id 
-                                    ? { ...c, volume: newVolume }
-                                    : c
-                                );
-                                const newConfig = { ...resources, application: { containers: updatedContainers } };
-                                recalculateAndUpdateCost(newConfig);
-                              }}
-                              disabled={isRecalculating}
-                              className="px-1.5 py-0.5 border border-purple-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
-                            >
-                              <option value="10">10GB</option>
-                              <option value="20">20GB</option>
-                              <option value="50">50GB</option>
-                              <option value="100">100GB</option>
-                              <option value="250">250GB</option>
-                              <option value="500">500GB</option>
-                            </select>
-                          </div>
-                        )}
-                        <div className="pt-2 border-t border-purple-200 mt-2">
-                          <div className="flex justify-between font-semibold">
-                            <span className="text-purple-600">Cost:</span>
-                            <span className="text-purple-900">€{totalContainerCost.toFixed(2)}/mo</span>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Service Access Badges */}
-                      {(container.serviceAccess.database || container.serviceAccess.cache) && (
-                        <div className="mt-3 pt-3 border-t border-purple-200">
-                          <p className="text-xs text-slate-600 mb-2">Connected to:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {container.serviceAccess.database && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">🐘 DB</span>
-                            )}
-                            {container.serviceAccess.cache && (
-                              <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">⚡ Cache</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => router.push(`/resources#container-${container.id}`)}
-                        className="mt-3 w-full text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-3 py-1.5 rounded hover:bg-purple-50 transition"
-                      >
-                        Edit Configuration
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Infrastructure Services */}
-            {(resources.database || resources.cache) && (
-              <>
-                <div className="flex justify-center gap-4">
-                  {resources.database && <div className="w-0.5 h-8 bg-slate-300"></div>}
-                  {resources.cache && <div className="w-0.5 h-8 bg-slate-300"></div>}
+            return (
+              <div key={container.id} className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span>🚀</span>
+                    <span>{container.name}</span>
+                  </h3>
+                  <button
+                    onClick={() => router.push(`/resources#container-${container.id}`)}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                  >
+                    Edit Resources
+                  </button>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {resources.database && (
-                    <div className={`bg-green-50 border-2 border-green-200 rounded-xl p-6 transition ${isRecalculating ? 'opacity-50' : ''}`}>
-                      <h3 className="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
-                        <span>🐘</span>
-                        <span>PostgreSQL Database</span>
-                      </h3>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">CPU:</span>
-                          <select
-                            value={resources.database.cpu}
-                            onChange={(e) => {
-                              const newConfig = {
-                                ...resources,
-                                database: resources.database ? { ...resources.database, cpu: e.target.value } : undefined
-                              };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-2 py-1 border border-green-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                          >
-                            <option value="1 vCPU">1 vCPU</option>
-                            <option value="2 vCPU">2 vCPU</option>
-                            <option value="4 vCPU">4 vCPU</option>
-                            <option value="8 vCPU">8 vCPU</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Memory:</span>
-                          <select
-                            value={resources.database.memory}
-                            onChange={(e) => {
-                              const newConfig = {
-                                ...resources,
-                                database: resources.database ? { ...resources.database, memory: e.target.value } : undefined
-                              };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-2 py-1 border border-green-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                          >
-                            <option value="2GB">2GB</option>
-                            <option value="4GB">4GB</option>
-                            <option value="8GB">8GB</option>
-                            <option value="16GB">16GB</option>
-                            <option value="32GB">32GB</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Storage:</span>
-                          <select
-                            value={resources.database.storage}
-                            onChange={(e) => {
-                              const newConfig = {
-                                ...resources,
-                                database: resources.database ? { ...resources.database, storage: e.target.value } : undefined
-                              };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-2 py-1 border border-green-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                          >
-                            <option value="10GB">10GB</option>
-                            <option value="20GB">20GB</option>
-                            <option value="50GB">50GB</option>
-                            <option value="100GB">100GB</option>
-                            <option value="250GB">250GB</option>
-                            <option value="500GB">500GB</option>
-                            <option value="1TB">1TB</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Backups:</span>
-                          <span className="font-semibold text-slate-900">{resources.database.backups.retention}</span>
-                        </div>
-                        <div className="pt-2 border-t border-green-200 flex justify-between items-center">
-                          <span className="text-slate-600 font-medium">Cost:</span>
-                          <span className="font-bold text-green-900">€{(cost.database || 0).toFixed(2)}/mo</span>
+                
+                {/* Public Endpoint Info */}
+                {container.exposure === 'public' && (
+                  <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-600 text-lg">ℹ️</span>
+                      <div>
+                        <p className="text-sm font-semibold text-blue-900">Public Endpoint Available</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          A secure public domain will be automatically provisioned after deployment
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">CPU</span>
+                    <select
+                      value={container.resources.cpu}
+                      onChange={(e) => {
+                        updateContainer(container.id, {
+                          resources: { ...container.resources, cpu: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="0.25">0.25 vCPU</option>
+                      <option value="0.5">0.5 vCPU</option>
+                      <option value="1">1 vCPU</option>
+                      <option value="2">2 vCPU</option>
+                      <option value="4">4 vCPU</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Memory</span>
+                    <select
+                      value={container.resources.memory}
+                      onChange={(e) => {
+                        updateContainer(container.id, {
+                          resources: { ...container.resources, memory: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="0.5GB">0.5GB</option>
+                      <option value="1GB">1GB</option>
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Replicas</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={container.resources.replicas.min}
+                      onChange={(e) => {
+                        const newMin = parseInt(e.target.value) || 1;
+                        if (newMin > 0 && newMin <= 10) {
+                          updateContainer(container.id, {
+                            resources: {
+                              ...container.resources,
+                              replicas: {
+                                ...container.resources.replicas,
+                                min: newMin
+                              }
+                            }
+                          });
+                          recalculateAndUpdateCost();
+                        }
+                      }}
+                      disabled={isRecalculating}
+                      className="w-16 px-2 py-1 border border-slate-200 rounded text-center text-sm font-semibold hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  {container.volume && (
+                    <>
+                      <div className="border-t border-slate-200 my-3 pt-3">
+                        <div className="flex items-center gap-1 mb-2">
+                          <span>💾</span>
+                          <span className="text-slate-700 font-semibold text-xs">Persistent Volume</span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => router.push('/resources#database')}
-                        className="mt-4 w-full text-sm text-green-600 hover:text-green-700 font-medium border border-green-200 px-3 py-2 rounded-lg hover:bg-green-50 transition"
-                      >
-                        Edit Configuration
-                      </button>
-                    </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Size</span>
+                        <select
+                          value={container.volume.sizeGB}
+                          onChange={(e) => {
+                            updateContainer(container.id, {
+                              volume: {
+                                ...container.volume!,
+                                sizeGB: parseInt(e.target.value)
+                              }
+                            });
+                            recalculateAndUpdateCost();
+                          }}
+                          disabled={isRecalculating}
+                          className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value={10}>10GB</option>
+                          <option value={20}>20GB</option>
+                          <option value={50}>50GB</option>
+                          <option value={100}>100GB</option>
+                          <option value={250}>250GB</option>
+                          <option value={500}>500GB</option>
+                        </select>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Mount path</span>
+                        <code className="text-slate-900 font-mono text-xs bg-slate-100 px-2 py-1 rounded">
+                          {container.volume.mountPath}
+                        </code>
+                      </div>
+                    </>
                   )}
-                  {resources.cache && (
-                    <div className={`bg-red-50 border-2 border-red-200 rounded-xl p-6 transition ${isRecalculating ? 'opacity-50' : ''}`}>
-                      <h3 className="text-sm font-semibold text-red-900 mb-3 flex items-center gap-2">
-                        <span>⚡</span>
-                        <span>Redis Cache</span>
-                      </h3>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Memory:</span>
-                          <select
-                            value={resources.cache.memory}
-                            onChange={(e) => {
-                              const newConfig = {
-                                ...resources,
-                                cache: resources.cache ? { ...resources.cache, memory: e.target.value } : undefined
-                              };
-                              recalculateAndUpdateCost(newConfig);
-                            }}
-                            disabled={isRecalculating}
-                            className="px-2 py-1 border border-red-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-                          >
-                            <option value="256MB">256MB</option>
-                            <option value="512MB">512MB</option>
-                            <option value="1GB">1GB</option>
-                            <option value="2GB">2GB</option>
-                            <option value="4GB">4GB</option>
-                          </select>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Persistence:</span>
-                          <span className="font-semibold text-slate-900">{resources.cache.persistence}</span>
-                        </div>
-                        <div className="pt-2 border-t border-red-200 flex justify-between items-center">
-                          <span className="text-slate-600 font-medium">Cost:</span>
-                          <span className="font-bold text-red-900">€{(cost.cache || 0).toFixed(2)}/mo</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => router.push('/resources#cache')}
-                        className="mt-4 w-full text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50 transition"
-                      >
-                        Edit Configuration
-                      </button>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Exposure</span>
+                    <span className="font-semibold">
+                      {container.exposure === 'public' ? '🌐 Public' : '🔒 Private'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Port</span>
+                    <code className="bg-slate-100 px-2 py-1 rounded text-slate-900 font-mono text-xs">
+                      {container.port}
+                    </code>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <div className="flex justify-between font-semibold">
+                      <span className="text-purple-600">App Cost:</span>
+                      <span className="text-purple-900">€{totalContainerCost.toFixed(2)}/mo</span>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            );
+          })}
 
-        {/* Domain Configuration */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <span>🌐</span>
-              <span>Domain</span>
-            </h3>
-            <button
-              onClick={() => router.push('/domain')}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-            >
-              Edit Domain
-            </button>
-          </div>
-          <div className="space-y-2 text-sm">
-            {state.domain?.customDomain ? (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Custom Domain</span>
-                  <code className="text-slate-900 font-mono font-semibold">{state.domain.customDomain}</code>
+          {/* Database Card */}
+          {resources.database && (() => {
+            const dbCPU = parseCPU(resources.database.cpu);
+            const dbMemory = parseMemoryToGB(resources.database.memory);
+            const dbStorageGB = parseStorageToGB(resources.database.storage);
+            const databaseCost = (dbCPU * 10) + (dbMemory * 4) + (dbStorageGB * 0.10);
+            
+            return (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span>🐘</span>
+                    <span>Database ({resources.database.engine.toUpperCase()})</span>
+                  </h3>
+                  <button
+                    onClick={() => router.push('/resources#database')}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                  >
+                    Edit Resources
+                  </button>
                 </div>
-                <div className="text-xs text-slate-500 mt-2">
-                  ✓ SSL certificate will be automatically provisioned
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">CPU</span>
+                    <select
+                      value={resources.database.cpu}
+                      onChange={(e) => {
+                        updateResources({
+                          ...resources,
+                          database: { ...resources.database!, cpu: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="1 vCPU">1 vCPU</option>
+                      <option value="2 vCPU">2 vCPU</option>
+                      <option value="4 vCPU">4 vCPU</option>
+                      <option value="8 vCPU">8 vCPU</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Memory</span>
+                    <select
+                      value={resources.database.memory}
+                      onChange={(e) => {
+                        updateResources({
+                          ...resources,
+                          database: { ...resources.database!, memory: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                      <option value="16GB">16GB</option>
+                      <option value="32GB">32GB</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Storage</span>
+                    <select
+                      value={resources.database.storage}
+                      onChange={(e) => {
+                        updateResources({
+                          ...resources,
+                          database: { ...resources.database!, storage: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="10GB">10GB</option>
+                      <option value="20GB">20GB</option>
+                      <option value="50GB">50GB</option>
+                      <option value="100GB">100GB</option>
+                      <option value="250GB">250GB</option>
+                      <option value="500GB">500GB</option>
+                      <option value="1TB">1TB</option>
+                    </select>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <div className="flex justify-between font-semibold">
+                      <span className="text-green-600">Database Cost:</span>
+                      <span className="text-green-900">€{databaseCost.toFixed(2)}/mo</span>
+                    </div>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Unhazzle Subdomain</span>
-                  <code className="text-slate-900 font-mono font-semibold">{state.domain?.defaultSubdomain}.unhazzle.app</code>
+              </div>
+            );
+          })()}
+
+          {/* Cache Card */}
+          {resources.cache && (() => {
+            const cacheMemoryGB = parseMemoryToGB(resources.cache.memory);
+            const cacheCost = cacheMemoryGB * 5.0;
+            
+            return (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span>
+                    <span>Cache ({resources.cache.engine})</span>
+                  </h3>
+                  <button
+                    onClick={() => router.push('/resources#cache')}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                  >
+                    Edit Resources
+                  </button>
                 </div>
-                <div className="text-xs text-slate-500 mt-2">
-                  ✓ Free SSL included
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Memory</span>
+                    <select
+                      value={resources.cache.memory}
+                      onChange={(e) => {
+                        updateResources({
+                          ...resources,
+                          cache: { ...resources.cache!, memory: e.target.value }
+                        });
+                        recalculateAndUpdateCost();
+                      }}
+                      disabled={isRecalculating}
+                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="256MB">256MB</option>
+                      <option value="512MB">512MB</option>
+                      <option value="1GB">1GB</option>
+                      <option value="2GB">2GB</option>
+                      <option value="4GB">4GB</option>
+                      <option value="8GB">8GB</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Persistence</span>
+                    <span className="text-slate-900 font-semibold">{resources.cache.persistence}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <div className="flex justify-between font-semibold">
+                      <span className="text-red-600">Cache Cost:</span>
+                      <span className="text-red-900">€{cacheCost.toFixed(2)}/mo</span>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* What's Included */}
@@ -726,6 +681,25 @@ export default function ReviewAndDeploy() {
           </div>
         </div>
 
+        {/* Pricing Note */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+          <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <span>💰</span>
+            <span>Transparent pricing</span>
+          </h4>
+          <p className="text-sm text-blue-800 mb-3">
+            This estimate is based on your current configuration. Your actual costs may vary based on:
+          </p>
+          <ul className="space-y-1 text-sm text-blue-800">
+            <li>• <strong>Infrastructure costs:</strong> Powered by Hetzner Cloud (Germany)</li>
+            <li>• <strong>Margin included:</strong> Total price includes our 30% service margin for platform management</li>
+            <li>• <strong>Auto-scaling:</strong> Costs increase only when traffic demands more replicas</li>
+            <li>• <strong>Bandwidth:</strong> First 20 TB included, then €1.00/TB in EU</li>
+            <li>• <strong>Storage:</strong> Database and volumes billed at €0.044/GB/month</li>
+            <li>• <strong>No hidden fees:</strong> What you see is what you pay</li>
+          </ul>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
           <button
@@ -749,8 +723,8 @@ export default function ReviewAndDeploy() {
               </>
             ) : (
               <>
-                <span>Deploy Now</span>
                 <span>🚀</span>
+                <span>Deploy Now</span>
               </>
             )}
           </button>
