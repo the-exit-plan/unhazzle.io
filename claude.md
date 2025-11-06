@@ -20,7 +20,7 @@ This guide provides instructions for implementing features in the Unhazzle.io pr
 - **Styling**: Tailwind CSS 4
 - **State Management**: React Context API (DeploymentContext)
 - **Runtime**: React 19.1.0
-- **Build Tool**: Turbopack
+- **Build Tool**: Turbopack (integrated via Next.js `--turbopack` flag)
 
 ### Scripts
 ```bash
@@ -154,7 +154,7 @@ Important but can be added shortly after MVP:
 - Multiple cost governance features (see feedback-summary.md)
 
 ### Bugs (Fix immediately)
-- **Cache selection mismatch** (selected memcached but shows Redis in logs - use generic terms in logs)
+- **Cache selection mismatch** (selected Memcached but shows Redis in logs - use generic terms in logs)
 
 ## Key Specifications Reference
 
