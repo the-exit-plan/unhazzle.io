@@ -39,7 +39,7 @@ npm start      # Production server
 
 ### 2. Lightweight Implementation (No TDD)
 - **No test infrastructure required**: Focus on rapid iteration for user testing
-- **Manual verification**: Test features by running the app and clicking through flows
+- **Manual verification**: The human vide-coding will test features by running the app and clicking through flows
 - **Type safety**: Use TypeScript to catch errors at compile time
 - **Build validation**: Run `npm run build` to ensure no TypeScript errors
 
@@ -65,7 +65,7 @@ npm start      # Production server
    - Review related specs in "Related Items" section
 
 2. **Understand the user flow**:
-   - Review `/journey/product-journey-docs/flow.md` for overall journey
+   - Review `/journey/product-journey-docs/flow.md` for overall journey. The flow has involved and the source of truth is the implementation in `prototype-app/`
    - Identify where your feature fits in the flow
    - Note dependencies on other features
 
@@ -121,10 +121,11 @@ These features are critical for the prototype to be useful for testing:
 
 - **View current deployment config** (✅ DONE)
 - **Multi-container support** (✅ COMPLETE Phase 2)
-- **Edit selections on pricing page**
-- **Volume/stateful storage**
-- **Fix deploying page generic logs** (avoid brand names, use generic terms)
-- **Editable auto-generated env var names** (UNHAZZLE_ prefix customization)
+- **Edit selections on pricing page** (✅ DONE)
+- **Volume/stateful storage** (✅ DONE)
+- **Fix deploying page generic logs** (avoid brand names, use generic terms) (✅ DONE)
+- **Editable auto-generated env var names** (UNHAZZLE_ prefix customization) (✅ DONE)
+- **Visualize project + environments + application/function/database/cache/message queues relationship**
 - **Team permissions & RBAC**
 - **NoSQL database support** (MongoDB, etc.)
 - **Message queue service** (RabbitMQ, Kafka)
@@ -154,7 +155,7 @@ Important but can be added shortly after MVP:
 - Multiple cost governance features (see feedback-summary.md)
 
 ### Bugs (Fix immediately)
-- **Cache selection mismatch** (selected Memcached but shows Redis in logs - use generic terms in logs)
+- **Cache selection mismatch** (selected Memcached but shows Redis in logs - use generic terms in logs) (✅ DONE)
 
 ## Key Specifications Reference
 
@@ -521,14 +522,13 @@ Before submitting a feature implementation, verify:
 
 1. **Don't build real infrastructure**: This is a demo/prototype
 2. **Don't add external API calls**: All data is mock/simulated
-3. **Don't use localStorage**: State is in-memory only for demo
-4. **Don't skip cost calculations**: Always show pricing impact
-5. **Don't ignore specs**: They're based on user research
-6. **Don't use brand names in logs**: Keep it generic
-7. **Don't over-engineer**: Simple, straightforward code
-8. **Don't break existing flows**: Test the full user journey
-9. **Don't ignore TypeScript errors**: Fix them, don't suppress
-10. **Don't assume knowledge**: Show tooltips and helper text
+3. **Don't skip cost calculations**: Always show pricing impact
+4. **Don't ignore specs**: They're based on user research
+5. **Don't use brand names in logs**: Keep it generic
+6. **Don't over-engineer**: Simple, straightforward code
+7. **Don't break existing flows**: Test the full user journey
+8. **Don't ignore TypeScript errors**: Fix them, don't suppress
+9. **Don't assume knowledge**: Show tooltips and helper text
 
 ## Questions to Ask Before Implementing
 
