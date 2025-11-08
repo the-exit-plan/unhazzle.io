@@ -6,10 +6,10 @@ const nextConfig: NextConfig = {
   assetPrefix: '/unhazzle.io/demo/',
   trailingSlash: true,
 
-  // Make Next produce a full static export
+  // // Make Next produce a full static export
   output: 'export',
 
-  // Disable image optimization (not available on GitHub Pages)
+  // // Disable image optimization (not available on GitHub Pages)
   images: {
     unoptimized: true,
   },

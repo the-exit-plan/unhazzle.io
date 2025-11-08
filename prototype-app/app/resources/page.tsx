@@ -8,7 +8,7 @@ import { ResourceConfig } from '@/lib/context/DeploymentContext';
 
 export default function Resources() {
   const router = useRouter();
-  const { state, updateResources, updateEnvironment, updateContainer } = useDeployment();
+  const { state, updateResources, updateEnvironment, updateContainer, removeContainer, removeDatabase, removeCache } = useDeployment();
   
   const [config, setConfig] = useState<ResourceConfig | null>(null);
   const [expandedContainers, setExpandedContainers] = useState<Set<string>>(new Set());
@@ -40,20 +40,25 @@ export default function Resources() {
     }
   }, []);
 
-  // Generate intelligent defaults on mount
+  // Initialize config from saved state if available; otherwise generate from questionnaire
   useEffect(() => {
-    if (state.questionnaire) {
+    if (!state.questionnaire) {
+      router.push('/');
+      return;
+    }
+
+    if (state.resources) {
+      setConfig(state.resources);
+    } else {
       const generatedConfig = generateResourceConfig(state.questionnaire);
       setConfig(generatedConfig);
-      
-      // Expand first container by default
-      if (state.containers.length > 0) {
-        setExpandedContainers(new Set([state.containers[0].id]));
-      }
-    } else {
-      router.push('/');
     }
-  }, [state.questionnaire, router, state.containers.length]);
+
+    // Expand first container by default
+    if (state.containers.length > 0) {
+      setExpandedContainers(new Set([state.containers[0].id]));
+    }
+  }, [state.questionnaire, state.resources, router, state.containers.length]);
 
   const toggleContainer = (containerId: string) => {
     setExpandedContainers(prev => {
@@ -71,6 +76,18 @@ export default function Resources() {
     e.stopPropagation();
     setEditingName(containerId);
     setTempName(currentName);
+  };
+
+  const handleRemoveContainer = (e: React.MouseEvent, containerId: string, containerName: string) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(`Remove application "${containerName}"?`);
+    if (!confirmed) return;
+    removeContainer(containerId);
+    setExpandedContainers(prev => {
+      const next = new Set(prev);
+      next.delete(containerId);
+      return next;
+    });
   };
 
   const saveName = (containerId: string) => {
@@ -282,8 +299,16 @@ export default function Resources() {
               return (
                 <div key={container.id} id={`container-${container.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all">
                   {/* Accordion Header */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleContainer(container.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleContainer(container.id);
+                      }
+                    }}
                     className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition"
                   >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -344,6 +369,13 @@ export default function Resources() {
                       <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-semibold">
                         App #{index + 1}
                       </span>
+                      <button
+                        onClick={(e) => handleRemoveContainer(e, container.id, container.name)}
+                        className="text-xs text-red-600 hover:text-red-700 border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
+                        title="Remove application"
+                      >
+                        Remove
+                      </button>
                       <svg 
                         className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                         fill="none" 
@@ -353,7 +385,7 @@ export default function Resources() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Accordion Content */}
                   {isExpanded && (
@@ -601,6 +633,18 @@ export default function Resources() {
                   <p className="text-sm text-slate-600">Persistent storage with automatic backups</p>
                 </div>
               </div>
+              <button
+                onClick={() => {
+                  const confirmed = window.confirm('Remove database from this configuration?');
+                  if (!confirmed) return;
+                  setConfig({ ...config, database: undefined });
+                  // Also clean state if already set from previous steps
+                  removeDatabase();
+                }}
+                className="text-sm text-red-600 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 transition"
+              >
+                Remove Database
+              </button>
             </div>
 
             <div className="grid md:grid-cols-4 gap-6">
@@ -684,6 +728,18 @@ export default function Resources() {
                   <p className="text-sm text-slate-600">High-speed in-memory storage</p>
                 </div>
               </div>
+              <button
+                onClick={() => {
+                  const confirmed = window.confirm('Remove cache from this configuration?');
+                  if (!confirmed) return;
+                  setConfig({ ...config, cache: undefined });
+                  // Also clean state if already set from previous steps
+                  removeCache();
+                }}
+                className="text-sm text-red-600 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 transition"
+              >
+                Remove Cache
+              </button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">

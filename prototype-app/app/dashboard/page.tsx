@@ -9,7 +9,7 @@ type TabType = 'overview' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSt
 
 export default function Dashboard() {
   const router = useRouter();
-  const { state } = useDeployment();
+  const { state, removeDatabase, removeCache } = useDeployment();
   
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [uptime, setUptime] = useState(99.98);
@@ -17,18 +17,24 @@ export default function Dashboard() {
   const [memoryUsage, setMemoryUsage] = useState(58);
   const [requestsPerMinute, setRequestsPerMinute] = useState(1240);
   const [selectedContainer, setSelectedContainer] = useState<string>('all');
+  const [mounted, setMounted] = useState(false);
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Redirect if not deployed
+  // Ensure client-only render to avoid SSR/client hydration mismatch from localStorage-backed context
   useEffect(() => {
-    if (!state.deployed) {
+    setMounted(true);
+  }, []);
+
+  // Redirect if not authenticated (no user)
+  useEffect(() => {
+    if (mounted && !state.user) {
       router.push('/');
     }
-  }, [state.deployed, router]);
+  }, [mounted, state.user, router]);
 
   // Simulate live metrics updates
   useEffect(() => {
@@ -41,8 +47,56 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  if (!state.deployed) {
+  if (!mounted) {
     return null;
+  }
+
+  // If authenticated but no project, show empty state
+  if (!state.project) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-4xl font-bold text-slate-900 mb-2">
+                  Dashboard
+                </h1>
+                <p className="text-slate-600">
+                  Welcome, {state.user?.name}!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          <div className="bg-white rounded-xl shadow-lg p-12">
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-12 h-12 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">
+                No Projects Yet
+              </h2>
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                Get started by creating your first project. Answer 4 quick questions about your application, 
+                and we&apos;ll automatically configure production-ready infrastructure for you.
+              </p>
+              <button
+                onClick={() => router.push('/questionnaire')}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg inline-flex items-center gap-3"
+              >
+                <span className="text-2xl">+</span>
+                <span>Create Your First Project</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const getMetricColor = (value: number, thresholds: { warning: number; critical: number }) => {
@@ -59,85 +113,29 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-4xl font-bold text-slate-900 mb-2">
-                Your Application
+                Dashboard
               </h1>
               <div className="flex items-center gap-4">
-                <span className="text-sm text-slate-600">
-                  Deployed to: <code className="bg-white px-2 py-1 rounded text-xs font-mono">{state.domain?.defaultSubdomain}</code>
-                </span>
-                <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                  <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-                  Live
-                </span>
+                {state.domain?.defaultSubdomain && (
+                  <span className="text-sm text-slate-600">
+                    Deployed to: <code className="bg-white px-2 py-1 rounded text-xs font-mono">{state.domain.defaultSubdomain}</code>
+                  </span>
+                )}
+                {state.deployed && (
+                  <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                    <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                    Live
+                  </span>
+                )}
               </div>
             </div>
             <button
-              onClick={() => router.push('/')}
-              className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium"
+              onClick={() => router.push('/questionnaire')}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg flex items-center gap-2"
             >
-              ← New Deployment
+              <span className="text-xl">+</span>
+              <span>Create Project</span>
             </button>
-          </div>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          {/* Uptime */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 font-medium">Uptime</span>
-              <span className="text-2xl">⏱️</span>
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{uptime.toFixed(2)}%</p>
-            <p className="text-xs text-green-600 mt-2">✓ Excellent</p>
-          </div>
-
-          {/* CPU Usage */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 font-medium">CPU Usage</span>
-              <span className="text-2xl">⚡</span>
-            </div>
-            <p className={`text-3xl font-bold ${getMetricColor(cpuUsage, { warning: 70, critical: 85 })}`}>
-              {cpuUsage.toFixed(0)}%
-            </p>
-            <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
-              <div 
-                className={`h-2 rounded-full transition-all ${
-                  cpuUsage > 85 ? 'bg-red-600' : cpuUsage > 70 ? 'bg-yellow-600' : 'bg-green-600'
-                }`}
-                style={{ width: `${cpuUsage}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Memory Usage */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 font-medium">Memory Usage</span>
-              <span className="text-2xl">💾</span>
-            </div>
-            <p className={`text-3xl font-bold ${getMetricColor(memoryUsage, { warning: 75, critical: 90 })}`}>
-              {memoryUsage.toFixed(0)}%
-            </p>
-            <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
-              <div 
-                className={`h-2 rounded-full transition-all ${
-                  memoryUsage > 90 ? 'bg-red-600' : memoryUsage > 75 ? 'bg-yellow-600' : 'bg-green-600'
-                }`}
-                style={{ width: `${memoryUsage}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Requests/min */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 font-medium">Requests/min</span>
-              <span className="text-2xl">📡</span>
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{Math.round(requestsPerMinute)}</p>
-            <p className="text-xs text-slate-500 mt-2">Current traffic</p>
           </div>
         </div>
 
@@ -176,9 +174,9 @@ export default function Dashboard() {
             ))}
           </div>
               <div className="p-6">
-                {/* Overview Tab */}
+                {/* Overview Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
                 {activeTab === 'overview' && (
-                  <OverviewConfig />
+                  <HybridOverview project={state.project} state={state} />
                 )}
 
                 {/* Logs Tab */}
@@ -548,13 +546,1777 @@ export default function Dashboard() {
 }
 
 // ======================
-// Overview Config Panel
+// Hybrid Overview: Left Panel (Hierarchy) + Right Panel (Editing)
+// ======================
+
+function HybridOverview({ project, state }: { project: any; state: any }) {
+  const { updateContainer, updateResources, removeDatabase, removeCache, removeContainer } = useDeployment();
+  const [selected, setSelected] = useState<{ kind: 'container' | 'database' | 'cache' | 'architecture'; id?: string; envId?: string }>(() => {
+    // Default to first container if available
+    if (project?.environments?.[0]?.containers?.[0]) {
+      return {
+        kind: 'container',
+        id: project.environments[0].containers[0].id,
+        envId: project.environments[0].id
+      };
+    }
+    return { kind: 'architecture' };
+  });
+
+  // Draft state for staged edits
+  const [draftContainer, setDraftContainer] = useState<any>(null);
+  const [draftDatabase, setDraftDatabase] = useState<any>(null);
+  const [draftCache, setDraftCache] = useState<any>(null);
+  const [showChanges, setShowChanges] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+
+  // Get the currently selected resource from project structure
+  const getSelectedResource = () => {
+    if (!project?.environments) return null;
+    
+    if (selected.kind === 'container') {
+      for (const env of project.environments) {
+        const container = env.containers?.find((c: any) => c.id === selected.id);
+        if (container) return { type: 'container', data: container, env };
+      }
+    } else if (selected.kind === 'database') {
+      const env = project.environments.find((e: any) => e.id === selected.envId);
+      if (env?.database) return { type: 'database', data: env.database, env };
+    } else if (selected.kind === 'cache') {
+      const env = project.environments.find((e: any) => e.id === selected.envId);
+      if (env?.cache) return { type: 'cache', data: env.cache, env };
+    }
+    return null;
+  };
+
+  const selectedResource = getSelectedResource();
+
+  // Keep draft in sync when selection changes
+  useEffect(() => {
+    const resource = getSelectedResource();
+    if (selected.kind === 'container' && resource?.data) {
+      const deep = JSON.parse(JSON.stringify(resource.data));
+      if (!Array.isArray(deep.environmentVariables)) deep.environmentVariables = [];
+      setDraftContainer(deep);
+    } else if (selected.kind === 'database' && resource?.data) {
+      setDraftDatabase(JSON.parse(JSON.stringify(resource.data)));
+      setDraftContainer(null);
+    } else if (selected.kind === 'cache' && resource?.data) {
+      setDraftCache(JSON.parse(JSON.stringify(resource.data)));
+      setDraftContainer(null);
+    } else {
+      setDraftContainer(null);
+      setDraftDatabase(null);
+      setDraftCache(null);
+    }
+  }, [selected, project]);
+
+  const hasContainerChanges = () => {
+    if (!selectedResource?.data || !draftContainer || selected.kind !== 'container') return false;
+    return JSON.stringify({
+      resources: draftContainer.resources,
+      healthCheck: draftContainer.healthCheck,
+      exposure: draftContainer.exposure,
+      serviceAccess: draftContainer.serviceAccess,
+      environmentVariables: draftContainer.environmentVariables,
+    }) !== JSON.stringify({
+      resources: selectedResource.data.resources,
+      healthCheck: selectedResource.data.healthCheck,
+      exposure: selectedResource.data.exposure,
+      serviceAccess: selectedResource.data.serviceAccess,
+      environmentVariables: selectedResource.data.environmentVariables,
+    });
+  };
+
+  const hasDatabaseChanges = () => {
+    if (!selectedResource?.data || !draftDatabase || selected.kind !== 'database') return false;
+    return JSON.stringify(draftDatabase) !== JSON.stringify(selectedResource.data);
+  };
+
+  const hasCacheChanges = () => {
+    if (!selectedResource?.data || !draftCache || selected.kind !== 'cache') return false;
+    return JSON.stringify(draftCache) !== JSON.stringify(selectedResource.data);
+  };
+
+  const applyContainerChanges = () => {
+    if (!selectedResource?.data || !draftContainer) return;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateContainer(selectedResource.data.id, {
+        resources: draftContainer.resources,
+        healthCheck: draftContainer.healthCheck,
+        exposure: draftContainer.exposure,
+        serviceAccess: draftContainer.serviceAccess,
+        environmentVariables: draftContainer.environmentVariables,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  const applyDatabaseChanges = () => {
+    if (!draftDatabase || !state.resources) return;
+    const res = state.resources;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateResources({
+        replicas: res.replicas,
+        cpu: res.cpu,
+        memory: res.memory,
+        database: draftDatabase,
+        cache: res.cache,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  const applyCacheChanges = () => {
+    if (!draftCache || !state.resources) return;
+    const res = state.resources;
+    setShowConfirmation(false);
+    setIsApplying(true);
+    setTimeout(() => {
+      updateResources({
+        replicas: res.replicas,
+        cpu: res.cpu,
+        memory: res.memory,
+        database: res.database,
+        cache: draftCache,
+      });
+      setIsApplying(false);
+    }, 800);
+  };
+
+  if (!project) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📦</div>
+        <h3 className="text-2xl font-bold text-slate-900 mb-2">No Projects Yet</h3>
+        <p className="text-slate-600 mb-6">Create your first project to get started with Unhazzle</p>
+        <button
+          onClick={() => window.location.href = '/questionnaire'}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold"
+        >
+          Create Project
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-12 gap-6">
+      {/* LEFT PANEL: Hierarchical Navigation */}
+      <div className="col-span-12 lg:col-span-4 xl:col-span-3">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 space-y-4 sticky top-4 border border-slate-200">
+          {/* Project Header */}
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">📦</span>
+              <h3 className="font-bold text-slate-900 text-lg">{project.name}</h3>
+            </div>
+            <div className="text-xs text-slate-600">
+              {project.environments?.length || 0} environment{project.environments?.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {/* Environments */}
+          {project.environments?.map((env: any) => {
+            const containers = env.containers || [];
+            const hasDatabase = !!env.database;
+            const hasCache = !!env.cache;
+
+            return (
+              <div key={env.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                {/* Environment Header */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-3 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🔧</span>
+                    <span className="font-bold text-slate-900">{env.name}</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                      <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                      Live
+                    </span>
+                  </div>
+                </div>
+
+                {/* Resources */}
+                <div className="p-3 space-y-3">
+                  {/* Containers */}
+                  {containers.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
+                        <span>🚀</span>
+                        <span>Containers ({containers.length})</span>
+                      </div>
+                      <div className="space-y-1">
+                        {containers.map((container: any, idx: number) => {
+                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `app-${idx + 1}`;
+                          const isSelected = selected.kind === 'container' && selected.id === container.id;
+                          const hasDbAccess = container.serviceAccess?.database;
+                          const hasCacheAccess = container.serviceAccess?.cache;
+
+                          return (
+                            <button
+                              key={container.id}
+                              onClick={() => setSelected({ kind: 'container', id: container.id, envId: env.id })}
+                              className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                                isSelected
+                                  ? 'border-purple-400 bg-purple-50 shadow-sm'
+                                  : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Database */}
+                  {hasDatabase && (
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
+                        <span>💾</span>
+                        <span>Database</span>
+                      </div>
+                      <button
+                        onClick={() => setSelected({ kind: 'database', envId: env.id })}
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                          selected.kind === 'database' && selected.envId === env.id
+                            ? 'border-green-400 bg-green-50 shadow-sm'
+                            : 'border-slate-200 hover:border-green-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-slate-900">PostgreSQL</div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Cache */}
+                  {hasCache && (
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
+                        <span>⚡</span>
+                        <span>Cache</span>
+                      </div>
+                      <button
+                        onClick={() => setSelected({ kind: 'cache', envId: env.id })}
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                          selected.kind === 'cache' && selected.envId === env.id
+                            ? 'border-red-400 bg-red-50 shadow-sm'
+                            : 'border-slate-200 hover:border-red-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-slate-900">Redis</div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Architecture Diagram Option */}
+          <button
+            onClick={() => setSelected({ kind: 'architecture' })}
+            className={`w-full text-left px-4 py-3 rounded-lg border transition ${
+              selected.kind === 'architecture'
+                ? 'border-purple-400 bg-purple-50 shadow-sm'
+                : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <span className="text-xl">🏗️</span>
+              <span>Architecture Diagram</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* RIGHT PANEL: Resource Editor */}
+      <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+        {selected.kind === 'container' && selectedResource && draftContainer && (
+          <ContainerEditor
+            container={selectedResource.data}
+            draftContainer={draftContainer}
+            setDraftContainer={setDraftContainer}
+            hasChanges={hasContainerChanges()}
+            showChanges={showChanges}
+            setShowChanges={setShowChanges}
+            onApply={() => setShowConfirmation(true)}
+            isApplying={isApplying}
+            state={state}
+            onRemove={removeContainer}
+          />
+        )}
+
+        {selected.kind === 'database' && selectedResource && draftDatabase && (
+          <DatabaseEditor
+            database={selectedResource.data}
+            draftDatabase={draftDatabase}
+            setDraftDatabase={setDraftDatabase}
+            hasChanges={hasDatabaseChanges()}
+            showChanges={showChanges}
+            setShowChanges={setShowChanges}
+            onApply={() => setShowConfirmation(true)}
+            isApplying={isApplying}
+            state={state}
+            onRemove={removeDatabase}
+          />
+        )}
+
+        {selected.kind === 'cache' && selectedResource && draftCache && (
+          <CacheEditor
+            cache={selectedResource.data}
+            draftCache={draftCache}
+            setDraftCache={setDraftCache}
+            hasChanges={hasCacheChanges()}
+            showChanges={showChanges}
+            setShowChanges={setShowChanges}
+            onApply={() => setShowConfirmation(true)}
+            isApplying={isApplying}
+            state={state}
+            onRemove={removeCache}
+          />
+        )}
+
+        {selected.kind === 'architecture' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span>🏗️</span>
+                <span>Architecture Diagram</span>
+              </h2>
+              <p className="text-slate-600 mb-6">
+                Visual representation of your deployed infrastructure, including container connections and internal DNS.
+              </p>
+            </div>
+            <ArchitectureDiagram state={state} />
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmation && (
+        <ConfirmationModal
+          selected={selected}
+          selectedResource={selectedResource}
+          draftContainer={draftContainer}
+          draftDatabase={draftDatabase}
+          draftCache={draftCache}
+          onCancel={() => setShowConfirmation(false)}
+          onConfirm={() => {
+            if (selected.kind === 'container') applyContainerChanges();
+            else if (selected.kind === 'database') applyDatabaseChanges();
+            else if (selected.kind === 'cache') applyCacheChanges();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ======================
+// Container Editor Component
+// ======================
+
+function ContainerEditor({ container, draftContainer, setDraftContainer, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+  const handleRemove = () => {
+    const containers = state.containers || [];
+    
+    // Check if this is the last container
+    if (containers.length <= 1) {
+      alert('Cannot remove the last container. Your project must have at least one container.');
+      return;
+    }
+    
+    const confirmed = window.confirm(`Remove container "${container.name || 'container'}"? This action cannot be undone in demo mode.`);
+    if (confirmed) {
+      onRemove(container.id);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">{container.name || 'Application Container'}</h3>
+          <p className="text-xs text-slate-500">Image: {container.imageUrl}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowChanges(true)}
+            disabled={!hasChanges || isApplying}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+            } disabled:opacity-50`}
+          >
+            Show Changes
+          </button>
+          <button
+            onClick={onApply}
+            disabled={!hasChanges || isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isApplying ? 'Applying…' : 'Apply'}
+          </button>
+          <button
+            onClick={handleRemove}
+            disabled={isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      {/* Public Endpoint (if applicable) */}
+      {container.exposure === 'public' && (() => {
+        const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || 'app';
+        const stableId = container.id.substring(0, 6);
+        const domain = `${displayName}-${stableId}.unhazzle.app`;
+        
+        return (
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-slate-600 uppercase">Public Endpoint</span>
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Live</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm text-purple-600 font-mono">
+                    https://{domain}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://${domain}`);
+                    }}
+                    className="p-1 hover:bg-slate-200 rounded transition text-sm"
+                    title="Copy to clipboard"
+                  >
+                    📋
+                  </button>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  Port {container.port} • SSL Enabled • CDN Cached
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Section: Resources */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">CPU</label>
+            <select
+              value={draftContainer.resources.cpu}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                resources: { ...draftContainer.resources, cpu: e.target.value }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="0.25">0.25</option>
+              <option value="0.5">0.5</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Memory</label>
+            <select
+              value={draftContainer.resources.memory}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                resources: { ...draftContainer.resources, memory: e.target.value }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="0.5GB">0.5GB</option>
+              <option value="1GB">1GB</option>
+              <option value="2GB">2GB</option>
+              <option value="4GB">4GB</option>
+              <option value="8GB">8GB</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Replicas (min)</label>
+            <input
+              type="number"
+              min={1}
+              value={draftContainer.resources.replicas.min}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                resources: {
+                  ...draftContainer.resources,
+                  replicas: { ...draftContainer.resources.replicas, min: Math.max(1, parseInt(e.target.value) || 1) }
+                }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">Set min=max for fixed scaling. Different values enable auto-scaling.</p>
+      </div>
+
+      {/* Section: Environment Variables (editable) */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Environment Variables</h4>
+        <div className="space-y-3">
+          {draftContainer.environmentVariables.length === 0 && (
+            <div className="text-xs text-slate-500">No variables defined yet.</div>
+          )}
+          {draftContainer.environmentVariables.map((env: any, idx: number) => (
+            <div key={idx} className="grid md:grid-cols-12 gap-3 items-start">
+              <div className="md:col-span-4">
+                <label className="block text-xs text-slate-600 mb-1">Key</label>
+                <input
+                  type="text"
+                  value={env.key}
+                  onChange={(e) => {
+                    const next = [...draftContainer.environmentVariables];
+                    next[idx] = { ...next[idx], key: e.target.value };
+                    setDraftContainer({ ...draftContainer, environmentVariables: next });
+                  }}
+                  placeholder="KEY"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                />
+              </div>
+              <div className="md:col-span-6">
+                <label className="block text-xs text-slate-600 mb-1">Value</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type={env.masked === false ? 'text' : 'password'}
+                    value={env.value}
+                    onChange={(e) => {
+                      const next = [...draftContainer.environmentVariables];
+                      next[idx] = { ...next[idx], value: e.target.value };
+                      setDraftContainer({ ...draftContainer, environmentVariables: next });
+                    }}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [...draftContainer.environmentVariables];
+                      const currentMasked = next[idx].masked !== false;
+                      next[idx] = { ...next[idx], masked: !currentMasked };
+                      setDraftContainer({ ...draftContainer, environmentVariables: next });
+                    }}
+                    className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
+                    aria-label={env.masked === false ? 'Hide value' : 'Show value'}
+                    title={env.masked === false ? 'Hide value' : 'Show value'}
+                  >
+                    {env.masked === false ? '👁️‍🗨️' : '👁️'}
+                  </button>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs mb-1 invisible">Action</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = draftContainer.environmentVariables.filter((_: any, i: number) => i !== idx);
+                    setDraftContainer({ ...draftContainer, environmentVariables: next });
+                  }}
+                  className="w-full md:w-auto px-3 py-2 text-xs rounded-lg border border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-500 flex items-center gap-2">
+              <span>🔐</span>
+              <span>Values are masked by default and stored encrypted.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = [
+                  ...draftContainer.environmentVariables,
+                  { key: '', value: '', masked: true },
+                ];
+                setDraftContainer({ ...draftContainer, environmentVariables: next });
+              }}
+              className="px-3 py-2 text-xs rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
+            >
+              + Add variable
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Health Check */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Health Check</h4>
+        <div className="grid md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Protocol</label>
+            <select
+              value={draftContainer.healthCheck.protocol}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                healthCheck: { ...draftContainer.healthCheck, protocol: e.target.value as any }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="HTTP">HTTP</option>
+              <option value="TCP">TCP</option>
+              <option value="gRPC">gRPC</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Port</label>
+            <input
+              type="number"
+              value={draftContainer.healthCheck.port}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                healthCheck: { ...draftContainer.healthCheck, port: parseInt(e.target.value) || draftContainer.port }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs text-slate-600 mb-1">Path</label>
+            <input
+              type="text"
+              value={draftContainer.healthCheck.path || ''}
+              onChange={(e) => setDraftContainer({
+                ...draftContainer,
+                healthCheck: { ...draftContainer.healthCheck, path: e.target.value }
+              })}
+              placeholder="/health"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Networking */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Networking</h4>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Visibility</label>
+            <div className="flex items-center gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={draftContainer.exposure === 'public'}
+                  onChange={() => setDraftContainer({ ...draftContainer, exposure: 'public' })}
+                />
+                <span className="text-slate-900">Public</span>
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={draftContainer.exposure === 'private'}
+                  onChange={() => setDraftContainer({ ...draftContainer, exposure: 'private' })}
+                />
+                <span className="text-slate-900">Private</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Domain</label>
+            <div className="text-sm text-slate-900">
+              {state.domain?.customDomain || `${state.domain?.defaultSubdomain}.unhazzle.app`}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Port</label>
+            <div className="text-sm font-mono text-slate-900">{draftContainer.port}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Service Access */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Service Access</h4>
+        <div className="space-y-2 text-sm">
+          {state.resources?.database && (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={draftContainer.serviceAccess.database}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  const envVarKey = 'UNHAZZLE_POSTGRES_URL';
+                  let updatedEnvVars = [...draftContainer.environmentVariables];
+
+                  if (enabled) {
+                    const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                    if (!exists) {
+                      updatedEnvVars.push({
+                        key: envVarKey,
+                        value: '',
+                        masked: false
+                      });
+                    }
+                  } else {
+                    updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                  }
+
+                  setDraftContainer({
+                    ...draftContainer,
+                    serviceAccess: { ...draftContainer.serviceAccess, database: enabled },
+                    environmentVariables: updatedEnvVars
+                  });
+                }}
+              />
+              <span className="text-slate-900">PostgreSQL</span>
+            </label>
+          )}
+          {state.resources?.cache && (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={draftContainer.serviceAccess.cache}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  const envVarKey = 'UNHAZZLE_REDIS_URL';
+                  let updatedEnvVars = [...draftContainer.environmentVariables];
+
+                  if (enabled) {
+                    const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                    if (!exists) {
+                      updatedEnvVars.push({
+                        key: envVarKey,
+                        value: '',
+                        masked: false
+                      });
+                    }
+                  } else {
+                    updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                  }
+
+                  setDraftContainer({
+                    ...draftContainer,
+                    serviceAccess: { ...draftContainer.serviceAccess, cache: enabled },
+                    environmentVariables: updatedEnvVars
+                  });
+                }}
+              />
+              <span className="text-slate-900">Redis</span>
+            </label>
+          )}
+          <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+        </div>
+      </div>
+
+      {/* Changes Preview */}
+      {showChanges && hasChanges && (
+        <ChangesPreview
+          current={container}
+          draft={draftContainer}
+          onClose={() => setShowChanges(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Simplified Changes Preview Component
+function ChangesPreview({ current, draft, onClose }: any) {
+  // Calculate cost impact
+  const costImpact = calculateContainerCostImpact(
+    current.resources.cpu,
+    current.resources.memory,
+    current.resources.replicas,
+    draft.resources.cpu,
+    draft.resources.memory,
+    draft.resources.replicas
+  );
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+        <button onClick={onClose} className="text-xs text-amber-700 underline">Hide</button>
+      </div>
+      <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+        {current.resources.cpu !== draft.resources.cpu && (
+          <li>CPU: {current.resources.cpu} → {draft.resources.cpu}</li>
+        )}
+        {current.resources.memory !== draft.resources.memory && (
+          <li>Memory: {current.resources.memory} → {draft.resources.memory}</li>
+        )}
+        {current.resources.replicas.min !== draft.resources.replicas.min && (
+          <li>Replicas (min): {current.resources.replicas.min} → {draft.resources.replicas.min}</li>
+        )}
+        {current.exposure !== draft.exposure && (
+          <li>Visibility: {current.exposure} → {draft.exposure}</li>
+        )}
+        {JSON.stringify(current.environmentVariables) !== JSON.stringify(draft.environmentVariables) && (
+          <li>Environment variables updated</li>
+        )}
+      </ul>
+      <div className="text-xs text-amber-800 mt-3">
+        Impact: CPU/RAM changes require rolling restart. Estimated duration: ~2 minutes. Zero-downtime ensured.
+        {costImpact !== 0 && (
+          <div className="font-semibold mt-1">
+            💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Simplified Database Editor
+function DatabaseEditor({ database, draftDatabase, setDraftDatabase, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+  const handleRemove = () => {
+    // Check if any container is still using the database
+    const containers = state.containers || [];
+    const inUse = containers.some((c: any) => c.serviceAccess?.database);
+    
+    if (inUse) {
+      alert('Cannot remove database: one or more containers are still connected. Disable database access in container settings first.');
+      return;
+    }
+    
+    const confirmed = window.confirm('Remove database from deployed configuration? This action cannot be undone in demo mode.');
+    if (confirmed) {
+      onRemove();
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">PostgreSQL Database</h3>
+          <p className="text-xs text-slate-500">Managed {draftDatabase.engine} instance</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowChanges(true)}
+            disabled={!hasChanges || isApplying}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+            } disabled:opacity-50`}
+          >
+            Show Changes
+          </button>
+          <button
+            onClick={onApply}
+            disabled={!hasChanges || isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isApplying ? 'Applying…' : 'Apply'}
+          </button>
+          <button
+            onClick={handleRemove}
+            disabled={isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      {/* Resources */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">CPU</label>
+            <select
+              value={draftDatabase.cpu}
+              onChange={(e) => setDraftDatabase({ ...draftDatabase, cpu: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="0.5">0.5</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Memory</label>
+            <select
+              value={draftDatabase.memory}
+              onChange={(e) => setDraftDatabase({ ...draftDatabase, memory: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="1GB">1GB</option>
+              <option value="2GB">2GB</option>
+              <option value="4GB">4GB</option>
+              <option value="8GB">8GB</option>
+              <option value="16GB">16GB</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Storage</label>
+            <select
+              value={draftDatabase.storage}
+              onChange={(e) => setDraftDatabase({ ...draftDatabase, storage: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="10GB">10GB</option>
+              <option value="20GB">20GB</option>
+              <option value="50GB">50GB</option>
+              <option value="100GB">100GB</option>
+              <option value="200GB">200GB</option>
+              <option value="500GB">500GB</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Backups */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Backups</h4>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Frequency</label>
+            <select
+              value={draftDatabase.backups.frequency}
+              onChange={(e) => setDraftDatabase({
+                ...draftDatabase,
+                backups: { ...draftDatabase.backups, frequency: e.target.value }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="hourly">Hourly</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Retention</label>
+            <select
+              value={draftDatabase.backups.retention}
+              onChange={(e) => setDraftDatabase({
+                ...draftDatabase,
+                backups: { ...draftDatabase.backups, retention: e.target.value }
+              })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="7 days">7 days</option>
+              <option value="14 days">14 days</option>
+              <option value="30 days">30 days</option>
+              <option value="90 days">90 days</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Enabled</label>
+            <label className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                checked={draftDatabase.backups.enabled}
+                onChange={(e) => setDraftDatabase({
+                  ...draftDatabase,
+                  backups: { ...draftDatabase.backups, enabled: e.target.checked }
+                })}
+              />
+              <span className="text-sm text-slate-900">Automatic backups</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Changes Preview */}
+      {showChanges && hasChanges && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+            <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
+          </div>
+          <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+            {database.cpu !== draftDatabase.cpu && (
+              <li>CPU: {database.cpu} → {draftDatabase.cpu}</li>
+            )}
+            {database.memory !== draftDatabase.memory && (
+              <li>Memory: {database.memory} → {draftDatabase.memory}</li>
+            )}
+            {database.storage !== draftDatabase.storage && (
+              <li>Storage: {database.storage} → {draftDatabase.storage}</li>
+            )}
+          </ul>
+          <div className="text-xs text-amber-800 mt-3">
+            Impact: Storage changes are instant. CPU/Memory changes require brief maintenance window (~3 min).
+            {(() => {
+              const costImpact = calculateDatabaseCostImpact(database, draftDatabase);
+              return costImpact !== 0 ? (
+                <div className="font-semibold mt-1">
+                  💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+                </div>
+              ) : null;
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Simplified Cache Editor
+function CacheEditor({ cache, draftCache, setDraftCache, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+  const handleRemove = () => {
+    // Check if any container is still using the cache
+    const containers = state.containers || [];
+    const inUse = containers.some((c: any) => c.serviceAccess?.cache);
+    
+    if (inUse) {
+      alert('Cannot remove cache: one or more containers are still connected. Disable cache access in container settings first.');
+      return;
+    }
+    
+    const confirmed = window.confirm('Remove cache from deployed configuration? This action cannot be undone in demo mode.');
+    if (confirmed) {
+      onRemove();
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">Redis Cache</h3>
+          <p className="text-xs text-slate-500">Managed {draftCache.engine} instance</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowChanges(true)}
+            disabled={!hasChanges || isApplying}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+            } disabled:opacity-50`}
+          >
+            Show Changes
+          </button>
+          <button
+            onClick={onApply}
+            disabled={!hasChanges || isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isApplying ? 'Applying…' : 'Apply'}
+          </button>
+          <button
+            onClick={handleRemove}
+            disabled={isApplying}
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      {/* Resources */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Memory</label>
+            <select
+              value={draftCache.memory}
+              onChange={(e) => setDraftCache({ ...draftCache, memory: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="256MB">256MB</option>
+              <option value="512MB">512MB</option>
+              <option value="1GB">1GB</option>
+              <option value="2GB">2GB</option>
+              <option value="4GB">4GB</option>
+              <option value="8GB">8GB</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Version</label>
+            <select
+              value={draftCache.version}
+              onChange={(e) => setDraftCache({ ...draftCache, version: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="7.2">7.2 (Latest)</option>
+              <option value="7.0">7.0</option>
+              <option value="6.2">6.2</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Configuration */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Configuration</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Eviction Policy</label>
+            <select
+              value={draftCache.evictionPolicy}
+              onChange={(e) => setDraftCache({ ...draftCache, evictionPolicy: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="allkeys-lru">allkeys-lru (Recommended)</option>
+              <option value="volatile-lru">volatile-lru</option>
+              <option value="allkeys-lfu">allkeys-lfu</option>
+              <option value="volatile-lfu">volatile-lfu</option>
+              <option value="noeviction">noeviction</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Persistence</label>
+            <select
+              value={draftCache.persistence}
+              onChange={(e) => setDraftCache({ ...draftCache, persistence: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="aof">AOF (Append-only file)</option>
+              <option value="rdb">RDB (Snapshots)</option>
+              <option value="both">Both (AOF + RDB)</option>
+              <option value="none">None (In-memory only)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Changes Preview */}
+      {showChanges && hasChanges && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="font-semibold text-amber-900">📝 Pending Changes</h5>
+            <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
+          </div>
+          <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
+            {cache.memory !== draftCache.memory && (
+              <li>Memory: {cache.memory} → {draftCache.memory}</li>
+            )}
+            {cache.version !== draftCache.version && (
+              <li>Version: {cache.version} → {draftCache.version}</li>
+            )}
+            {cache.evictionPolicy !== draftCache.evictionPolicy && (
+              <li>Eviction Policy: {cache.evictionPolicy} → {draftCache.evictionPolicy}</li>
+            )}
+          </ul>
+          <div className="text-xs text-amber-800 mt-3">
+            Impact: Memory changes require restart (~30 sec). Data persisted if AOF/RDB enabled.
+            {(() => {
+              const costImpact = calculateCacheCostImpact(cache.memory, draftCache.memory);
+              return costImpact !== 0 ? (
+                <div className="font-semibold mt-1">
+                  💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+                </div>
+              ) : null;
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Confirmation Modal
+function ConfirmationModal({ selected, selectedResource, draftContainer, draftDatabase, draftCache, onCancel, onConfirm }: any) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Apply Configuration Changes?</h3>
+            
+            {selected.kind === 'container' && selectedResource && draftContainer && (
+              <>
+                <div className="text-sm text-slate-700 mb-4">
+                  <p className="font-medium mb-2">Summary:</p>
+                  <p className="text-slate-600">Container: <span className="font-mono">{selectedResource.data.name || selectedResource.data.imageUrl.split('/').pop()?.split(':')[0]}</span></p>
+                  <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                    {selectedResource.data.resources.cpu !== draftContainer.resources.cpu && (
+                      <li>CPU: {selectedResource.data.resources.cpu} → {draftContainer.resources.cpu} cores</li>
+                    )}
+                    {selectedResource.data.resources.memory !== draftContainer.resources.memory && (
+                      <li>Memory: {selectedResource.data.resources.memory} → {draftContainer.resources.memory}</li>
+                    )}
+                    {selectedResource.data.resources.replicas.min !== draftContainer.resources.replicas.min && (
+                      <li>Min replicas: {selectedResource.data.resources.replicas.min} → {draftContainer.resources.replicas.min}</li>
+                    )}
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                  <p className="font-medium text-slate-900">Impact Assessment:</p>
+                  <p className="text-slate-600">⚠️ Rolling restart required</p>
+                  <p className="text-slate-600">⏱️ Estimated time: ~2 minutes</p>
+                  <p className="text-slate-600">✅ No expected traffic disruption</p>
+                  {(() => {
+                    const costImpact = calculateContainerCostImpact(
+                      selectedResource.data.resources.cpu,
+                      selectedResource.data.resources.memory,
+                      selectedResource.data.resources.replicas,
+                      draftContainer.resources.cpu,
+                      draftContainer.resources.memory,
+                      draftContainer.resources.replicas
+                    );
+                    return costImpact !== 0 ? (
+                      <p className="text-slate-600 font-medium">
+                        💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </>
+            )}
+
+            {selected.kind === 'database' && selectedResource && draftDatabase && (
+              <>
+                <div className="text-sm text-slate-700 mb-4">
+                  <p className="font-medium mb-2">Summary:</p>
+                  <p className="text-slate-600">Resource: <span className="font-mono">PostgreSQL Database</span></p>
+                  <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                    {selectedResource.data.cpu !== draftDatabase.cpu && (
+                      <li>CPU: {selectedResource.data.cpu} → {draftDatabase.cpu} cores</li>
+                    )}
+                    {selectedResource.data.memory !== draftDatabase.memory && (
+                      <li>Memory: {selectedResource.data.memory} → {draftDatabase.memory}</li>
+                    )}
+                    {selectedResource.data.storage !== draftDatabase.storage && (
+                      <li>Storage: {selectedResource.data.storage} → {draftDatabase.storage}</li>
+                    )}
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                  <p className="font-medium text-slate-900">Impact Assessment:</p>
+                  <p className="text-slate-600">⚠️ Maintenance window required for CPU/Memory changes</p>
+                  <p className="text-slate-600">⏱️ Estimated time: ~3 minutes</p>
+                  <p className="text-slate-600">✅ Zero data loss guaranteed</p>
+                  {(() => {
+                    const costImpact = calculateDatabaseCostImpact(
+                      selectedResource.data,
+                      draftDatabase
+                    );
+                    return costImpact !== 0 ? (
+                      <p className="text-slate-600 font-medium">
+                        💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </>
+            )}
+
+            {selected.kind === 'cache' && selectedResource && draftCache && (
+              <>
+                <div className="text-sm text-slate-700 mb-4">
+                  <p className="font-medium mb-2">Summary:</p>
+                  <p className="text-slate-600">Resource: <span className="font-mono">Redis Cache</span></p>
+                  <ul className="list-disc ml-5 mt-2 space-y-1 text-slate-600">
+                    {selectedResource.data.memory !== draftCache.memory && (
+                      <li>Memory: {selectedResource.data.memory} → {draftCache.memory}</li>
+                    )}
+                    {selectedResource.data.version !== draftCache.version && (
+                      <li>Version: {selectedResource.data.version} → {draftCache.version}</li>
+                    )}
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+                  <p className="font-medium text-slate-900">Impact Assessment:</p>
+                  <p className="text-slate-600">⚠️ Restart required (~30 seconds)</p>
+                  <p className="text-slate-600">✅ Data persisted if AOF/RDB enabled</p>
+                  {(() => {
+                    const costImpact = calculateCacheCostImpact(
+                      selectedResource.data.memory,
+                      draftCache.memory
+                    );
+                    return costImpact !== 0 ? (
+                      <p className="text-slate-600 font-medium">
+                        💰 Cost impact: {costImpact > 0 ? '+' : ''}${Math.abs(costImpact).toFixed(2)}/month
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </>
+            )}
+
+            <p className="text-sm text-slate-600 mt-4">Are you sure you want to apply these changes?</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t">
+          <button
+            onClick={onCancel}
+            className="px-5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-5 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 font-medium"
+          >
+            Apply Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================
+// Project & Environment Overview (Old standalone version - kept for reference)
+// ======================
+
+function ProjectEnvironmentOverview({ project, state }: { project: any; state: any }) {
+  const [expandedEnvironments, setExpandedEnvironments] = useState<Record<string, boolean>>({ 'env-dev': true });
+  const [selectedResource, setSelectedResource] = useState<{ type: 'container' | 'database' | 'cache'; id?: string } | null>(null);
+
+  if (!project) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📦</div>
+        <h3 className="text-2xl font-bold text-slate-900 mb-2">No Projects Yet</h3>
+        <p className="text-slate-600 mb-6">Create your first project to get started with Unhazzle</p>
+        <button
+          onClick={() => window.location.href = '/questionnaire'}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold"
+        >
+          Create Project
+        </button>
+      </div>
+    );
+  }
+
+  const toggleEnvironment = (envId: string) => {
+    setExpandedEnvironments(prev => ({ ...prev, [envId]: !prev[envId] }));
+  };
+
+  // Calculate project total cost
+  const calculateProjectCost = () => {
+    let total = 0;
+    project.environments?.forEach((env: any) => {
+      total += calculateEnvironmentCost(env);
+    });
+    return total;
+  };
+
+  const calculateEnvironmentCost = (env: any) => {
+    let total = 0;
+    
+    // Container costs
+    env.containers?.forEach((container: any) => {
+      const cpuCores = parseFloat(container.resources.cpu);
+      const memoryGB = parseFloat(container.resources.memory);
+      const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
+      
+      // Simplified cost calculation
+      let costPerInstance = 5;
+      if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
+      if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
+      
+      total += costPerInstance * avgReplicas;
+    });
+    
+    // Database cost
+    if (env.database) {
+      total += 45; // Base database cost
+    }
+    
+    // Cache cost
+    if (env.cache) {
+      total += 15; // Base cache cost
+    }
+    
+    return Math.round(total * 1.3); // 30% margin
+  };
+
+  const calculateContainerCost = (container: any) => {
+    const cpuCores = parseFloat(container.resources.cpu);
+    const memoryGB = parseFloat(container.resources.memory);
+    const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
+    
+    let costPerInstance = 5;
+    if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
+    if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
+    
+    return Math.round(costPerInstance * avgReplicas * 1.3);
+  };
+
+  const projectCost = calculateProjectCost();
+
+  return (
+    <div className="space-y-6">
+      {/* Project Header */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+              <span>📦</span>
+              <span>{project.name}</span>
+            </h2>
+            <p className="text-sm text-slate-600 mt-1">
+              {project.environments?.length || 0} environment{project.environments?.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold text-purple-600">
+              €{projectCost}/mo
+            </div>
+            <div className="text-xs text-slate-600">Total project cost</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Environments List */}
+      <div className="space-y-4">
+        {project.environments?.map((env: any) => {
+          const isExpanded = expandedEnvironments[env.id] !== false;
+          const envCost = calculateEnvironmentCost(env);
+          const containers = env.containers || [];
+          const hasDatabase = !!env.database;
+          const hasCache = !!env.cache;
+
+          return (
+            <div key={env.id} className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+              {/* Environment Header */}
+              <button
+                onClick={() => toggleEnvironment(env.id)}
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{isExpanded ? '▼' : '▶'}</span>
+                  <div className="text-left">
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <span>🔧</span>
+                      <span>{env.name}</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                        <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                        Running
+                      </span>
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {containers.length} container{containers.length !== 1 ? 's' : ''}
+                      {hasDatabase && ', database'}
+                      {hasCache && ', cache'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-slate-900">€{envCost}/mo</div>
+                  <div className="text-xs text-slate-600">Environment cost</div>
+                </div>
+              </button>
+
+              {/* Environment Resources (expandable) */}
+              {isExpanded && (
+                <div className="border-t border-slate-200 p-6 space-y-6">
+                  {/* Containers */}
+                  {containers.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <span>🚀</span>
+                        <span>Containers ({containers.length})</span>
+                      </h4>
+                      <div className="space-y-2">
+                        {containers.map((container: any, idx: number) => {
+                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${idx + 1}`;
+                          const containerCost = calculateContainerCost(container);
+                          const hasDbAccess = container.serviceAccess?.database;
+                          const hasCacheAccess = container.serviceAccess?.cache;
+
+                          return (
+                            <div
+                              key={container.id}
+                              className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition cursor-pointer border border-slate-200"
+                              onClick={() => setSelectedResource({ type: 'container', id: container.id })}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-lg">🐳</span>
+                                    <div>
+                                      <div className="font-semibold text-slate-900">{displayName}</div>
+                                      <div className="text-xs text-slate-600">
+                                        {container.resources.cpu} CPU • {container.resources.memory} RAM • {container.resources.replicas.min} replica{container.resources.replicas.min !== 1 ? 's' : ''}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {(hasDbAccess || hasCacheAccess) && (
+                                    <div className="flex items-center gap-2 ml-8">
+                                      <span className="text-xs text-slate-500">Connected to:</span>
+                                      {hasDbAccess && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                          <span>💾</span>
+                                          <span>Database</span>
+                                        </span>
+                                      )}
+                                      {hasCacheAccess && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
+                                          <span>⚡</span>
+                                          <span>Cache</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-slate-900">€{containerCost}/mo</div>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                    <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                    Running
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Database */}
+                  {hasDatabase && (
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <span>💾</span>
+                        <span>Database</span>
+                      </h4>
+                      <div
+                        className="bg-green-50 rounded-lg p-4 hover:bg-green-100 transition cursor-pointer border border-green-200"
+                        onClick={() => setSelectedResource({ type: 'database' })}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-slate-900">PostgreSQL</div>
+                            <div className="text-xs text-slate-600 mt-1">
+                              {env.database.cpu} CPU • {env.database.memory} RAM • {env.database.storage} storage
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900">€45/mo</div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded-full">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                              Connected
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cache */}
+                  {hasCache && (
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <span>⚡</span>
+                        <span>Cache</span>
+                      </h4>
+                      <div
+                        className="bg-red-50 rounded-lg p-4 hover:bg-red-100 transition cursor-pointer border border-red-200"
+                        onClick={() => setSelectedResource({ type: 'cache' })}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-slate-900">Redis</div>
+                            <div className="text-xs text-slate-600 mt-1">
+                              {env.cache.memory} memory • {env.cache.version}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900">€15/mo</div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                              Connected
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Resource Detail Modal */}
+      {selectedResource && (
+        <ResourceDetailModal
+          resource={selectedResource}
+          project={project}
+          onClose={() => setSelectedResource(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Simple Resource Detail Modal
+function ResourceDetailModal({ resource, project, onClose }: any) {
+  // Find the resource data
+  let resourceData = null;
+  let resourceName = '';
+  
+  if (resource.type === 'container') {
+    project.environments?.forEach((env: any) => {
+      const container = env.containers?.find((c: any) => c.id === resource.id);
+      if (container) {
+        resourceData = container;
+        resourceName = container.imageUrl.split('/').pop()?.split(':')[0] || 'Container';
+      }
+    });
+  } else if (resource.type === 'database') {
+    resourceData = project.environments?.[0]?.database;
+    resourceName = 'PostgreSQL Database';
+  } else if (resource.type === 'cache') {
+    resourceData = project.environments?.[0]?.cache;
+    resourceName = 'Redis Cache';
+  }
+
+  if (!resourceData) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-2xl font-bold text-slate-900">{resourceName}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl">
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {resource.type === 'container' && (
+            <>
+              <div>
+                <div className="text-sm font-semibold text-slate-600 mb-1">Image</div>
+                <div className="text-sm text-slate-900 font-mono bg-slate-50 p-2 rounded">{resourceData.imageUrl}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">CPU</div>
+                  <div className="text-sm text-slate-900">{resourceData.resources.cpu} cores</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Memory</div>
+                  <div className="text-sm text-slate-900">{resourceData.resources.memory}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Replicas</div>
+                  <div className="text-sm text-slate-900">{resourceData.resources.replicas.min} - {resourceData.resources.replicas.max}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Port</div>
+                  <div className="text-sm text-slate-900">{resourceData.port}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-600 mb-1">Exposure</div>
+                <div className="text-sm text-slate-900 capitalize">{resourceData.exposure}</div>
+              </div>
+              {(resourceData.serviceAccess?.database || resourceData.serviceAccess?.cache) && (
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-2">Service Access</div>
+                  <div className="flex gap-2">
+                    {resourceData.serviceAccess.database && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">
+                        💾 Database
+                      </span>
+                    )}
+                    {resourceData.serviceAccess.cache && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">
+                        ⚡ Cache
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {resource.type === 'database' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Engine</div>
+                  <div className="text-sm text-slate-900">{resourceData.engine}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Version</div>
+                  <div className="text-sm text-slate-900">{resourceData.version}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">CPU</div>
+                  <div className="text-sm text-slate-900">{resourceData.cpu} cores</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Memory</div>
+                  <div className="text-sm text-slate-900">{resourceData.memory}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Storage</div>
+                  <div className="text-sm text-slate-900">{resourceData.storage}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Backups</div>
+                  <div className="text-sm text-slate-900">{resourceData.backups.enabled ? 'Enabled' : 'Disabled'}</div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {resource.type === 'cache' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Engine</div>
+                  <div className="text-sm text-slate-900">{resourceData.engine}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Version</div>
+                  <div className="text-sm text-slate-900">{resourceData.version}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Memory</div>
+                  <div className="text-sm text-slate-900">{resourceData.memory}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-600 mb-1">Eviction Policy</div>
+                  <div className="text-sm text-slate-900 font-mono text-xs">{resourceData.evictionPolicy}</div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-6 pt-4 border-t flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================
+// Overview Config Panel (Legacy - kept for Settings redirect)
 // ======================
 
 type ResourceKind = 'application' | 'database' | 'cache' | 'architecture';
 
 function OverviewConfig() {
-  const { state, updateContainer, updateResources } = useDeployment();
+  const { state, updateContainer, updateResources, removeDatabase, removeCache } = useDeployment();
   const [selected, setSelected] = useState<{ kind: ResourceKind; id?: string }>(() => ({
     kind: 'application',
     id: state.containers[0]?.id,
@@ -739,6 +2501,21 @@ function OverviewConfig() {
                 </div>
                 <div className="text-xs text-slate-500 mt-1">{state.resources.database.storage} storage</div>
               </button>
+              <button
+                onClick={() => {
+                  const inUse = state.containers.some(c => c.serviceAccess.database);
+                  if (inUse) {
+                    alert('Cannot remove database: one or more applications are still connected. Disable access first in application settings.');
+                    return;
+                  }
+                  const confirmed = window.confirm('Remove database from deployed configuration? This simulates deprovisioning.');
+                  if (!confirmed) return;
+                  removeDatabase();
+                }}
+                className="mt-2 w-full text-left text-xs text-red-600 hover:text-red-700 px-3 py-2 border border-red-200 rounded-lg hover:bg-red-50 transition"
+              >
+                Remove Database
+              </button>
             </div>
           )}
 
@@ -757,6 +2534,21 @@ function OverviewConfig() {
                   <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">Connected</span>
                 </div>
                 <div className="text-xs text-slate-500 mt-1">{state.resources.cache.memory} memory</div>
+              </button>
+              <button
+                onClick={() => {
+                  const inUse = state.containers.some(c => c.serviceAccess.cache);
+                  if (inUse) {
+                    alert('Cannot remove cache: one or more applications are still connected. Disable access first in application settings.');
+                    return;
+                  }
+                  const confirmed = window.confirm('Remove cache from deployed configuration? This simulates deprovisioning.');
+                  if (!confirmed) return;
+                  removeCache();
+                }}
+                className="mt-2 w-full text-left text-xs text-red-600 hover:text-red-700 px-3 py-2 border border-red-200 rounded-lg hover:bg-red-50 transition"
+              >
+                Remove Cache
               </button>
             </div>
           )}
@@ -1912,8 +3704,8 @@ function ArchitectureDiagram({ state }: { state: any }) {
   const publicContainers = state.containers.filter((c: any) => c.exposure === 'public');
   const privateContainers = state.containers.filter((c: any) => c.exposure === 'private');
   const hasLoadBalancer = publicContainers.length > 0;
-  const hasDatabase = state.resources?.database !== null;
-  const hasCache = state.resources?.cache !== null;
+  const hasDatabase = Boolean(state.resources?.database);
+  const hasCache = Boolean(state.resources?.cache);
 
   const getDisplayName = (imageUrl: string) => {
     return imageUrl.split('/').pop()?.split(':')[0] || 'container';

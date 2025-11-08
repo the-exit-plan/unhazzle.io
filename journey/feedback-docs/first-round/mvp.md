@@ -60,7 +60,7 @@
 | Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
 |------|-------------|--------|-----|-----------|--------------|----------|
 | Infrastructure alerting | Alerts when infrastructure components fail or degrade | Mahya | ✓ | | | |
-| Cost alerts | Alerts when costs exceed thresholds | Matija | ✓ | | | |
+| Cost alerts | Alerts when costs exceed thresholds | Matija | | ✓ | | |
 
 ---
 
@@ -68,11 +68,11 @@
 
 | Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
 |------|-------------|--------|-----|-----------|--------------|----------|
+| Do it yourself services | We do the exercise to set up a database with custom parameters and document it | Inaki, Jeroen/Eveline | ✓ | | | |
 | NoSQL database support | Add MongoDB, Cassandra, or other NoSQL options. Investigate how they are going to configure (advance) it | Matija, Inaki | ✓ | | | |
 | Message queue service | Event-driven apps need message queues (RabbitMQ, Kafka, SQS) | Jeroen/Eveline | ✓ | | | |
 | In-memory cache service | Redis, Valkey, OSS |  | ✓ | | | |
 | FaaS/Serverless functions | Support for short-lived jobs and serverless functions | Jeroen/Eveline | ✓ | | | |
-| Managed vs. self-managed services | Clear option: Aiven-managed (higher cost) or self-managed with backups enabled | Inaki, Jeroen/Eveline | ✓ | | | |
 ---
 
 ## **CLI IMPROVEMENTS**
@@ -110,7 +110,7 @@
 
 | Item | Description | Source | MVP | Must-Have (ASAP after launch) | Nice-to-Have (revisit later) | Won't do |
 |------|-------------|--------|-----|-----------|--------------|----------|
-| Environment visualization | Visualize project + environment relationship | Jeroen/Eveline | | | ✓ | |
+| Environment visualization | Visualize project + environment relationship | Jeroen/Eveline | ✓ | | | |
 | PR/ephemeral environments | Short-lived environments for pull requests (auto-expire, minimal resources) | Jeroen/Eveline | ? | | | |
 | Max PR environments cap | Limit number of PR environments per project to control costs | Jeroen/Eveline | ? | | | |
 

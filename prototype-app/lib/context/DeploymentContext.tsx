@@ -15,6 +15,35 @@ export interface QuestionnaireAnswers {
   cache: 'redis' | 'memcached' | 'none';
 }
 
+// Project and Environment structure for hierarchical navigation
+export interface Environment {
+  id: string;
+  name: string; // 'dev', 'staging', 'prod', etc.
+  containers: ContainerConfig[];
+  database?: {
+    engine: string;
+    version: string;
+    cpu: string;
+    memory: string;
+    storage: string;
+    backups: { enabled: boolean; retention: string; frequency: string };
+    replicas: string;
+  };
+  cache?: {
+    engine: string;
+    version: string;
+    memory: string;
+    evictionPolicy: string;
+    persistence: string;
+  };
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  environments: Environment[];
+}
+
 export interface VolumeConfig {
   mountPath: string;
   sizeGB: number;
@@ -112,12 +141,14 @@ export interface DeploymentState {
   user: UserInfo | null;
   questionnaire: QuestionnaireAnswers | null;
   application: ApplicationConfig | null; // Legacy support
-  containers: ContainerConfig[]; // New multi-container support
+  containers: ContainerConfig[]; // Legacy: will be migrated to project.environments[0].containers
   resources: ResourceConfig | null;
   environment: EnvironmentVariables | null;
   domain: DomainConfig | null;
   cost: CostBreakdown | null;
   deployed: boolean;
+  // New: Project-based structure
+  project: Project | null;
 }
 
 interface DeploymentContextType {
@@ -126,6 +157,7 @@ interface DeploymentContextType {
   updateQuestionnaire: (answers: QuestionnaireAnswers) => void;
   updateApplication: (config: ApplicationConfig) => void; // Legacy
   addContainer: (container: ContainerConfig) => void;
+  clearContainers: () => void;
   updateContainer: (id: string, container: Partial<ContainerConfig>) => void;
   removeContainer: (id: string) => void;
   updateResources: (config: ResourceConfig) => void;
@@ -134,6 +166,8 @@ interface DeploymentContextType {
   updateCost: (cost: CostBreakdown) => void;
   markDeployed: () => void;
   resetState: () => void;
+  removeDatabase: () => void;
+  removeCache: () => void;
 }
 
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
@@ -148,6 +182,7 @@ const initialState: DeploymentState = {
   domain: null,
   cost: null,
   deployed: false,
+  project: null,
 };
 
 export function DeploymentProvider({ children }: { children: ReactNode }) {
@@ -159,9 +194,30 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(saved);
           // Ensure containers array exists for backward compatibility
+          const containers = parsed.containers || [];
+          
+          // If deployed but no project structure, create it from legacy data
+          let project = parsed.project;
+          if (parsed.deployed && !project && containers.length > 0) {
+            project = {
+              id: 'proj-' + Date.now(),
+              name: parsed.questionnaire?.appType ? `${parsed.questionnaire.appType} Application` : 'My Application',
+              environments: [
+                {
+                  id: 'env-dev-' + Date.now(),
+                  name: 'dev',
+                  containers: containers,
+                  database: parsed.resources?.database,
+                  cache: parsed.resources?.cache,
+                }
+              ]
+            };
+          }
+          
           return {
             ...parsed,
-            containers: parsed.containers || []
+            containers,
+            project
           };
         } catch (e) {
           console.error('Failed to parse saved state:', e);
@@ -212,14 +268,45 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const clearContainers = () => {
+    setState(prev => {
+      const newState = { ...prev, containers: [] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
   const updateContainer = (id: string, updates: Partial<ContainerConfig>) => {
     setState(prev => {
       const existingContainers = prev.containers || [];
+      const updatedContainers = existingContainers.map(c => 
+        c.id === id ? { ...c, ...updates } : c
+      );
+      
+      // Also update project environment structure
+      let updatedProject = prev.project;
+      if (prev.project?.environments?.[0]) {
+        updatedProject = {
+          ...prev.project,
+          environments: prev.project.environments.map((env: Environment, idx: number) => {
+            if (idx === 0) {
+              // Update containers in first environment
+              return {
+                ...env,
+                containers: updatedContainers,
+              };
+            }
+            return env;
+          })
+        };
+      }
+      
       const newState = {
         ...prev,
-        containers: existingContainers.map(c => 
-          c.id === id ? { ...c, ...updates } : c
-        )
+        containers: updatedContainers,
+        project: updatedProject
       };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
@@ -231,9 +318,146 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
   const removeContainer = (id: string) => {
     setState(prev => {
       const existingContainers = prev.containers || [];
+      const updatedContainers = existingContainers.filter(c => c.id !== id);
+      
+      // Also update project environment structure
+      let updatedProject = prev.project;
+      if (prev.project?.environments?.[0]) {
+        updatedProject = {
+          ...prev.project,
+          environments: prev.project.environments.map((env: Environment, idx: number) => {
+            if (idx === 0) {
+              // Update containers in first environment
+              return {
+                ...env,
+                containers: updatedContainers,
+              };
+            }
+            return env;
+          })
+        };
+      }
+      
       const newState = {
         ...prev,
-        containers: existingContainers.filter(c => c.id !== id)
+        containers: updatedContainers,
+        project: updatedProject
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  // Remove database service from resources and clean up container references
+  const removeDatabase = () => {
+    setState(prev => {
+      // Toggle off DB access and remove related env vars from all containers
+      const cleanedContainers = (prev.containers || []).map(c => {
+        if (!c.serviceAccess?.database) return c;
+        const filteredEnv = (c.environmentVariables || []).filter(v => v.key !== 'UNHAZZLE_POSTGRES_URL' && v.key !== 'DATABASE_URL');
+        return {
+          ...c,
+          serviceAccess: { ...c.serviceAccess, database: false },
+          environmentVariables: filteredEnv,
+        };
+      });
+
+      // Update resources (if present) by removing database
+      const newResources = prev.resources ? { ...prev.resources, database: undefined } : prev.resources;
+
+      // Remove auto-generated DATABASE_URL from environment if present
+      let newEnv = prev.environment;
+      if (prev.environment?.autoGenerated) {
+        newEnv = {
+          ...prev.environment,
+          autoGenerated: prev.environment.autoGenerated.filter((e: any) => e.key !== 'DATABASE_URL')
+        } as any;
+      }
+
+      // Also update project environment structure
+      let updatedProject = prev.project;
+      if (prev.project?.environments?.[0]) {
+        updatedProject = {
+          ...prev.project,
+          environments: prev.project.environments.map((env: Environment, idx: number) => {
+            if (idx === 0) {
+              return {
+                ...env,
+                containers: cleanedContainers,
+                database: undefined,
+              };
+            }
+            return env;
+          })
+        };
+      }
+
+      const newState = { 
+        ...prev, 
+        containers: cleanedContainers, 
+        resources: newResources, 
+        environment: newEnv,
+        project: updatedProject
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  // Remove cache service from resources and clean up container references
+  const removeCache = () => {
+    setState(prev => {
+      // Toggle off cache access and remove related env vars from all containers
+      const cleanedContainers = (prev.containers || []).map(c => {
+        if (!c.serviceAccess?.cache) return c;
+        const filteredEnv = (c.environmentVariables || []).filter(v => v.key !== 'UNHAZZLE_REDIS_URL' && v.key !== 'REDIS_URL');
+        return {
+          ...c,
+          serviceAccess: { ...c.serviceAccess, cache: false },
+          environmentVariables: filteredEnv,
+        };
+      });
+
+      // Update resources (if present) by removing cache
+      const newResources = prev.resources ? { ...prev.resources, cache: undefined } : prev.resources;
+
+      // Remove auto-generated REDIS_URL from environment if present
+      let newEnv = prev.environment;
+      if (prev.environment?.autoGenerated) {
+        newEnv = {
+          ...prev.environment,
+          autoGenerated: prev.environment.autoGenerated.filter((e: any) => e.key !== 'REDIS_URL')
+        } as any;
+      }
+
+      // Also update project environment structure
+      let updatedProject = prev.project;
+      if (prev.project?.environments?.[0]) {
+        updatedProject = {
+          ...prev.project,
+          environments: prev.project.environments.map((env: Environment, idx: number) => {
+            if (idx === 0) {
+              return {
+                ...env,
+                containers: cleanedContainers,
+                cache: undefined,
+              };
+            }
+            return env;
+          })
+        };
+      }
+
+      const newState = { 
+        ...prev, 
+        containers: cleanedContainers, 
+        resources: newResources, 
+        environment: newEnv,
+        project: updatedProject
       };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
@@ -244,7 +468,28 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
   const updateResources = (config: ResourceConfig) => {
     setState(prev => {
-      const newState = { ...prev, resources: config };
+      // Update both legacy resources AND project environment structure
+      let updatedProject = prev.project;
+      
+      if (prev.project?.environments?.[0]) {
+        // Update the first environment (typically 'dev') with new database/cache config
+        updatedProject = {
+          ...prev.project,
+          environments: prev.project.environments.map((env: Environment, idx: number) => {
+            if (idx === 0) {
+              // Update first environment
+              return {
+                ...env,
+                database: config.database,
+                cache: config.cache,
+              };
+            }
+            return env;
+          })
+        };
+      }
+      
+      const newState = { ...prev, resources: config, project: updatedProject };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
@@ -284,7 +529,22 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
   const markDeployed = () => {
     setState(prev => {
-      const newState = { ...prev, deployed: true };
+      // Create project structure with default 'dev' environment
+      const project: Project = {
+        id: 'proj-' + Date.now(),
+        name: prev.questionnaire?.appType ? `${prev.questionnaire.appType} Application` : 'My Application',
+        environments: [
+          {
+            id: 'env-dev-' + Date.now(),
+            name: 'dev',
+            containers: prev.containers || [],
+            database: prev.resources?.database,
+            cache: prev.resources?.cache,
+          }
+        ]
+      };
+
+      const newState = { ...prev, deployed: true, project };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
@@ -307,6 +567,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         updateQuestionnaire,
         updateApplication,
         addContainer,
+        clearContainers,
         updateContainer,
         removeContainer,
         updateResources,
@@ -315,6 +576,8 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         updateCost,
         markDeployed,
         resetState,
+        removeDatabase,
+        removeCache,
       }}
     >
       {children}

@@ -7,7 +7,7 @@ import { CostBreakdown } from '@/lib/context/DeploymentContext';
 
 export default function ReviewAndDeploy() {
   const router = useRouter();
-  const { state, updateCost, updateContainer, updateResources } = useDeployment();
+  const { state, updateCost, updateContainer, updateResources, removeContainer, removeDatabase, removeCache } = useDeployment();
   
   const [cost, setCost] = useState<CostBreakdown | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -300,12 +300,24 @@ export default function ReviewAndDeploy() {
                     <span>🚀</span>
                     <span>{container.name}</span>
                   </h3>
-                  <button
-                    onClick={() => router.push(`/resources#container-${container.id}`)}
-                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                  >
-                    Edit Resources
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => router.push(`/resources#container-${container.id}`)}
+                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm(`Remove application "${container.name}"?`);
+                        if (!confirmed) return;
+                        removeContainer(container.id);
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Public Endpoint Info */}
@@ -467,12 +479,24 @@ export default function ReviewAndDeploy() {
                     <span>🐘</span>
                     <span>Database ({resources.database.engine.toUpperCase()})</span>
                   </h3>
-                  <button
-                    onClick={() => router.push('/resources#database')}
-                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                  >
-                    Edit Resources
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => router.push('/resources#database')}
+                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm('Remove database from configuration?');
+                        if (!confirmed) return;
+                        removeDatabase();
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
@@ -562,12 +586,24 @@ export default function ReviewAndDeploy() {
                     <span>⚡</span>
                     <span>Cache ({resources.cache.engine})</span>
                   </h3>
-                  <button
-                    onClick={() => router.push('/resources#cache')}
-                    className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                  >
-                    Edit Resources
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => router.push('/resources#cache')}
+                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm('Remove cache from configuration?');
+                        if (!confirmed) return;
+                        removeCache();
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">

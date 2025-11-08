@@ -50,7 +50,7 @@ interface PublicImageInput {
 
 export default function ApplicationSetup() {
   const router = useRouter();
-  const { state, updateApplication, addContainer } = useDeployment();
+  const { state, updateApplication, addContainer, clearContainers } = useDeployment();
   
   // GitHub PAT
   const [githubPAT, setGithubPAT] = useState('');
@@ -154,8 +154,8 @@ export default function ApplicationSetup() {
 
     // Simulate processing delay
     setTimeout(() => {
-      // Clear existing containers
-      // Note: We'll need to add clearContainers to context, for now we'll just add
+      // Clear existing containers to avoid duplicates when reconfiguring
+      clearContainers();
       
       // Add private images from GitHub
       selectedPrivateImages.forEach((imageName, index) => {
@@ -226,7 +226,7 @@ export default function ApplicationSetup() {
           });
         });
 
-      // Save first container to legacy application field for backward compatibility
+  // Save first container to legacy application field for backward compatibility
       const firstImage = selectedPrivateImages[0] || publicImages.find(p => p.url.trim())?.url;
       if (firstImage) {
         updateApplication({
@@ -254,6 +254,31 @@ export default function ApplicationSetup() {
   };
 
   const totalSelected = selectedPrivateImages.length + publicImages.filter(p => p.url.trim()).length;
+
+  // Hydrate UI selections from existing state (if returning to this page)
+  useEffect(() => {
+    if ((selectedPrivateImages.length > 0 || publicImages.length > 0) || state.containers.length === 0) {
+      return; // Don't override current selections or when nothing to hydrate
+    }
+
+    const pri: string[] = [];
+    const names: Record<string, string> = {};
+    const pubs: PublicImageInput[] = [];
+
+    state.containers.forEach((c) => {
+      if (c.imageUrl.startsWith('ghcr.io/')) {
+        const imageName = c.imageUrl.replace(/^ghcr.io\//, '');
+        pri.push(imageName);
+        names[imageName] = c.name;
+      } else {
+        pubs.push({ url: c.imageUrl, customName: c.name });
+      }
+    });
+
+    setSelectedPrivateImages(pri);
+    setPrivateImageNames(names);
+    setPublicImages(pubs);
+  }, [state.containers]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">

@@ -27,9 +27,9 @@ export default function SignIn() {
       githubUsername,
     });
 
-    // Simulate OAuth delay
+    // Simulate OAuth delay - redirect to dashboard (landing page after login)
     setTimeout(() => {
-      router.push('/questionnaire');
+      router.push('/dashboard');
     }, 400);
   };
 
