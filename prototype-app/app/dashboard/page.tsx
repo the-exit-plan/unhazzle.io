@@ -4,14 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
 import { calculateContainerCostImpact, calculateDatabaseCostImpact, calculateCacheCostImpact } from '@/lib/utils/costCalculator';
+import EnvironmentNavigator from './EnvironmentNavigator';
+import EnvironmentInfo from './EnvironmentInfo';
+import ProjectSettings from './ProjectSettings';
+import { CloneModal, PromoteModal, DeleteModal, PauseModal, ResumeModal } from './EnvironmentModals';
 
-type TabType = 'overview' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSteps';
+type TabType = 'projects' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSteps';
 
 export default function Dashboard() {
   const router = useRouter();
   const { state, removeDatabase, removeCache } = useDeployment();
   
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('projects');
   const [uptime, setUptime] = useState(99.98);
   const [cpuUsage, setCpuUsage] = useState(42);
   const [memoryUsage, setMemoryUsage] = useState(58);
@@ -143,7 +147,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Tab Headers */}
           <div className="border-b border-slate-200 flex">
-            {(['overview', 'logs', 'metrics', 'events', 'settings', 'nextSteps'] as const).map(tab => (
+            {(['projects', 'logs', 'metrics', 'events', 'settings', 'nextSteps'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -174,8 +178,8 @@ export default function Dashboard() {
             ))}
           </div>
               <div className="p-6">
-                {/* Overview Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
-                {activeTab === 'overview' && (
+                {/* Projects Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
+                {activeTab === 'projects' && (
                   <HybridOverview project={state.project} state={state} />
                 )}
 
@@ -324,19 +328,19 @@ export default function Dashboard() {
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 <div className="bg-purple-50 border border-purple-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Settings moved to Overview</h3>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Settings moved to Projects</h3>
                   <p className="text-slate-700 mb-4">
-                    Edit your current deployment configuration in the Overview tab. Use the left sidebar to pick a resource and the right panel to edit. You can preview and apply staged changes.
+                    Edit your current deployment configuration in the Projects tab. Use the left sidebar to pick a resource and the right panel to edit. You can preview and apply staged changes.
                   </p>
                   <button
-                    onClick={() => setActiveTab('overview')}
+                    onClick={() => setActiveTab('projects')}
                     className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
                   >
-                    Go to Overview
+                    Go to Projects
                   </button>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Looking for advanced settings? We’ll surface them here soon. For now, everything configurable is available in Overview.
+                  Looking for advanced settings? We’ll surface them here soon. For now, everything configurable is available in Projects.
                 </div>
               </div>
             )}
@@ -550,18 +554,18 @@ export default function Dashboard() {
 // ======================
 
 function HybridOverview({ project, state }: { project: any; state: any }) {
-  const { updateContainer, updateResources, removeDatabase, removeCache, removeContainer } = useDeployment();
-  const [selected, setSelected] = useState<{ kind: 'container' | 'database' | 'cache' | 'architecture'; id?: string; envId?: string }>(() => {
-    // Default to first container if available
-    if (project?.environments?.[0]?.containers?.[0]) {
-      return {
-        kind: 'container',
-        id: project.environments[0].containers[0].id,
-        envId: project.environments[0].id
-      };
-    }
-    return { kind: 'architecture' };
+  const { updateContainer, updateResources, removeDatabase, removeCache, removeContainer, cloneEnvironment, promoteEnvironment, deleteEnvironment, pauseEnvironment, resumeEnvironment, updateProject } = useDeployment();
+  const [selected, setSelected] = useState<{ kind: 'container' | 'database' | 'cache' | 'architecture' | 'environment' | 'project-settings'; id?: string; envId?: string }>(() => {
+    // Default to project settings view
+    return { kind: 'project-settings' };
   });
+
+  // Environment modals state
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   // Draft state for staged edits
   const [draftContainer, setDraftContainer] = useState<any>(null);
@@ -709,135 +713,107 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     <div className="grid grid-cols-12 gap-6">
       {/* LEFT PANEL: Hierarchical Navigation */}
       <div className="col-span-12 lg:col-span-4 xl:col-span-3">
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 space-y-4 sticky top-4 border border-slate-200">
-          {/* Project Header */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">📦</span>
-              <h3 className="font-bold text-slate-900 text-lg">{project.name}</h3>
-            </div>
-            <div className="text-xs text-slate-600">
-              {project.environments?.length || 0} environment{project.environments?.length !== 1 ? 's' : ''}
-            </div>
-          </div>
-
-          {/* Environments */}
-          {project.environments?.map((env: any) => {
-            const containers = env.containers || [];
-            const hasDatabase = !!env.database;
-            const hasCache = !!env.cache;
-
-            return (
-              <div key={env.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                {/* Environment Header */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-3 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🔧</span>
-                    <span className="font-bold text-slate-900">{env.name}</span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                      <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
-                      Live
-                    </span>
-                  </div>
-                </div>
-
-                {/* Resources */}
-                <div className="p-3 space-y-3">
-                  {/* Containers */}
-                  {containers.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                        <span>🚀</span>
-                        <span>Containers ({containers.length})</span>
-                      </div>
-                      <div className="space-y-1">
-                        {containers.map((container: any, idx: number) => {
-                          const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `app-${idx + 1}`;
-                          const isSelected = selected.kind === 'container' && selected.id === container.id;
-                          const hasDbAccess = container.serviceAccess?.database;
-                          const hasCacheAccess = container.serviceAccess?.cache;
-
-                          return (
-                            <button
-                              key={container.id}
-                              onClick={() => setSelected({ kind: 'container', id: container.id, envId: env.id })}
-                              className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                                isSelected
-                                  ? 'border-purple-400 bg-purple-50 shadow-sm'
-                                  : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50'
-                              }`}
-                            >
-                              <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Database */}
-                  {hasDatabase && (
-                    <div>
-                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                        <span>💾</span>
-                        <span>Database</span>
-                      </div>
-                      <button
-                        onClick={() => setSelected({ kind: 'database', envId: env.id })}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                          selected.kind === 'database' && selected.envId === env.id
-                            ? 'border-green-400 bg-green-50 shadow-sm'
-                            : 'border-slate-200 hover:border-green-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="text-sm font-medium text-slate-900">PostgreSQL</div>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Cache */}
-                  {hasCache && (
-                    <div>
-                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                        <span>⚡</span>
-                        <span>Cache</span>
-                      </div>
-                      <button
-                        onClick={() => setSelected({ kind: 'cache', envId: env.id })}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                          selected.kind === 'cache' && selected.envId === env.id
-                            ? 'border-red-400 bg-red-50 shadow-sm'
-                            : 'border-slate-200 hover:border-red-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="text-sm font-medium text-slate-900">Redis</div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Architecture Diagram Option */}
-          <button
-            onClick={() => setSelected({ kind: 'architecture' })}
-            className={`w-full text-left px-4 py-3 rounded-lg border transition ${
-              selected.kind === 'architecture'
-                ? 'border-purple-400 bg-purple-50 shadow-sm'
-                : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50 bg-white'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <span className="text-xl">🏗️</span>
-              <span>Architecture Diagram</span>
-            </div>
-          </button>
-        </div>
+        <EnvironmentNavigator 
+          project={project} 
+          selected={selected} 
+          onSelect={setSelected} 
+        />
       </div>
 
-      {/* RIGHT PANEL: Resource Editor */}
+      {/* RIGHT PANEL: Resource Editor or Environment Info */}
       <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+        {/* Project Settings */}
+        {selected.kind === 'project-settings' && (
+          <ProjectSettings
+            project={project}
+            onSave={(updates) => {
+              updateProject(updates);
+            }}
+          />
+        )}
+
+        {/* Environment Overview */}
+        {selected.kind === 'environment' && selected.envId && (() => {
+          const selectedEnv = project.environments?.find((e: any) => e.id === selected.envId);
+          return selectedEnv ? (
+            <>
+              <EnvironmentInfo
+                environment={selectedEnv}
+                onClone={() => setShowCloneModal(true)}
+                onPromote={() => setShowPromoteModal(true)}
+                onDelete={() => setShowDeleteModal(true)}
+                onPause={() => setShowPauseModal(true)}
+                onResume={() => setShowResumeModal(true)}
+              />
+              
+              {/* Modals */}
+              {showCloneModal && (
+                <CloneModal
+                  sourceEnvironment={selectedEnv}
+                  onClose={() => setShowCloneModal(false)}
+                  onConfirm={(newName) => {
+                    cloneEnvironment(selectedEnv.id, newName);
+                    setShowCloneModal(false);
+                  }}
+                />
+              )}
+              
+              {showPromoteModal && (
+                <PromoteModal
+                  sourceEnvironment={selectedEnv}
+                  availableTargets={project.environments?.filter((e: any) => e.type === 'standard' && e.id !== selectedEnv.id && e.status === 'active') || []}
+                  onClose={() => setShowPromoteModal(false)}
+                  onConfirm={(targetId) => {
+                    promoteEnvironment(selectedEnv.id, targetId);
+                    setShowPromoteModal(false);
+                  }}
+                />
+              )}
+              
+              {showPauseModal && (
+                <PauseModal
+                  environment={selectedEnv}
+                  onClose={() => setShowPauseModal(false)}
+                  onConfirm={() => {
+                    pauseEnvironment(selectedEnv.id);
+                    setShowPauseModal(false);
+                  }}
+                />
+              )}
+              
+              {showResumeModal && (
+                <ResumeModal
+                  environment={selectedEnv}
+                  onClose={() => setShowResumeModal(false)}
+                  onConfirm={() => {
+                    resumeEnvironment(selectedEnv.id);
+                    setShowResumeModal(false);
+                  }}
+                />
+              )}
+              
+              {showDeleteModal && (
+                <DeleteModal
+                  environment={selectedEnv}
+                  onClose={() => setShowDeleteModal(false)}
+                  onConfirm={() => {
+                    deleteEnvironment(selectedEnv.id);
+                    setShowDeleteModal(false);
+                    // Reset selection to first available environment
+                    const remaining = project.environments?.filter((e: any) => e.id !== selectedEnv.id && e.status !== 'deleted');
+                    if (remaining?.[0]) {
+                      setSelected({ kind: 'environment', envId: remaining[0].id });
+                    } else {
+                      setSelected({ kind: 'architecture' });
+                    }
+                  }}
+                />
+              )}
+            </>
+          ) : null;
+        })()}
+
+        {/* Container Editor */}
         {selected.kind === 'container' && selectedResource && draftContainer && (
           <ContainerEditor
             container={selectedResource.data}

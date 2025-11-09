@@ -16,9 +16,38 @@ export interface QuestionnaireAnswers {
 }
 
 // Project and Environment structure for hierarchical navigation
+export interface PRSource {
+  provider: 'github';
+  repository: string;
+  prNumber: number;
+  prTitle: string;
+  branchName: string;
+  commitSha: string;
+}
+
+export interface ServiceOverride {
+  serviceName: string;
+  image: string;
+}
+
+export type EnvironmentType = 'standard' | 'pr';
+export type EnvironmentStatus = 'provisioning' | 'active' | 'paused' | 'deleting' | 'deleted' | 'expired';
+
 export interface Environment {
   id: string;
-  name: string; // 'dev', 'staging', 'prod', etc.
+  name: string; // 'dev', 'staging', 'prod', 'feature-fix-carts-pr-128'
+  slug: string; // kebab-case, 3-63 chars
+  type: EnvironmentType;
+  status: EnvironmentStatus;
+  createdAt: string; // ISO 8601
+  expiresAt?: string; // ISO 8601, only for type='pr'
+  
+  // PR-specific metadata
+  prSource?: PRSource;
+  triggeredBy?: 'pull_request_opened' | 'pull_request_reopened' | 'pull_request_synchronize';
+  serviceOverride?: ServiceOverride;
+  
+  // Configuration
   containers: ContainerConfig[];
   database?: {
     engine: string;
@@ -36,12 +65,61 @@ export interface Environment {
     evictionPolicy: string;
     persistence: string;
   };
+  
+  // Access
+  baseDomain: string; // {env-slug}.{project-slug}.demo.unhazzle.io
+  publicContainers: string[]; // container names with exposure='public'
+}
+
+export interface ConfigRepo {
+  provider: 'github' | 'gitlab';
+  repository: string; // 'owner/repo'
+  branch: string; // 'main'
+  manifestPath: string; // 'unhazzle.yaml'
+}
+
+export interface PREnvSettings {
+  enabled: boolean;
+  maxEnvs: number; // 1-20
+  lifetimeHours: number; // 1-8
+  autoDeleteOnPRClose: boolean; // always true in MVP
+}
+
+export interface RepositoryIntegration {
+  url: string;
+  branch: string;
+  autoDeployEnabled: boolean;
+  configPath: string; // Path to unhazzle.yaml in repo
+}
+
+export interface PREnvironmentSettings {
+  enabled: boolean;
+  autoCreateOnPR: boolean;
+  autoDeleteOnMerge: boolean;
+  expirationHours: number;
+  nameTemplate: string;
 }
 
 export interface Project {
   id: string;
   name: string;
+  slug: string; // kebab-case
+  description?: string;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  
+  repository?: RepositoryIntegration;
+  prEnvironmentSettings?: PREnvironmentSettings;
+  
+  configRepo?: ConfigRepo;
+  prEnvs: PREnvSettings;
+  
   environments: Environment[];
+  
+  // Computed
+  envCount: number;
+  prEnvCount: number;
+  standardEnvCount: number;
 }
 
 export interface VolumeConfig {
@@ -149,6 +227,7 @@ export interface DeploymentState {
   deployed: boolean;
   // New: Project-based structure
   project: Project | null;
+  activeEnvironmentId: string | null; // Track which environment is selected in UI
 }
 
 interface DeploymentContextType {
@@ -168,6 +247,17 @@ interface DeploymentContextType {
   resetState: () => void;
   removeDatabase: () => void;
   removeCache: () => void;
+  // New: Project and Environment management
+  updateProject: (updates: Partial<Project>) => void;
+  createEnvironment: (envData: Partial<Environment> & { name: string }) => Environment;
+  updateEnvironmentConfig: (envId: string, updates: Partial<Environment>) => void;
+  deleteEnvironment: (envId: string) => void;
+  cloneEnvironment: (sourceEnvId: string, newName: string) => Environment;
+  promoteEnvironment: (sourceEnvId: string, targetEnvId: string) => void;
+  pauseEnvironment: (envId: string) => void;
+  resumeEnvironment: (envId: string) => void;
+  setActiveEnvironment: (envId: string) => void;
+  getActiveEnvironment: () => Environment | null;
 }
 
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
@@ -183,6 +273,7 @@ const initialState: DeploymentState = {
   cost: null,
   deployed: false,
   project: null,
+  activeEnvironmentId: null,
 };
 
 export function DeploymentProvider({ children }: { children: ReactNode }) {
@@ -199,18 +290,42 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
           // If deployed but no project structure, create it from legacy data
           let project = parsed.project;
           if (parsed.deployed && !project && containers.length > 0) {
+            const now = new Date().toISOString();
+            const projectSlug = parsed.questionnaire?.appType ? `${parsed.questionnaire.appType.toLowerCase()}-app` : 'my-app';
+            const publicContainers = containers
+              .filter((c: ContainerConfig) => c.exposure === 'public')
+              .map((c: ContainerConfig) => c.name);
+              
             project = {
               id: 'proj-' + Date.now(),
               name: parsed.questionnaire?.appType ? `${parsed.questionnaire.appType} Application` : 'My Application',
+              slug: projectSlug,
+              createdAt: now,
+              updatedAt: now,
+              prEnvs: {
+                enabled: true,
+                maxEnvs: 3,
+                lifetimeHours: 2,
+                autoDeleteOnPRClose: true,
+              },
               environments: [
                 {
                   id: 'env-dev-' + Date.now(),
                   name: 'dev',
+                  slug: 'dev',
+                  type: 'standard' as EnvironmentType,
+                  status: 'active' as EnvironmentStatus,
+                  createdAt: now,
+                  baseDomain: `dev.${projectSlug}.demo.unhazzle.io`,
+                  publicContainers,
                   containers: containers,
                   database: parsed.resources?.database,
                   cache: parsed.resources?.cache,
                 }
-              ]
+              ],
+              envCount: 1,
+              prEnvCount: 0,
+              standardEnvCount: 1,
             };
           }
           
@@ -529,19 +644,124 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
   const markDeployed = () => {
     setState(prev => {
-      // Create project structure with default 'dev' environment
+      // Create project structure with multiple environments
+      const now = new Date().toISOString();
+      const projectSlug = prev.questionnaire?.appType ? `${prev.questionnaire.appType.toLowerCase()}-app` : 'my-app';
+      const publicContainers = (prev.containers || [])
+        .filter(c => c.exposure === 'public')
+        .map(c => c.name);
+      
+      // Dev environment (current deployment)
+      const devEnv = {
+        id: 'env-dev-' + Date.now(),
+        name: 'dev',
+        slug: 'dev',
+        type: 'standard' as EnvironmentType,
+        status: 'active' as EnvironmentStatus,
+        createdAt: now,
+        baseDomain: `dev.${projectSlug}.demo.unhazzle.io`,
+        publicContainers,
+        containers: prev.containers || [],
+        database: prev.resources?.database,
+        cache: prev.resources?.cache,
+      };
+      
+      // Staging environment (clone of dev but with more resources)
+      const stagingContainers = JSON.parse(JSON.stringify(prev.containers || [])).map((c: any) => ({
+        ...c,
+        id: c.id + '-staging',
+        resources: {
+          ...c.resources,
+          cpu: '2',
+          memory: '4096',
+          replicas: { min: 2, max: 10 }
+        }
+      }));
+      
+      const stagingEnv = {
+        id: 'env-staging-' + Date.now(),
+        name: 'staging',
+        slug: 'staging',
+        type: 'standard' as EnvironmentType,
+        status: 'active' as EnvironmentStatus,
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+        baseDomain: `staging.${projectSlug}.demo.unhazzle.io`,
+        publicContainers,
+        containers: stagingContainers,
+        database: prev.resources?.database,
+        cache: prev.resources?.cache,
+      };
+      
+      // PR Environment #42 (expires in 90 minutes)
+      const prContainers = JSON.parse(JSON.stringify(prev.containers || [])).map((c: any, idx: number) => ({
+        ...c,
+        id: c.id + '-pr42',
+        resources: {
+          ...c.resources,
+          cpu: '0.5',
+          memory: '512',
+          replicas: { min: 1, max: 1 }
+        }
+      }));
+      
+      const pr42Env = {
+        id: 'env-pr-42-' + Date.now(),
+        name: 'fix-checkout-pr-42',
+        slug: 'fix-checkout-pr-42',
+        type: 'pr' as EnvironmentType,
+        status: 'active' as EnvironmentStatus,
+        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
+        expiresAt: new Date(Date.now() + 90 * 60 * 1000).toISOString(), // expires in 90 min
+        baseDomain: `fix-checkout-pr-42.${projectSlug}.demo.unhazzle.io`,
+        publicContainers,
+        containers: prContainers,
+        database: prev.resources?.database ? { ...prev.resources.database, storage: '20 GB' } : undefined,
+        cache: prev.resources?.cache ? { ...prev.resources.cache, memory: '128 MB' } : undefined,
+        prSource: {
+          provider: 'github' as const,
+          repository: 'acme/shop-frontend',
+          prNumber: 42,
+          prTitle: 'Fix checkout flow validation',
+          branchName: 'fix/checkout-validation',
+          commitSha: 'a3b4c5d',
+        },
+        triggeredBy: 'pull_request_opened' as const,
+        serviceOverride: {
+          serviceName: publicContainers[0] || 'frontend',
+          image: 'ghcr.io/acme/shop-frontend:pr-42-a3b4c5d',
+        },
+      };
+      
       const project: Project = {
         id: 'proj-' + Date.now(),
         name: prev.questionnaire?.appType ? `${prev.questionnaire.appType} Application` : 'My Application',
-        environments: [
-          {
-            id: 'env-dev-' + Date.now(),
-            name: 'dev',
-            containers: prev.containers || [],
-            database: prev.resources?.database,
-            cache: prev.resources?.cache,
-          }
-        ]
+        slug: projectSlug,
+        description: 'A production-ready application deployed with Unhazzle',
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        updatedAt: now,
+        repository: {
+          url: `https://github.com/${prev.user?.githubUsername || 'username'}/${projectSlug}`,
+          branch: 'main',
+          autoDeployEnabled: true,
+          configPath: 'unhazzle.yaml',
+        },
+        prEnvironmentSettings: {
+          enabled: true,
+          autoCreateOnPR: true,
+          autoDeleteOnMerge: true,
+          expirationHours: 72,
+          nameTemplate: 'pr-{number}',
+        },
+        prEnvs: {
+          enabled: true,
+          maxEnvs: 3,
+          lifetimeHours: 2,
+          autoDeleteOnPRClose: true,
+        },
+        environments: [devEnv, stagingEnv, pr42Env],
+        envCount: 3,
+        prEnvCount: 1,
+        standardEnvCount: 2,
       };
 
       const newState = { ...prev, deployed: true, project };
@@ -557,6 +777,303 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('unhazzle-deployment-state');
     }
+  };
+
+  // New: Project management
+  const updateProject = (updates: Partial<Project>) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+      
+      const updatedProject = {
+        ...prev.project,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  // New: Environment management
+  const createEnvironment = (envData: Partial<Environment> & { name: string }): Environment => {
+    if (!state.project) {
+      throw new Error('Cannot create environment without a project');
+    }
+
+    const now = new Date().toISOString();
+    const slug = envData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const publicContainers = (envData.containers || [])
+      .filter(c => c.exposure === 'public')
+      .map(c => c.name);
+
+    const newEnv: Environment = {
+      id: `env-${slug}-${Date.now()}`,
+      slug,
+      type: envData.type || 'standard',
+      status: envData.status || 'provisioning',
+      createdAt: now,
+      baseDomain: `${slug}.${state.project.slug}.demo.unhazzle.io`,
+      publicContainers,
+      containers: envData.containers || [],
+      database: envData.database,
+      cache: envData.cache,
+      ...envData,
+      name: envData.name, // Override to ensure name is set last
+    };
+
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = [...prev.project.environments, newEnv];
+      const prEnvCount = updatedEnvironments.filter(e => e.type === 'pr').length;
+      const standardEnvCount = updatedEnvironments.filter(e => e.type === 'standard').length;
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        envCount: updatedEnvironments.length,
+        prEnvCount,
+        standardEnvCount,
+        updatedAt: now,
+      };
+
+      const newState = { 
+        ...prev, 
+        project: updatedProject,
+        activeEnvironmentId: newEnv.id, // Auto-select new environment
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+
+    return newEnv;
+  };
+
+  const updateEnvironmentConfig = (envId: string, updates: Partial<Environment>) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        if (env.id === envId) {
+          const updatedEnv = { ...env, ...updates };
+          // Recalculate publicContainers if containers changed
+          if (updates.containers) {
+            updatedEnv.publicContainers = updates.containers
+              .filter(c => c.exposure === 'public')
+              .map(c => c.name);
+          }
+          return updatedEnv;
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const deleteEnvironment = (envId: string) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const now = new Date().toISOString();
+      const updatedEnvironments = prev.project.environments.map(env => 
+        env.id === envId 
+          ? { ...env, status: 'deleted' as EnvironmentStatus }
+          : env
+      );
+
+      const prEnvCount = updatedEnvironments.filter(e => e.type === 'pr' && e.status !== 'deleted').length;
+      const standardEnvCount = updatedEnvironments.filter(e => e.type === 'standard' && e.status !== 'deleted').length;
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        envCount: prEnvCount + standardEnvCount,
+        prEnvCount,
+        standardEnvCount,
+        updatedAt: now,
+      };
+
+      // If deleting active environment, clear selection
+      const newActiveEnvId = prev.activeEnvironmentId === envId ? null : prev.activeEnvironmentId;
+
+      const newState = { 
+        ...prev, 
+        project: updatedProject,
+        activeEnvironmentId: newActiveEnvId,
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const cloneEnvironment = (sourceEnvId: string, newName: string): Environment => {
+    if (!state.project) {
+      throw new Error('Cannot clone environment without a project');
+    }
+
+    const sourceEnv = state.project.environments.find(e => e.id === sourceEnvId);
+    if (!sourceEnv) {
+      throw new Error('Source environment not found');
+    }
+
+    // Clone configuration but create new identity
+    const clonedEnv = createEnvironment({
+      name: newName,
+      type: 'standard',
+      containers: JSON.parse(JSON.stringify(sourceEnv.containers)), // Deep clone
+      database: sourceEnv.database ? JSON.parse(JSON.stringify(sourceEnv.database)) : undefined,
+      cache: sourceEnv.cache ? JSON.parse(JSON.stringify(sourceEnv.cache)) : undefined,
+    });
+
+    return clonedEnv;
+  };
+
+  const promoteEnvironment = (sourceEnvId: string, targetEnvId: string) => {
+    if (!state.project) {
+      throw new Error('Cannot promote without a project');
+    }
+
+    const sourceEnv = state.project.environments.find(e => e.id === sourceEnvId);
+    const targetEnv = state.project.environments.find(e => e.id === targetEnvId);
+
+    if (!sourceEnv || !targetEnv) {
+      throw new Error('Source or target environment not found');
+    }
+
+    // Copy configuration from source to target
+    updateEnvironmentConfig(targetEnvId, {
+      containers: JSON.parse(JSON.stringify(sourceEnv.containers)),
+      database: sourceEnv.database ? JSON.parse(JSON.stringify(sourceEnv.database)) : undefined,
+      cache: sourceEnv.cache ? JSON.parse(JSON.stringify(sourceEnv.cache)) : undefined,
+      status: 'provisioning', // Trigger redeploy
+    });
+
+    // After a short delay, mark as active (simulated deployment)
+    setTimeout(() => {
+      updateEnvironmentConfig(targetEnvId, { status: 'active' });
+    }, 100);
+  };
+
+  const setActiveEnvironment = (envId: string) => {
+    setState(prev => {
+      const newState = { ...prev, activeEnvironmentId: envId };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const getActiveEnvironment = (): Environment | null => {
+    if (!state.project || !state.activeEnvironmentId) return null;
+    return state.project.environments.find(e => e.id === state.activeEnvironmentId) || null;
+  };
+
+  const pauseEnvironment = (envId: string) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        if (env.id === envId && env.status === 'active') {
+          // Mark as paused - in a real system, this would scale replicas to 0
+          // and stop database/cache services
+          return {
+            ...env,
+            status: 'paused' as EnvironmentStatus,
+          };
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const resumeEnvironment = (envId: string) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        if (env.id === envId && env.status === 'paused') {
+          // Mark as provisioning, then transition to active
+          // In a real system, this would restore replicas and restart services
+          return {
+            ...env,
+            status: 'provisioning' as EnvironmentStatus,
+          };
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+
+      // Simulate provisioning delay, then mark as active
+      setTimeout(() => {
+        setState(current => {
+          if (!current.project) return current;
+
+          const envs = current.project.environments.map(e => 
+            e.id === envId && e.status === 'provisioning'
+              ? { ...e, status: 'active' as EnvironmentStatus }
+              : e
+          );
+
+          const proj = {
+            ...current.project,
+            environments: envs,
+            updatedAt: new Date().toISOString(),
+          };
+
+          const s = { ...current, project: proj };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('unhazzle-deployment-state', JSON.stringify(s));
+          }
+          return s;
+        });
+      }, 2000);
+
+      return newState;
+    });
   };
 
   return (
@@ -578,6 +1095,16 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         resetState,
         removeDatabase,
         removeCache,
+        updateProject,
+        createEnvironment,
+        updateEnvironmentConfig,
+        deleteEnvironment,
+        cloneEnvironment,
+        promoteEnvironment,
+        pauseEnvironment,
+        resumeEnvironment,
+        setActiveEnvironment,
+        getActiveEnvironment,
       }}
     >
       {children}
