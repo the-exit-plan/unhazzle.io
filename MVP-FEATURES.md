@@ -46,9 +46,25 @@ Each feature entry must follow this structure:
 7. **Add Features**: Append new features to appropriate section, assign next sequential ID
 
 ### Querying Features
+**Basic Queries**:
 - Filter by Status: `grep "DONE" MVP-FEATURES.md`
 - Filter by Priority: `grep "Alpha" MVP-FEATURES.md`
 - Find by ID: `grep "F-001" MVP-FEATURES.md`
+
+**Advanced Query Examples**:
+```bash
+# Find all Alpha priority features that are TODO
+grep "^| F-" MVP-FEATURES.md | grep "⬜ TODO" | grep " Alpha "
+
+# Find all features with blockers
+grep "^| F-" MVP-FEATURES.md | grep "🔴"
+
+# Find features that depend on a specific feature (e.g., F-014)
+grep "^| F-" MVP-FEATURES.md | grep "F-014"
+
+# List all DONE features with their titles
+grep "^| F-" MVP-FEATURES.md | grep "✅ DONE" | awk -F'|' '{print $2 " - " $3}'
+```
 
 ---
 
