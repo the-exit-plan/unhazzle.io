@@ -43,7 +43,7 @@ Each feature entry must follow this structure:
 4. **Spec Path**: Relative path from repo root (e.g., `journey/feedback-docs/first-round/features-spec/feature-name.md`)
 5. **Notes**: Keep concise, append new notes with date prefix `[YYYY-MM-DD]`
 6. **Preserve IDs**: Never change Feature IDs (F-XXX format)
-7. **Add Features**: Append new features to appropriate section, assign next sequential ID
+7. **Add Features**: Append new features to end of table, assign next sequential ID
 
 ### Querying Features
 **Basic Queries**:
@@ -86,9 +86,7 @@ grep "^| F-" MVP-FEATURES.md | grep "✅ DONE" | awk -F'|' '{print $2 " - " $3}'
 
 ---
 
-## MVP Features by Category
-
-### Configuration & Settings
+## MVP Features
 
 | ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
 |----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
@@ -99,99 +97,44 @@ grep "^| F-" MVP-FEATURES.md | grep "✅ DONE" | awk -F'|' '{print $2 " - " $3}'
 | F-005 | Multi-Container Support | Support multiple containers per application (frontend/backend separation) with service access | Functional | ✅ DONE | Alpha | - | `journey/feedback-docs/first-round/features-spec/multi-container-support.md` | - | - | Source: Jeroen/Eveline. Includes granular service access control. |
 | F-006 | Volume/Stateful Storage | Ability to attach persistent volumes for stateful applications and databases | Functional | ✅ DONE | Alpha | - | `journey/feedback-docs/first-round/features-spec/volume-stateful-storage.md` | - | - | Source: Inaki, Jeroen/Eveline. Smart size limits (500GB app, 10TB DB). |
 | F-007 | Remove Resource Capability | Enable users to remove applications, databases, or caches from deployment configuration | Functional | ✅ DONE | Alpha | - | `journey/feedback-docs/first-round/features-spec/remove-resource.md` | - | - | Completed 2025-11-08. Validates dependencies before removal. |
-
-### User Interface & UX
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-008 | Demo Mode Banner | Visual indicator that platform is in demo/prototype mode with simulated deployment | Non-Functional | ⬜ TODO | Alpha | - | - | - | - | Clear communication to prevent confusion about real infrastructure. |
 | F-009 | Mock Deployment Progress | Realistic deployment progress simulation with generic resource logs | Functional | ✅ DONE | Alpha | - | `journey/feedback-docs/first-round/features-spec/fix-deploying-page-generic-logs.md` | - | - | Source: Inaki (bug fix). Generic terms instead of brand names. |
 | F-010 | Form State Persistence | Save deployment configuration to localStorage for page refresh recovery | Functional | ⬜ TODO | Alpha | - | - | - | - | Prevent data loss during configuration process. |
 | F-011 | Review Page Simplification | Streamlined review page with clear resource grouping and cost breakdown | Functional | 🟨 IN_PROGRESS | Alpha | - | `journey/feedback-docs/first-round/features-spec/review-page-simplification.md` | F-004 | - | Optimize for quick review and deploy confidence. |
 | F-012 | Dashboard Architecture View | Visual diagram of container architecture and service connections | Functional | ⬜ TODO | Beta | - | `journey/feedback-docs/first-round/features-spec/dashboard-architecture-view.md` | F-005 | - | Help users understand their deployment topology. |
 | F-013 | Required Field Indicators | Mark required fields with asterisk (*) in forms | Non-Functional | ⬜ TODO | Gamma | - | - | - | - | Source: Viviana. UX polish for clarity. |
-
-### Project & Environment Management
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-014 | Project and Environments | Complete project and environment model with PR environment support | Functional | 🟨 IN_PROGRESS | Alpha | - | `journey/feedback-docs/first-round/features-spec/project-and-environments.md` | - | - | Foundation for multi-environment workflows. MVP definition phase. |
 | F-015 | Dashboard Project/Environment Navigation | Enhanced navigation between projects and environments in dashboard | Functional | 🟨 IN_PROGRESS | Beta | - | `journey/feedback-docs/first-round/features-spec/dashboard-project-environment-navigation.md` | F-014 | - | Depends on project model completion. |
 | F-016 | Environment Visualization | Visualize project + environment relationship in dashboard | Functional | ⬜ TODO | Beta | - | - | F-014 | - | Source: Jeroen/Eveline. Clear context for dev/staging/prod. |
 | F-017 | PR/Ephemeral Environments | Short-lived environments for pull requests with auto-expire and minimal resources | Functional | ⬜ TODO | Beta | - | `journey/feedback-docs/first-round/features-spec/project-and-environments.md` | F-014 | - | Source: Jeroen/Eveline. Cost-controlled preview environments. |
 | F-018 | Max PR Environments Cap | Limit number of PR environments per project to control costs | Functional | ⬜ TODO | Beta | - | `journey/feedback-docs/first-round/features-spec/project-and-environments.md` | F-017 | - | Default: 3 max per project. Configurable 1-20. |
-
-### Security & Access Control
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-019 | Team Permissions & RBAC | Define different permission levels for team members and platform access | Functional | ⬜ TODO | Alpha | - | - | - | 🔴 Auth system | Source: Mahya. Critical for multi-user teams. Blocked by auth implementation. |
 | F-020 | IP Whitelist | Restrict access by IP address for security | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Jeroen/Eveline. Network security feature. |
 | F-021 | Geo-Based Firewalling | Block traffic based on geographic location | Functional | ⏸️ DEFERRED | Gamma | - | - | F-020 | - | Deferred to post-MVP. Lower priority than IP whitelist. |
-
-### Database & Services
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-022 | Do-It-Yourself Services | Documentation and enablement for self-managed database setup with custom parameters | Non-Functional | ⬜ TODO | Alpha | - | - | - | - | Source: Inaki, Jeroen/Eveline. Exercise and document DIY approach. |
 | F-023 | NoSQL Database Support | Add MongoDB, Cassandra, or other NoSQL options to platform | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Matija, Inaki. Requires configuration investigation. |
 | F-024 | Message Queue Service | Event-driven apps need message queues (RabbitMQ, Kafka, SQS) | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Jeroen/Eveline. Modern app requirement. |
 | F-025 | In-Memory Cache Service | Redis, Valkey, OSS cache options | Functional | ✅ DONE | Alpha | - | - | - | - | Basic cache support implemented. |
 | F-026 | FaaS/Serverless Functions | Support for short-lived jobs and serverless functions | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Jeroen/Eveline. Complement container workloads. |
 | F-027 | Static Content Hosting | Solution for hosting static assets (CDN, object storage) | Functional | ⬜ TODO | Beta | - | - | 🔴 Research | Requires more investigation. Source: Matija, Jeroen/Eveline. |
-
-### Monitoring & Observability
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-028 | Infrastructure Alerting | Alerts when infrastructure components fail or degrade | Functional | ⬜ TODO | Beta | - | - | - | 🔴 Backend | Requires real backend infrastructure. Not applicable to prototype. |
 | F-029 | Third-Party Monitoring Integration | Support Datadog, Dynatrace, Prometheus, Grafana, OpenTelemetry configuration | Functional | ⬜ TODO | Beta | - | - | F-005 | - | Source: Inaki, Jeroen/Eveline. Container-level checkbox integration. |
 | F-030 | Monitoring Stack Template | Offer pre-configured monitoring stack (Grafana LGTM, ELK) for multiple projects | Functional | ⬜ TODO | Beta | - | - | F-029 | - | Source: Jeroen/Eveline. Shared monitoring deployment. |
 | F-031 | Cost Alerts | Alerts when costs exceed thresholds | Functional | ⬜ TODO | Beta | - | - | - | 🔴 Backend | Requires real cost tracking system. |
-
-### Pricing & Transparency
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-032 | Show Max Cost on Scale-Up | Display maximum potential cost if scaling reaches upper limits | Functional | ⬜ TODO | Alpha | - | - | - | - | Source: Andre. Risk transparency for autoscaling. |
 | F-033 | Risk Disclosure | Clearly communicate risks associated with configuration choices | Non-Functional | ⬜ TODO | Beta | - | - | - | - | Source: Andre. Legal and transparency requirement. |
 | F-034 | Cost Telemetry Service | Track compute, storage, bandwidth per app/config to maintain predictable margins | Functional | ⬜ TODO | Beta | - | - | - | 🔴 Backend | Source: Andre (P&G). Post-launch governance. |
-
-### Configuration Management
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-035 | Remove Domain Configuration | Simplify public/private container configuration without mandatory domains | Functional | 🟨 IN_PROGRESS | Alpha | - | `journey/feedback-docs/first-round/features-spec/remove-domain-configuration.md` | - | - | Streamline exposure settings. |
 | F-036 | Remove Environment Page | Consolidate environment selection into project creation flow | Functional | 🟨 IN_PROGRESS | Alpha | - | `journey/feedback-docs/first-round/features-spec/remove-environment-page.md` | F-014 | - | Simplify onboarding flow. |
 | F-037 | Configuration Guardrails | Prevent junior devs from provisioning unnecessary resources with warnings | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Mahya. Guidance and validation. |
-
-### CLI Improvements
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-038 | Shorten CLI Binary Name | "unhazzle" is too long for frequent typing; consider shorter alternative | Non-Functional | ⬜ TODO | Beta | - | - | - | - | Source: Matija. UX improvement for power users. |
 | F-039 | Interactive CLI Mode | Support both flags and interactive prompts (e.g., `unhazzle init` asks questions) | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Matija. Modern CLI UX pattern. |
 | F-040 | In-Terminal Help/Guidance | Modern CLI with built-in guidance, less need for external docs | Non-Functional | ⬜ TODO | Beta | - | - | - | - | Source: Matija. Reduce friction for CLI users. |
 | F-041 | Better GH Actions Setup Docs | Clearer instructions on what users need to do to set up GitHub Actions | Non-Functional | ⬜ TODO | Alpha | - | - | - | - | Source: Matija. Critical for deployment automation. |
-
-### Compliance & Legal
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-042 | EU Compliance Framework | Legal/data-protection/governance standards (GDPR, etc.) | Non-Functional | ⬜ TODO | Beta | - | - | - | - | Source: Andre. Internal framework, not customer-facing T&C. |
 | F-043 | SLA and DPA Documentation | Service Level Agreement and Data Processing Agreement | Non-Functional | ⬜ TODO | Beta | - | - | - | - | Source: Andre. Must be reviewed by legal expert. |
 | F-044 | Sustainability/Green Hosting | EU data centers with renewable energy, efficiency transparency | Non-Functional | ⏸️ DEFERRED | Gamma | - | - | - | - | Source: Andre. Differentiator but post-MVP priority. |
-
-### Migration & Integration
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-045 | Migration Tools | Help users migrate from existing platforms with running pipelines | Functional | ⬜ TODO | Beta | - | - | - | - | Source: Mahya. Competitive necessity for adoption. |
-
-### Strategic/Business
-
-| ID | Feature Title | Description | Type | Status | Priority | Owner | Spec Path | Dependencies | Blockers | Notes |
-|----|--------------|-------------|------|--------|----------|-------|-----------|--------------|----------|-------|
 | F-046 | Onboarding Video | Short video for beginners and power users | Non-Functional | ⏸️ DEFERRED | Gamma | - | - | - | - | Source: Andre. Nice-to-have for user education. |
 | F-047 | FAQ or Chatbot Support | Built-in help for common questions during configuration | Functional | ⏸️ DEFERRED | Gamma | - | - | - | - | Source: Viviana, Andre. Reduce support burden. |
 | F-048 | EU Language Selector | Support multiple European languages in UI | Non-Functional | ⏸️ DEFERRED | Gamma | - | - | - | - | Source: Andre. i18n for broader market. |
@@ -207,8 +150,8 @@ grep "^| F-" MVP-FEATURES.md | grep "✅ DONE" | awk -F'|' '{print $2 " - " $3}'
 - ⏸️ DEFERRED: 5 features
 
 **By Priority**:
-- Alpha: 18 features (must-have for prototype)
-- Beta: 24 features (required for MVP launch)
+- Alpha: 19 features (must-have for prototype)
+- Beta: 23 features (required for MVP launch)
 - Gamma: 6 features (post-MVP enhancements)
 
 **By Type**:
@@ -273,7 +216,7 @@ F-004 (Edit on Pricing) ───────────> F-011 (Review Page Si
 
 ### When Adding New Features
 1. Assign next sequential ID (F-XXX)
-2. Place in appropriate category
+2. Append to end of main features table
 3. Set realistic priority (Alpha/Beta/Gamma)
 4. Document dependencies using existing feature IDs
 5. Add spec path if specification document exists
@@ -287,8 +230,8 @@ F-004 (Edit on Pricing) ───────────> F-011 (Review Page Si
 5. Add dated note in Notes column for significant changes
 
 ### When Identifying Blockers
-1. Mark status as 🔴 BLOCKED
-2. Document blocker in Blockers column
+1. Mark blocker in Blockers column with 🔴 symbol
+2. Document blocker description
 3. Add to "Active Blockers" section with explanation
 4. Update dependencies graph if blocker affects other features
 
@@ -311,7 +254,7 @@ F-004 (Edit on Pricing) ───────────> F-011 (Review Page Si
 
 ---
 
-**Document Version**: 1.0  
-**Generated**: 2025-11-09  
-**Format**: Markdown with pipe-separated tables for easy parsing  
+**Document Version**: 1.1  
+**Generated**: 2025-11-10  
+**Format**: Markdown with single unified table for easy parsing  
 **Maintainer**: AI Agents + Human Review
