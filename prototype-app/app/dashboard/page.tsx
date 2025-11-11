@@ -133,13 +133,15 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => router.push('/questionnaire')}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg flex items-center gap-2"
-            >
-              <span className="text-xl">+</span>
-              <span>Create Project</span>
-            </button>
+            {!state.project && (
+              <button
+                onClick={() => router.push('/questionnaire')}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg flex items-center gap-2"
+              >
+                <span className="text-xl">+</span>
+                <span>Create Project</span>
+              </button>
+            )}
           </div>
         </div>
 

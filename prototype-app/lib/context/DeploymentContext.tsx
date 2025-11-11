@@ -644,16 +644,21 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
   const markDeployed = () => {
     setState(prev => {
-      // Create project structure with multiple environments
+      // Create project structure with only dev environment initially
       const now = new Date().toISOString();
-      const projectSlug = prev.questionnaire?.appType ? `${prev.questionnaire.appType.toLowerCase()}-app` : 'my-app';
+      
+      // Generate a unique project name based on timestamp
+      const timestamp = Date.now();
+      const projectName = `Project ${timestamp.toString().slice(-6)}`;
+      const projectSlug = `project-${timestamp.toString().slice(-6)}`;
+      
       const publicContainers = (prev.containers || [])
         .filter(c => c.exposure === 'public')
         .map(c => c.name);
       
       // Dev environment (current deployment)
-      const devEnv = {
-        id: 'env-dev-' + Date.now(),
+      const devEnv: Environment = {
+        id: 'env-dev-' + timestamp,
         name: 'dev',
         slug: 'dev',
         type: 'standard' as EnvironmentType,
@@ -666,78 +671,12 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         cache: prev.resources?.cache,
       };
       
-      // Staging environment (clone of dev but with more resources)
-      const stagingContainers = JSON.parse(JSON.stringify(prev.containers || [])).map((c: any) => ({
-        ...c,
-        id: c.id + '-staging',
-        resources: {
-          ...c.resources,
-          cpu: '2',
-          memory: '4096',
-          replicas: { min: 2, max: 10 }
-        }
-      }));
-      
-      const stagingEnv = {
-        id: 'env-staging-' + Date.now(),
-        name: 'staging',
-        slug: 'staging',
-        type: 'standard' as EnvironmentType,
-        status: 'active' as EnvironmentStatus,
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-        baseDomain: `staging.${projectSlug}.demo.unhazzle.io`,
-        publicContainers,
-        containers: stagingContainers,
-        database: prev.resources?.database,
-        cache: prev.resources?.cache,
-      };
-      
-      // PR Environment #42 (expires in 90 minutes)
-      const prContainers = JSON.parse(JSON.stringify(prev.containers || [])).map((c: any, idx: number) => ({
-        ...c,
-        id: c.id + '-pr42',
-        resources: {
-          ...c.resources,
-          cpu: '0.5',
-          memory: '512',
-          replicas: { min: 1, max: 1 }
-        }
-      }));
-      
-      const pr42Env = {
-        id: 'env-pr-42-' + Date.now(),
-        name: 'fix-checkout-pr-42',
-        slug: 'fix-checkout-pr-42',
-        type: 'pr' as EnvironmentType,
-        status: 'active' as EnvironmentStatus,
-        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
-        expiresAt: new Date(Date.now() + 90 * 60 * 1000).toISOString(), // expires in 90 min
-        baseDomain: `fix-checkout-pr-42.${projectSlug}.demo.unhazzle.io`,
-        publicContainers,
-        containers: prContainers,
-        database: prev.resources?.database ? { ...prev.resources.database, storage: '20 GB' } : undefined,
-        cache: prev.resources?.cache ? { ...prev.resources.cache, memory: '128 MB' } : undefined,
-        prSource: {
-          provider: 'github' as const,
-          repository: 'acme/shop-frontend',
-          prNumber: 42,
-          prTitle: 'Fix checkout flow validation',
-          branchName: 'fix/checkout-validation',
-          commitSha: 'a3b4c5d',
-        },
-        triggeredBy: 'pull_request_opened' as const,
-        serviceOverride: {
-          serviceName: publicContainers[0] || 'frontend',
-          image: 'ghcr.io/acme/shop-frontend:pr-42-a3b4c5d',
-        },
-      };
-      
       const project: Project = {
-        id: 'proj-' + Date.now(),
-        name: prev.questionnaire?.appType ? `${prev.questionnaire.appType} Application` : 'My Application',
+        id: 'proj-' + timestamp,
+        name: projectName,
         slug: projectSlug,
         description: 'A production-ready application deployed with Unhazzle',
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        createdAt: now,
         updatedAt: now,
         repository: {
           url: `https://github.com/${prev.user?.githubUsername || 'username'}/${projectSlug}`,
@@ -746,22 +685,22 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
           configPath: 'unhazzle.yaml',
         },
         prEnvironmentSettings: {
-          enabled: true,
+          enabled: false, // Disabled by default - user can enable in settings
           autoCreateOnPR: true,
           autoDeleteOnMerge: true,
           expirationHours: 72,
           nameTemplate: 'pr-{number}',
         },
         prEnvs: {
-          enabled: true,
+          enabled: false, // Disabled by default
           maxEnvs: 3,
           lifetimeHours: 2,
           autoDeleteOnPRClose: true,
         },
-        environments: [devEnv, stagingEnv, pr42Env],
-        envCount: 3,
-        prEnvCount: 1,
-        standardEnvCount: 2,
+        environments: [devEnv], // Only dev environment initially
+        envCount: 1,
+        prEnvCount: 0,
+        standardEnvCount: 1,
       };
 
       const newState = { ...prev, deployed: true, project };
