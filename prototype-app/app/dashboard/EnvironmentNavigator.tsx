@@ -3,15 +3,24 @@
 import { Environment, Project } from '@/lib/context/DeploymentContext';
 import { useEffect, useState } from 'react';
 
+type SelectionKind = 'container' | 'database' | 'architecture' | 'environment' | 'project-settings' | 'create-environment' | 'add-container';
+
 interface EnvironmentNavigatorProps {
   project: Project;
-  selected: { kind: 'container' | 'database' | 'cache' | 'architecture' | 'environment' | 'project-settings'; id?: string; envId?: string };
-  onSelect: (selection: { kind: 'container' | 'database' | 'cache' | 'architecture' | 'environment' | 'project-settings'; id?: string; envId?: string }) => void;
+  selected: { kind: SelectionKind; id?: string; envId?: string };
+  onSelect: (selection: { kind: SelectionKind; id?: string; envId?: string }) => void;
 }
 
 export default function EnvironmentNavigator({ project, selected, onSelect }: EnvironmentNavigatorProps) {
   // Track which environment is expanded (only one at a time)
   const [expandedEnvId, setExpandedEnvId] = useState<string | null>(null);
+
+  // Auto-expand environment when it's selected
+  useEffect(() => {
+    if (selected.kind === 'environment' && selected.envId) {
+      setExpandedEnvId(selected.envId);
+    }
+  }, [selected]);
 
   // Calculate time remaining for PR environments
   const getTimeRemaining = (expiresAt?: string): string => {
@@ -41,6 +50,11 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
   }, []);
 
   const getStatusBadge = (env: Environment) => {
+    // Don't show status badge for undeployed environments
+    if (!env.deployed) {
+      return null;
+    }
+    
     if (env.status === 'provisioning') {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">
@@ -94,7 +108,7 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
 
   // Filter out deleted/expired environments
   const activeEnvironments = project.environments.filter(e => e.status !== 'deleted' && e.status !== 'expired');
-  const standardEnvs = activeEnvironments.filter(e => e.type === 'standard');
+  const standardEnvs = activeEnvironments.filter(e => e.type === 'standard' || e.type === 'non-prod' || e.type === 'prod');
   const prEnvs = activeEnvironments.filter(e => e.type === 'pr');
 
   return (
@@ -130,7 +144,6 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
       {standardEnvs.map((env: Environment) => {
         const containers = env.containers || [];
         const hasDatabase = !!env.database;
-        const hasCache = !!env.cache;
         const isEnvSelected = selected.kind === 'environment' && selected.envId === env.id;
         const isExpanded = expandedEnvId === env.id;
 
@@ -164,6 +177,16 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
                   </svg>
                   <span className="text-lg">🔧</span>
                   <span className="font-bold text-slate-900">{env.name}</span>
+                  {env.type === 'prod' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs rounded font-medium">
+                      PROD
+                    </span>
+                  )}
+                  {env.type === 'non-prod' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-medium">
+                      DEV
+                    </span>
+                  )}
                 </div>
                 {getStatusBadge(env)}
               </div>
@@ -230,27 +253,17 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
                 </div>
               )}
 
-              {/* Cache */}
-              {hasCache && (
-                <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                    <span>⚡</span>
-                    <span>Cache</span>
-                  </div>
-                  <button
-                    onClick={() => onSelect({ kind: 'cache', envId: env.id })}
-                    className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                      selected.kind === 'cache' && selected.envId === env.id
-                        ? 'border-red-400 bg-red-50 shadow-sm'
-                        : 'border-slate-200 hover:border-red-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="text-sm font-medium text-slate-900">
-                      {env.cache?.engine === 'redis' ? 'Redis' : env.cache?.engine}
-                    </div>
-                  </button>
-                </div>
-              )}
+              
+              {/* Add Container Action Button */}
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <button
+                  onClick={() => onSelect({ kind: 'add-container', envId: env.id })}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:border-blue-400 hover:bg-blue-50 bg-white transition text-xs font-medium text-slate-700 hover:text-blue-700"
+                >
+                  <span className="text-sm">📦</span>
+                  <span>Add Container</span>
+                </button>
+              </div>
             </div>
             )}
           </div>
@@ -338,10 +351,21 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
         </div>
       )}
 
+      {/* Create Environment Button */}
+      <div className="mt-4 pt-4 border-t border-slate-200">
+        <button
+          onClick={() => onSelect({ kind: 'create-environment' })}
+          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-purple-400 hover:bg-purple-50 bg-white transition text-sm font-medium text-slate-700 hover:text-purple-700"
+        >
+          <span className="text-base">🌍</span>
+          <span>Create Environment</span>
+        </button>
+      </div>
+
       {/* Architecture Diagram Option */}
       <button
         onClick={() => onSelect({ kind: 'architecture' })}
-        className={`w-full text-left px-4 py-3 rounded-lg border transition ${
+        className={`w-full text-left px-4 py-3 rounded-lg border transition mt-4 ${
           selected.kind === 'architecture'
             ? 'border-purple-400 bg-purple-50 shadow-sm'
             : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50 bg-white'

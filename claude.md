@@ -32,10 +32,10 @@ npm start      # Production server
 ## Core Principles
 
 ### 1. Spec-Driven Development
-- **All features are specified** in `/journey/product-journey-docs/` and `/journey/feedback-docs/first-round/features-spec/`
+- **All features are specified** in `/mvp/features/`
 - **Read specs before coding**: Understand the UX flow, validation rules, and business logic
 - **Follow specs precisely**: They define the expected behavior based on user research
-- **Reference the glossary**: `/journey/GLOSSARY.md` defines standard terminology
+- **Reference the glossary**: `/mvp/GLOSSARY.md` defines standard terminology
 
 ### 2. Lightweight Implementation (No TDD)
 - **No test infrastructure required**: Focus on rapid iteration for user testing
@@ -60,17 +60,15 @@ npm start      # Production server
 ### Before Starting a Feature
 
 1. **Read the specification**:
-   - Check `/journey/feedback-docs/first-round/features-spec/{feature-name}.md`
-   - Check `/journey/feedback-docs/first-round/feedback-summary.md` for priority
-   - Review related specs in "Related Items" section
+   - Check `/mvp/features/{feature-name}.md`
 
 2. **Understand the user flow**:
-   - Review `/journey/product-journey-docs/flow.md` for overall journey. The flow has involved and the source of truth is the implementation in `prototype-app/`
+   - Review `/mvp/flow.md` for overall journey. The flow has involved and the source of truth is the implementation in `prototype-app/`
    - Identify where your feature fits in the flow
    - Note dependencies on other features
 
 3. **Check the glossary**:
-   - Use correct terminology from `/journey/GLOSSARY.md`
+   - Use correct terminology from `/mvp/GLOSSARY.md`
    - Follow subject-first command structure (e.g., `application deploy`)
    - Use singular forms (e.g., `application`, not `applications`)
 
@@ -125,28 +123,18 @@ These features are critical for the prototype to be useful for testing:
 - **Volume/stateful storage** (✅ DONE)
 - **Fix deploying page generic logs** (avoid brand names, use generic terms) (✅ DONE)
 - **Editable auto-generated env var names** (UNHAZZLE_ prefix customization) (✅ DONE)
-- **Visualize project + environments + application/function/database/cache/message queues relationship**
-- **Team permissions & RBAC**
-- **NoSQL database support** (MongoDB, etc.)
-- **Message queue service** (RabbitMQ, Kafka)
-- **In-memory cache service** (Redis, Valkey)
-- **FaaS/Serverless functions**
-- **Managed vs. self-managed services** (clear option presentation)
+- **Visualize project + environments + application/cache/message queues relationship** (✅ DONE)
+- **User Management**
 - **Infrastructure alerting**
 - **Cost alerts**
 - **Third-party monitoring integration** (Datadog, Prometheus, etc.)
-- **Monitoring stack template** (pre-configured Grafana LGTM, ELK)
 - **Show max cost on scale-up**
 - **IP whitelist**
 
 ### Must-Have (ASAP after launch)
 Important but can be added shortly after MVP:
 
-- **Shorten CLI binary name**
-- **Interactive CLI mode**
-- **In-terminal help/guidance**
 - **Better GH Actions setup docs**
-- **Configuration guardrails** (prevent junior devs from over-provisioning)
 - **Better documentation/examples**
 - **Risk disclosure** (communicate risks with choices)
 - **Migration tools** (from existing platforms)
@@ -154,13 +142,10 @@ Important but can be added shortly after MVP:
 - **SLA and DPA documentation**
 - Multiple cost governance features (see feedback-summary.md)
 
-### Bugs (Fix immediately)
-- **Cache selection mismatch** (selected Memcached but shows Redis in logs - use generic terms in logs) (✅ DONE)
-
 ## Key Specifications Reference
 
 ### Core Flow Specs
-- **Overall user flow**: `/journey/product-journey-docs/flow.md`
+- **Overall user flow**: `/mvp/flow.md`
 - **Prototype strategy**: `/journey/product-journey-docs/prototype.md`
 - **Glossary**: `/journey/GLOSSARY.md`
 
@@ -175,9 +160,6 @@ Important but can be added shortly after MVP:
 8. **Remove domain configuration**: `/journey/feedback-docs/first-round/features-spec/remove-domain-configuration.md`
 9. **Remove environment page**: `/journey/feedback-docs/first-round/features-spec/remove-environment-page.md`
 
-### Feedback Documentation
-- **Summary**: `/journey/feedback-docs/first-round/feedback-summary.md`
-- **User feedback**: `/journey/feedback-docs/first-round/{user}-friends.md`
 
 ## Project Structure
 

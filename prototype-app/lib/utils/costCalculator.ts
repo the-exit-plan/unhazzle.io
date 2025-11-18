@@ -199,3 +199,81 @@ export function calculateCacheCostImpact(
   const newCost = calculateCacheCost(newMemory);
   return Math.round((newCost - currentCost) * 100) / 100;
 }
+
+// Calculate total environment cost from containers, database, and cache
+export function calculateEnvironmentCost(environment: any): { current: number; max: number; breakdown: any } {
+  let totalCurrent = 0;
+  let totalMax = 0;
+  const breakdown: any = {
+    containers: [],
+    database: undefined,
+    cache: undefined,
+    loadBalancer: 12,
+    bandwidth: 10,
+  };
+
+  // Calculate cost for each container
+  if (environment.containers && environment.containers.length > 0) {
+    environment.containers.forEach((container: any) => {
+      const cpuCores = parseFloat(container.resources?.cpu || '0.5');
+      const memoryGB = parseFloat(container.resources?.memory || '512') / 1024;
+      const minReplicas = container.resources?.replicas?.min || 1;
+      const maxReplicas = container.resources?.replicas?.max || 1;
+
+      // Calculate per-instance cost
+      let monthlyPerInstance: number;
+      if (cpuCores <= 1 && memoryGB <= 2) {
+        monthlyPerInstance = 4.99;
+      } else if (cpuCores <= 2 && memoryGB <= 4) {
+        monthlyPerInstance = 5.49;
+      } else if (cpuCores <= 4 && memoryGB <= 8) {
+        monthlyPerInstance = 9.49;
+      } else {
+        monthlyPerInstance = 17.49;
+      }
+
+      const currentCost = Math.ceil(minReplicas / 2) * monthlyPerInstance;
+      const maxCost = Math.ceil(maxReplicas / 2) * monthlyPerInstance;
+
+      breakdown.containers.push({
+        name: container.name,
+        current: currentCost,
+        max: maxCost,
+      });
+
+      totalCurrent += currentCost;
+      totalMax += maxCost;
+    });
+  }
+
+  // Add database cost
+  if (environment.database) {
+    const dbCost = calculateDatabaseCost(
+      environment.database.cpu,
+      environment.database.memory,
+      environment.database.storage,
+      environment.database.replicas
+    );
+    breakdown.database = dbCost;
+    totalCurrent += dbCost;
+    totalMax += dbCost;
+  }
+
+  // Add cache cost
+  if (environment.cache) {
+    const cacheCost = calculateCacheCost(environment.cache.memory);
+    breakdown.cache = cacheCost;
+    totalCurrent += cacheCost;
+    totalMax += cacheCost;
+  }
+
+  // Add load balancer and bandwidth
+  totalCurrent += breakdown.loadBalancer + breakdown.bandwidth;
+  totalMax += breakdown.loadBalancer + breakdown.bandwidth;
+
+  return {
+    current: Math.round(totalCurrent * 100) / 100,
+    max: Math.round(totalMax * 100) / 100,
+    breakdown,
+  };
+}

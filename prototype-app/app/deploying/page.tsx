@@ -206,10 +206,11 @@ const calculateTotalDuration = (steps: DeploymentStep[]): number => {
 
 export default function Deploying() {
   const router = useRouter();
-  const { state, markDeployed } = useDeployment();
+  const { state, getActiveEnvironment } = useDeployment();
+  const activeEnv = getActiveEnvironment();
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [steps, setSteps] = useState<DeploymentStep[]>(() => generateDeploymentSteps(state));
+  const [steps, setSteps] = useState<DeploymentStep[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isDeploymentComplete, setIsDeploymentComplete] = useState(false);
 
@@ -218,22 +219,54 @@ export default function Deploying() {
     window.scrollTo(0, 0);
   }, []);
 
-  // Redirect if no cost calculated
+  // Initialize steps when environment is available
   useEffect(() => {
-    if (!state.cost) {
-      router.push('/');
+    if (activeEnv && activeEnv.containers.length > 0) {
+      // Create a pseudo-state for step generation
+      const pseudoState = {
+        ...state,
+        containers: activeEnv.containers,
+        resources: {
+          database: activeEnv.database,
+          cache: activeEnv.cache,
+          replicas: { min: 1, max: 1 },
+          cpu: '0.5',
+          memory: '512MB'
+        }
+      };
+      setSteps(generateDeploymentSteps(pseudoState as DeploymentState));
     }
-  }, [state.cost, router]);
+  }, [activeEnv]);
+
+  // Redirect if no active environment or containers
+  useEffect(() => {
+    if (!activeEnv || activeEnv.containers.length === 0) {
+      router.push('/dashboard');
+    }
+  }, [activeEnv, router]);
 
   // Deployment progress simulation with clear stopping condition
   useEffect(() => {
-    if (!state.cost || isDeploymentComplete) return;
+    if (!activeEnv || steps.length === 0 || isDeploymentComplete) return;
 
     let stepTimers: NodeJS.Timeout[] = [];
     let logTimers: NodeJS.Timeout[] = [];
     let elapsedTimer: NodeJS.Timeout;
 
     const runDeployment = async () => {
+      // Create pseudo-state for log generation
+      const pseudoState = {
+        ...state,
+        containers: activeEnv.containers,
+        resources: {
+          database: activeEnv.database,
+          cache: activeEnv.cache,
+          replicas: { min: 1, max: 1 },
+          cpu: '0.5',
+          memory: '512MB'
+        }
+      };
+
       for (let index = 0; index < steps.length; index++) {
         await new Promise<void>((resolve) => {
           // Mark current step as running
@@ -246,7 +279,7 @@ export default function Deploying() {
           setCurrentStepIndex(index);
 
           // Get all logs for this step
-          const allLogs = getLogsForStep(steps[index].id, state);
+          const allLogs = getLogsForStep(steps[index].id, pseudoState);
 
           // Add logs at intervals
           let logIndex = 0;
@@ -279,7 +312,6 @@ export default function Deploying() {
 
       // All steps complete
       setIsDeploymentComplete(true);
-      markDeployed();
     };
 
     // Start elapsed timer
@@ -295,7 +327,7 @@ export default function Deploying() {
       logTimers.forEach(t => clearInterval(t));
       clearInterval(elapsedTimer);
     };
-  }, [state.cost, isDeploymentComplete, markDeployed]);
+  }, [activeEnv, steps.length, isDeploymentComplete]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -321,8 +353,15 @@ export default function Deploying() {
     }
   };
 
-  if (!state.cost) {
-    return null;
+  if (!activeEnv || steps.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin text-6xl mb-4">⚙️</div>
+          <p className="text-slate-600">Preparing deployment...</p>
+        </div>
+      </div>
+    );
   }
 
   const completedSteps = steps.filter(s => s.status === 'completed').length;
@@ -343,8 +382,8 @@ export default function Deploying() {
             Deploying Your Application
           </h1>
           <p className="text-lg text-slate-600">
-            {state.containers.length > 1 
-              ? `Deploying ${state.containers.length} containers and infrastructure.` 
+            {activeEnv.containers.length > 1 
+              ? `Deploying ${activeEnv.containers.length} containers and infrastructure.` 
               : 'Deploying your container and infrastructure.'
             } This typically takes {totalDuration}-{totalDuration + 10} seconds.
           </p>
@@ -454,21 +493,21 @@ export default function Deploying() {
               <span>Provisioning servers in Germany</span>
             </li>
             
-            {state.resources?.database && (
+            {activeEnv.database && (
               <li className="flex items-start gap-2">
                 <span className="text-purple-600 mt-0.5">•</span>
                 <span>Setting up database with automated backups</span>
               </li>
             )}
             
-            {state.resources?.cache && (
+            {activeEnv.cache && (
               <li className="flex items-start gap-2">
                 <span className="text-purple-600 mt-0.5">•</span>
                 <span>Deploying cache service</span>
               </li>
             )}
             
-            {state.containers.map((container, index) => {
+            {activeEnv.containers.map((container, index) => {
               const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `container-${index + 1}`;
               return (
                 <li key={container.id} className="flex items-start gap-2">
@@ -487,7 +526,7 @@ export default function Deploying() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-600 mt-0.5">•</span>
-              <span>Deploying to: <code className="bg-white px-2 py-0.5 rounded text-xs">{state.domain?.defaultSubdomain}</code></span>
+              <span>Deploying to: <code className="bg-white px-2 py-0.5 rounded text-xs">{activeEnv.baseDomain}</code></span>
             </li>
           </ul>
         </div>
@@ -502,7 +541,7 @@ export default function Deploying() {
                 Your application is now live and running
               </p>
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push(`/dashboard?selection=environment&env=${activeEnv.id}`)}
                 className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
               >
                 View Operations Dashboard →

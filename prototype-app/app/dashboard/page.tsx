@@ -1,15 +1,444 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
 import { calculateContainerCostImpact, calculateDatabaseCostImpact, calculateCacheCostImpact } from '@/lib/utils/costCalculator';
 import EnvironmentNavigator from './EnvironmentNavigator';
 import EnvironmentInfo from './EnvironmentInfo';
 import ProjectSettings from './ProjectSettings';
-import { CloneModal, PromoteModal, DeleteModal, PauseModal, ResumeModal } from './EnvironmentModals';
+import CostHeader from './CostHeader';
+import { CloneModal, PromoteModal, DeleteModal, PauseModal, ResumeModal, CreateEnvironmentModal } from './EnvironmentModals';
+import AddContainerModal from './AddContainerModal';
+import DeleteContainerModal from './DeleteContainerModal';
+import type { EnvironmentType } from '@/lib/context/DeploymentContext';
 
 type TabType = 'projects' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSteps';
+
+// Component for creating first environment
+function CreateFirstEnvironment() {
+  const { state, createEnvironment, setActiveEnvironment } = useDeployment();
+  const router = useRouter();
+  const [envName, setEnvName] = useState('');
+  const [envType, setEnvType] = useState<'non-prod' | 'prod'>('non-prod');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const nameValid = envName.length >= 3 && envName.length <= 63 && /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])$/.test(envName);
+
+  const handleCreate = () => {
+    if (!nameValid || !state.project) return;
+    
+    setIsCreating(true);
+    const newEnv = createEnvironment({
+      name: envName,
+      type: envType as EnvironmentType,
+      status: 'provisioning',
+      deployed: false,
+      pendingChanges: false
+    });
+    
+    // Set as active environment and redirect to Project Settings → Container Registry
+    setTimeout(() => {
+      setIsCreating(false);
+      setActiveEnvironment(newEnv.id);
+      router.push('/dashboard?selection=project-settings&tab=registry');
+    }, 500);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            Create Your First Environment
+          </h1>
+          <p className="text-slate-600">
+            Environments isolate your deployments. Start with development, staging, or production.
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          {/* Environment Name */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Environment Name *
+            </label>
+            <input
+              type="text"
+              value={envName}
+              onChange={(e) => setEnvName(e.target.value.toLowerCase())}
+              placeholder="development"
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {envName && !nameValid && (
+              <p className="text-sm text-red-600 mt-1">
+                3-63 characters, lowercase alphanumeric + hyphens, start/end with alphanumeric
+              </p>
+            )}
+          </div>
+
+          {/* Environment Type */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              Environment Type *
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setEnvType('non-prod')}
+                className={`p-4 border-2 rounded-lg transition ${
+                  envType === 'non-prod'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="font-semibold text-slate-900 mb-1">Non-Production</div>
+                <div className="text-sm text-slate-600">Development, testing, staging</div>
+              </button>
+              <button
+                onClick={() => setEnvType('prod')}
+                className={`p-4 border-2 rounded-lg transition ${
+                  envType === 'prod'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="font-semibold text-slate-900 mb-1">Production</div>
+                <div className="text-sm text-slate-600">Live, customer-facing</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex gap-3">
+              <span className="text-xl">💡</span>
+              <div className="flex-1 text-sm text-blue-900">
+                <p className="font-medium mb-1">Naming Recommendation</p>
+                <p>
+                  Use descriptive names like &quot;production&quot;, &quot;staging&quot;, &quot;development&quot;, or &quot;test&quot;. 
+                  Environment type helps Unhazzle apply appropriate safeguards (e.g., extra confirmations for production changes).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleCreate}
+              disabled={!nameValid || isCreating}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isCreating ? (
+                <>
+                  <span className="animate-spin">⚙️</span>
+                  <span>Creating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Environment</span>
+                  <span>→</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Project Info */}
+        {state.project && (
+          <div className="mt-6 text-center text-sm text-slate-600">
+            Project: <span className="font-medium text-slate-900">{state.project.name}</span>
+            {state.region && (
+              <span className="ml-4">
+                <span role="img" aria-label={state.region.country}>{state.region.flag}</span>
+                {' '}{state.region.label}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Mock GitHub Container Registry images
+const MOCK_GHCR_IMAGES = [
+  {
+    name: 'acme/ecommerce-shop',
+    tag: 'v2.1.0',
+    size: '324 MB',
+    lastUpdated: '2024-10-28T14:30:00Z',
+    description: 'Main e-commerce application with Next.js frontend'
+  },
+  {
+    name: 'acme/api-gateway',
+    tag: 'v1.5.2',
+    size: '156 MB',
+    lastUpdated: '2024-10-25T09:15:00Z',
+    description: 'GraphQL API gateway service'
+  },
+  {
+    name: 'acme/payment-processor',
+    tag: 'v3.0.1',
+    size: '89 MB',
+    lastUpdated: '2024-10-30T16:45:00Z',
+    description: 'Payment processing microservice'
+  },
+  {
+    name: 'acme/notification-service',
+    tag: 'v2.3.0',
+    size: '112 MB',
+    lastUpdated: '2024-10-29T11:20:00Z',
+    description: 'Email and SMS notification handler'
+  },
+  {
+    name: 'acme/background-worker',
+    tag: 'v1.8.4',
+    size: '78 MB',
+    lastUpdated: '2024-10-27T13:10:00Z',
+    description: 'Background job processing worker'
+  }
+];
+
+// OCI Registry Modal Component  
+function OCIRegistryModal() {
+  const { state, updateProject, createAppsFromImages, getActiveEnvironment } = useDeployment();
+  const router = useRouter();
+  const [githubPAT, setGithubPAT] = useState(state.project?.githubPAT || '');
+  const [showImages, setShowImages] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const activeEnv = getActiveEnvironment();
+
+  const handleFetchImages = () => {
+    if (!githubPAT.trim()) {
+      alert('Please enter a GitHub Personal Access Token');
+      return;
+    }
+    
+    // Save PAT to project
+    if (state.project) {
+      updateProject({ githubPAT });
+    }
+    
+    setShowImages(true);
+  };
+
+  const toggleImage = (imageName: string) => {
+    if (selectedImages.includes(imageName)) {
+      setSelectedImages(selectedImages.filter(img => img !== imageName));
+    } else {
+      if (selectedImages.length >= 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      setSelectedImages([...selectedImages, imageName]);
+    }
+  };
+
+  const handleContinue = () => {
+    if (!activeEnv) return;
+    
+    setIsCreating(true);
+    
+    const imagesToCreate = selectedImages.map(imgName => {
+      const img = MOCK_GHCR_IMAGES.find(i => `${i.name}:${i.tag}` === imgName);
+      if (!img) return null;
+      
+      const autoName = img.name.split('/').pop()?.split(':')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') || 'app';
+      
+      return {
+        name: `${img.name}:${img.tag}`,
+        url: `ghcr.io/${img.name}:${img.tag}`,
+        autoName,
+        tag: img.tag,
+        description: img.description
+      };
+    }).filter(Boolean) as Array<{name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private'}>;
+    
+    if (imagesToCreate.length > 0) {
+      createAppsFromImages(activeEnv.id, imagesToCreate);
+    }
+    
+    setTimeout(() => {
+      setIsCreating(false);
+      router.push('/dashboard');
+    }, 1000);
+  };
+
+  const handleSkip = () => {
+    router.push('/dashboard');
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            Connect Your Container Registry
+          </h1>
+          <p className="text-slate-600">
+            Connect to GitHub Container Registry to quickly deploy your private images
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          {!showImages ? (
+            <>
+              {/* PAT Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  GitHub Personal Access Token
+                </label>
+                <input
+                  type="password"
+                  value={githubPAT}
+                  onChange={(e) => setGithubPAT(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Token needs <code className="bg-slate-100 px-1 rounded">read:packages</code> scope
+                </p>
+              </div>
+
+              {/* Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex gap-3">
+                  <span className="text-xl">ℹ️</span>
+                  <div className="flex-1 text-sm text-blue-900">
+                    <p className="font-medium mb-1">Optional Step</p>
+                    <p>
+                      You can skip this step and add containers manually later. This is just a convenience 
+                      to quickly import multiple images from ghcr.io.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-between">
+                <button
+                  onClick={handleSkip}
+                  className="px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleFetchImages}
+                  disabled={!githubPAT.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <span>Fetch Images</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Image Selection */}
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-slate-900 mb-4">
+                  Select Images to Deploy (max 5)
+                </h2>
+                <div className="space-y-3">
+                  {MOCK_GHCR_IMAGES.map(img => {
+                    const fullName = `${img.name}:${img.tag}`;
+                    const isSelected = selectedImages.includes(fullName);
+                    
+                    return (
+                      <button
+                        key={fullName}
+                        onClick={() => toggleImage(fullName)}
+                        className={`w-full p-4 border-2 rounded-lg text-left transition ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${
+                            isSelected ? 'bg-purple-600 border-purple-600' : 'border-slate-300'
+                          }`}>
+                            {isSelected && (
+                              <svg className="w-full h-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-slate-900 mb-1">
+                              ghcr.io/{img.name}:<span className="text-purple-600">{img.tag}</span>
+                            </div>
+                            <div className="text-sm text-slate-600 mb-2">{img.description}</div>
+                            <div className="flex items-center gap-4 text-xs text-slate-500">
+                              <span>{img.size}</span>
+                              <span>•</span>
+                              <span>Updated {formatDate(img.lastUpdated)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selection Summary */}
+              <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                <div className="text-sm font-medium text-slate-700">
+                  {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                  {selectedImages.length > 0 && ' - containers will be auto-configured with smart defaults'}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-between">
+                <button
+                  onClick={handleSkip}
+                  className="px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+                >
+                  Skip & Add Manually
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={selectedImages.length === 0 || isCreating}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isCreating ? (
+                    <>
+                      <span className="animate-spin">⚙️</span>
+                      <span>Creating Containers...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continue with {selectedImages.length} Container{selectedImages.length !== 1 ? 's' : ''}</span>
+                      <span>→</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -86,7 +515,7 @@ export default function Dashboard() {
                 No Projects Yet
               </h2>
               <p className="text-slate-600 mb-8 leading-relaxed">
-                Get started by creating your first project. Answer 4 quick questions about your application, 
+                Get started by creating your first project. Answer 5 quick questions about your workload, 
                 and we&apos;ll automatically configure production-ready infrastructure for you.
               </p>
               <button
@@ -103,6 +532,14 @@ export default function Dashboard() {
     );
   }
 
+  // If project exists but no environments, show environment creation
+  if (state.project && state.project.environments.length === 0) {
+    return <CreateFirstEnvironment />;
+  }
+
+  // Active environment will be used in tabs
+  const activeEnv = state.project?.environments.find(e => e.id === state.activeEnvironmentId) || state.project?.environments[0];
+
   const getMetricColor = (value: number, thresholds: { warning: number; critical: number }) => {
     if (value > thresholds.critical) return 'text-red-600';
     if (value > thresholds.warning) return 'text-yellow-600';
@@ -115,7 +552,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="flex-1">
               <h1 className="text-4xl font-bold text-slate-900 mb-2">
                 Dashboard
               </h1>
@@ -123,6 +560,12 @@ export default function Dashboard() {
                 {state.domain?.defaultSubdomain && (
                   <span className="text-sm text-slate-600">
                     Deployed to: <code className="bg-white px-2 py-1 rounded text-xs font-mono">{state.domain.defaultSubdomain}</code>
+                  </span>
+                )}
+                {state.region && (
+                  <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm">
+                    <span role="img" aria-label={state.region.country}>{state.region.flag}</span>
+                    <span>{state.region.label}</span>
                   </span>
                 )}
                 {state.deployed && (
@@ -133,6 +576,11 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+            {activeEnv && activeEnv.containers.length > 0 && (
+              <div className="ml-6">
+                <CostHeader environment={activeEnv} />
+              </div>
+            )}
             {!state.project && (
               <button
                 onClick={() => router.push('/questionnaire')}
@@ -556,11 +1004,14 @@ export default function Dashboard() {
 // ======================
 
 function HybridOverview({ project, state }: { project: any; state: any }) {
-  const { updateContainer, updateResources, removeDatabase, removeCache, removeContainer, cloneEnvironment, promoteEnvironment, deleteEnvironment, pauseEnvironment, resumeEnvironment, updateProject } = useDeployment();
-  const [selected, setSelected] = useState<{ kind: 'container' | 'database' | 'cache' | 'architecture' | 'environment' | 'project-settings'; id?: string; envId?: string }>(() => {
-    // Default to project settings view
-    return { kind: 'project-settings' };
-  });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { updateContainer, updateResources, removeDatabase, removeCache, removeContainer, cloneEnvironment, promoteEnvironment, deleteEnvironment, pauseEnvironment, resumeEnvironment, updateProject, createAppsFromImages, getActiveEnvironment, updateEnvironmentConfig, createEnvironment } = useDeployment();
+  
+  type SelectionKind = 'container' | 'database' | 'architecture' | 'environment' | 'project-settings' | 'create-environment' | 'add-container';
+  
+  const [selected, setSelected] = useState<{ kind: SelectionKind; id?: string; envId?: string }>({ kind: 'project-settings' });
+  const [projectSettingsTab, setProjectSettingsTab] = useState<'general' | 'repository' | 'registry' | 'pr-environments'>('general');
 
   // Environment modals state
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -568,6 +1019,12 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  
+  // Add Container/Cache modals state
+  const [showAddContainerModal, setShowAddContainerModal] = useState(false);
+  const [showCreateEnvironmentModal, setShowCreateEnvironmentModal] = useState(false);
+  const [showDeleteContainerModal, setShowDeleteContainerModal] = useState(false);
+  const [containerToDelete, setContainerToDelete] = useState<{ id: string; name: string; envId: string } | null>(null);
 
   // Draft state for staged edits
   const [draftContainer, setDraftContainer] = useState<any>(null);
@@ -576,6 +1033,13 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const [showChanges, setShowChanges] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+
+  // OCI Registry setup state (inline in dashboard)
+  const [githubPAT, setGithubPAT] = useState(state.project?.githubPAT || '');
+  const [showImages, setShowImages] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isCreatingContainers, setIsCreatingContainers] = useState(false);
+  const [skippedRegistrySetup, setSkippedRegistrySetup] = useState<Record<string, boolean>>({});
 
   // Get the currently selected resource from project structure
   const getSelectedResource = () => {
@@ -589,14 +1053,30 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     } else if (selected.kind === 'database') {
       const env = project.environments.find((e: any) => e.id === selected.envId);
       if (env?.database) return { type: 'database', data: env.database, env };
-    } else if (selected.kind === 'cache') {
-      const env = project.environments.find((e: any) => e.id === selected.envId);
-      if (env?.cache) return { type: 'cache', data: env.cache, env };
     }
     return null;
   };
 
   const selectedResource = getSelectedResource();
+
+  // Sync with URL params when they change
+  useEffect(() => {
+    const selection = searchParams.get('selection');
+    const envId = searchParams.get('env');
+    const containerId = searchParams.get('id');
+    const tab = searchParams.get('tab');
+    
+    if (selection === 'project-settings') {
+      setSelected({ kind: 'project-settings' });
+      if (tab && (tab === 'registry' || tab === 'repository' || tab === 'pr-environments' || tab === 'general')) {
+        setProjectSettingsTab(tab as 'general' | 'repository' | 'registry' | 'pr-environments');
+      }
+    } else if (selection === 'container' && containerId && envId) {
+      setSelected({ kind: 'container', id: containerId, envId });
+    } else if (selection === 'environment' && envId) {
+      setSelected({ kind: 'environment', envId });
+    }
+  }, [searchParams]);
 
   // Keep draft in sync when selection changes
   useEffect(() => {
@@ -608,9 +1088,6 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     } else if (selected.kind === 'database' && resource?.data) {
       setDraftDatabase(JSON.parse(JSON.stringify(resource.data)));
       setDraftContainer(null);
-    } else if (selected.kind === 'cache' && resource?.data) {
-      setDraftCache(JSON.parse(JSON.stringify(resource.data)));
-      setDraftContainer(null);
     } else {
       setDraftContainer(null);
       setDraftDatabase(null);
@@ -621,12 +1098,14 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const hasContainerChanges = () => {
     if (!selectedResource?.data || !draftContainer || selected.kind !== 'container') return false;
     return JSON.stringify({
+      imageUrl: draftContainer.imageUrl,
       resources: draftContainer.resources,
       healthCheck: draftContainer.healthCheck,
       exposure: draftContainer.exposure,
       serviceAccess: draftContainer.serviceAccess,
       environmentVariables: draftContainer.environmentVariables,
     }) !== JSON.stringify({
+      imageUrl: selectedResource.data.imageUrl,
       resources: selectedResource.data.resources,
       healthCheck: selectedResource.data.healthCheck,
       exposure: selectedResource.data.exposure,
@@ -640,17 +1119,13 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     return JSON.stringify(draftDatabase) !== JSON.stringify(selectedResource.data);
   };
 
-  const hasCacheChanges = () => {
-    if (!selectedResource?.data || !draftCache || selected.kind !== 'cache') return false;
-    return JSON.stringify(draftCache) !== JSON.stringify(selectedResource.data);
-  };
-
   const applyContainerChanges = () => {
     if (!selectedResource?.data || !draftContainer) return;
     setShowConfirmation(false);
     setIsApplying(true);
     setTimeout(() => {
       updateContainer(selectedResource.data.id, {
+        imageUrl: draftContainer.imageUrl,
         resources: draftContainer.resources,
         healthCheck: draftContainer.healthCheck,
         exposure: draftContainer.exposure,
@@ -678,21 +1153,74 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     }, 800);
   };
 
-  const applyCacheChanges = () => {
-    if (!draftCache || !state.resources) return;
-    const res = state.resources;
-    setShowConfirmation(false);
-    setIsApplying(true);
+  // OCI Registry setup handlers
+  const handleFetchImages = () => {
+    if (!githubPAT.trim()) {
+      alert('Please enter a GitHub Personal Access Token');
+      return;
+    }
+    
+    // Save PAT to project
+    if (state.project) {
+      updateProject({ githubPAT });
+    }
+    
+    setShowImages(true);
+  };
+
+  const toggleImage = (imageName: string) => {
+    if (selectedImages.includes(imageName)) {
+      setSelectedImages(selectedImages.filter(img => img !== imageName));
+    } else {
+      if (selectedImages.length >= 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      setSelectedImages([...selectedImages, imageName]);
+    }
+  };
+
+  const handleCreateContainers = () => {
+    const activeEnv = getActiveEnvironment();
+    if (!activeEnv) return;
+    
+    setIsCreatingContainers(true);
+    
+    const imagesToCreate = selectedImages.map(imgName => {
+      const img = MOCK_GHCR_IMAGES.find(i => `${i.name}:${i.tag}` === imgName);
+      if (!img) return null;
+      
+      const autoName = img.name.split('/').pop()?.split(':')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') || 'app';
+      
+      return {
+        name: `${img.name}:${img.tag}`,
+        url: `ghcr.io/${img.name}:${img.tag}`,
+        autoName,
+        tag: img.tag,
+        description: img.description
+      };
+    }).filter(Boolean) as Array<{name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private'}>;
+    
+    if (imagesToCreate.length > 0) {
+      createAppsFromImages(activeEnv.id, imagesToCreate);
+    }
+    
     setTimeout(() => {
-      updateResources({
-        replicas: res.replicas,
-        cpu: res.cpu,
-        memory: res.memory,
-        database: res.database,
-        cache: draftCache,
-      });
-      setIsApplying(false);
-    }, 800);
+      setIsCreatingContainers(false);
+      setShowImages(false);
+      setSelectedImages([]);
+    }, 1000);
+  };
+
+  const formatImageDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
   };
 
   if (!project) {
@@ -718,7 +1246,19 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
         <EnvironmentNavigator 
           project={project} 
           selected={selected} 
-          onSelect={setSelected} 
+          onSelect={(selection) => {
+            // Handle modal triggers
+            if (selection.kind === 'add-container') {
+              setShowAddContainerModal(true);
+              return;
+            }
+            if (selection.kind === 'create-environment') {
+              setShowCreateEnvironmentModal(true);
+              return;
+            }
+            // Normal selection
+            setSelected(selection);
+          }} 
         />
       </div>
 
@@ -728,8 +1268,12 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
         {selected.kind === 'project-settings' && (
           <ProjectSettings
             project={project}
+            initialTab={projectSettingsTab}
             onSave={(updates) => {
               updateProject(updates);
+            }}
+            onCreateEnvironment={() => {
+              setShowCreateEnvironmentModal(true);
             }}
           />
         )}
@@ -739,14 +1283,174 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
           const selectedEnv = project.environments?.find((e: any) => e.id === selected.envId);
           return selectedEnv ? (
             <>
-              <EnvironmentInfo
-                environment={selectedEnv}
-                onClone={() => setShowCloneModal(true)}
-                onPromote={() => setShowPromoteModal(true)}
-                onDelete={() => setShowDeleteModal(true)}
-                onPause={() => setShowPauseModal(true)}
-                onResume={() => setShowResumeModal(true)}
-              />
+              {/* If environment has no containers, show inline registry setup */}
+              {selectedEnv.containers.length === 0 && !selectedEnv.deployed && !skippedRegistrySetup[selectedEnv.id] && !project.githubPAT ? (
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      Connect Your Container Registry
+                    </h2>
+                    <p className="text-gray-600">
+                      Connect to GitHub Container Registry to deploy your private images to <span className="font-semibold">{selectedEnv.name}</span>
+                    </p>
+                  </div>
+
+                  {!showImages ? (
+                    <>
+                      {/* PAT Input */}
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          GitHub Personal Access Token
+                        </label>
+                        <input
+                          type="password"
+                          value={githubPAT}
+                          onChange={(e) => setGithubPAT(e.target.value)}
+                          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Token needs <code className="bg-gray-100 px-1 rounded">read:packages</code> scope to access ghcr.io
+                        </p>
+                      </div>
+
+                      {/* Info */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div className="flex gap-3">
+                          <span className="text-xl">ℹ️</span>
+                          <div className="flex-1 text-sm text-blue-900">
+                            <p className="font-medium mb-1">Connect to GitHub Container Registry</p>
+                            <p>
+                              Link your GitHub account to quickly import container images from ghcr.io. 
+                              This is optional - you can always add containers manually.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleFetchImages}
+                          disabled={!githubPAT.trim()}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex-1"
+                        >
+                          Fetch Images
+                        </button>
+                        <button
+                          onClick={() => setSkippedRegistrySetup(prev => ({ ...prev, [selectedEnv.id]: true }))}
+                          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition"
+                        >
+                          Skip for Now
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Select Images to Deploy
+                          </h3>
+                          <span className="text-sm text-gray-600">
+                            {selectedImages.length} / 5 selected
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {MOCK_GHCR_IMAGES.map((img) => {
+                            const imageName = `${img.name}:${img.tag}`;
+                            const isSelected = selectedImages.includes(imageName);
+                            return (
+                              <button
+                                key={imageName}
+                                onClick={() => toggleImage(imageName)}
+                                className={`w-full p-4 border-2 rounded-lg text-left transition ${
+                                  isSelected
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${
+                                    isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                                  }`}>
+                                    {isSelected && (
+                                      <svg className="w-full h-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-gray-900 mb-1">
+                                      ghcr.io/{img.name}:<span className="text-blue-600">{img.tag}</span>
+                                    </div>
+                                    <div className="text-sm text-gray-600 mb-2">{img.description}</div>
+                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                      <span>{img.size}</span>
+                                      <span>•</span>
+                                      <span>Updated {formatImageDate(img.lastUpdated)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Selection Summary */}
+                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div className="text-sm font-medium text-gray-700">
+                          {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                          {selectedImages.length > 0 && ' - containers will be auto-configured with smart defaults'}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowImages(false)}
+                          disabled={isCreatingContainers}
+                          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition disabled:opacity-50"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={handleCreateContainers}
+                          disabled={selectedImages.length === 0 || isCreatingContainers}
+                          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-2"
+                        >
+                          {isCreatingContainers ? (
+                            <>
+                              <span className="animate-spin">⚙️</span>
+                              <span>Creating Containers...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Continue with {selectedImages.length} Container{selectedImages.length !== 1 ? 's' : ''}</span>
+                              <span>→</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <EnvironmentInfo
+                    environment={selectedEnv}
+                    onClone={() => setShowCloneModal(true)}
+                    onPromote={() => setShowPromoteModal(true)}
+                    onDelete={() => setShowDeleteModal(true)}
+                    onPause={() => setShowPauseModal(true)}
+                    onResume={() => setShowResumeModal(true)}
+                    onAddContainer={() => {
+                      setSelected({ kind: 'add-container', envId: selectedEnv.id });
+                      setShowAddContainerModal(true);
+                    }}
+                  />
+                </>
+              )}
               
               {/* Modals */}
               {showCloneModal && (
@@ -763,7 +1467,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
               {showPromoteModal && (
                 <PromoteModal
                   sourceEnvironment={selectedEnv}
-                  availableTargets={project.environments?.filter((e: any) => e.type === 'standard' && e.id !== selectedEnv.id && e.status === 'active') || []}
+                  availableTargets={project.environments?.filter((e: any) => (e.type === 'standard' || e.type === 'non-prod' || e.type === 'prod') && e.id !== selectedEnv.id && e.status === 'active') || []}
                   onClose={() => setShowPromoteModal(false)}
                   onConfirm={(targetId) => {
                     promoteEnvironment(selectedEnv.id, targetId);
@@ -811,14 +1515,90 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
                   }}
                 />
               )}
+
+
             </>
           ) : null;
         })()}
 
+        {/* Add Container/Cache Modals */}
+        {showAddContainerModal && selected.envId && (
+          <AddContainerModal
+            onClose={() => setShowAddContainerModal(false)}
+            availableImages={state.project?.githubPAT ? MOCK_GHCR_IMAGES : []}
+            onAdd={({ name, imageUrl, exposure }) => {
+              const activeEnv = getActiveEnvironment();
+              if (!activeEnv) return;
+              
+              // Generate the container ID upfront (same logic as in createAppsFromImages)
+              const newContainerId = `container-${Date.now()}-0`;
+              
+              // Create container with the correct signature
+              createAppsFromImages(
+                activeEnv.id,
+                [{
+                  name: imageUrl.split('/').pop()?.split(':')[0] || name,
+                  url: imageUrl,
+                  autoName: name,
+                  tag: imageUrl.split(':').pop() || 'latest',
+                  description: `${name} container`,
+                  exposure: exposure as 'public' | 'private'
+                }]
+              );
+              
+              setShowAddContainerModal(false);
+              
+              // Navigate to the newly created container using the generated ID via URL
+              // Use a longer delay to ensure state has updated
+              setTimeout(() => {
+                router.push(`/dashboard?selection=container&id=${newContainerId}&env=${activeEnv.id}`);
+              }, 150);
+            }}
+          />
+        )}
+        
+        {/* Delete Container Modal */}
+        {showDeleteContainerModal && containerToDelete && (
+          <DeleteContainerModal
+            containerName={containerToDelete.name}
+            onClose={() => {
+              setShowDeleteContainerModal(false);
+              setContainerToDelete(null);
+            }}
+            onConfirm={() => {
+              removeContainer(containerToDelete.id, containerToDelete.envId);
+              setShowDeleteContainerModal(false);
+              setContainerToDelete(null);
+              // Navigate back to environment overview
+              router.push(`/dashboard?selection=environment&env=${containerToDelete.envId}`);
+            }}
+          />
+        )}
+
+        {/* Create Environment Modal */}
+        {showCreateEnvironmentModal && (
+          <CreateEnvironmentModal
+            onClose={() => setShowCreateEnvironmentModal(false)}
+            onConfirm={(name, type) => {
+              const newEnv = createEnvironment({
+                name,
+                type,
+                status: 'provisioning',
+                deployed: false,
+                pendingChanges: false
+              });
+              setShowCreateEnvironmentModal(false);
+              // Navigate to the new environment
+              router.push(`/dashboard?selection=environment&env=${newEnv.id}`);
+            }}
+          />
+        )}
+        
         {/* Container Editor */}
         {selected.kind === 'container' && selectedResource && draftContainer && (
           <ContainerEditor
             container={selectedResource.data}
+            environment={selectedResource.env}
             draftContainer={draftContainer}
             setDraftContainer={setDraftContainer}
             hasChanges={hasContainerChanges()}
@@ -827,13 +1607,17 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             onApply={() => setShowConfirmation(true)}
             isApplying={isApplying}
             state={state}
-            onRemove={removeContainer}
+            onRequestRemove={(id: string, name: string, envId: string) => {
+              setContainerToDelete({ id, name, envId });
+              setShowDeleteContainerModal(true);
+            }}
           />
         )}
 
         {selected.kind === 'database' && selectedResource && draftDatabase && (
           <DatabaseEditor
             database={selectedResource.data}
+            environment={selectedResource.env}
             draftDatabase={draftDatabase}
             setDraftDatabase={setDraftDatabase}
             hasChanges={hasDatabaseChanges()}
@@ -843,21 +1627,6 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             isApplying={isApplying}
             state={state}
             onRemove={removeDatabase}
-          />
-        )}
-
-        {selected.kind === 'cache' && selectedResource && draftCache && (
-          <CacheEditor
-            cache={selectedResource.data}
-            draftCache={draftCache}
-            setDraftCache={setDraftCache}
-            hasChanges={hasCacheChanges()}
-            showChanges={showChanges}
-            setShowChanges={setShowChanges}
-            onApply={() => setShowConfirmation(true)}
-            isApplying={isApplying}
-            state={state}
-            onRemove={removeCache}
           />
         )}
 
@@ -889,7 +1658,6 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
           onConfirm={() => {
             if (selected.kind === 'container') applyContainerChanges();
             else if (selected.kind === 'database') applyDatabaseChanges();
-            else if (selected.kind === 'cache') applyCacheChanges();
           }}
         />
       )}
@@ -901,21 +1669,12 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
 // Container Editor Component
 // ======================
 
-function ContainerEditor({ container, draftContainer, setDraftContainer, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+function ContainerEditor({ container, environment, draftContainer, setDraftContainer, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRequestRemove }: any) {
   const handleRemove = () => {
-    const containers = state.containers || [];
-    
-    // Check if this is the last container
-    if (containers.length <= 1) {
-      alert('Cannot remove the last container. Your project must have at least one container.');
-      return;
-    }
-    
-    const confirmed = window.confirm(`Remove container "${container.name || 'container'}"? This action cannot be undone in demo mode.`);
-    if (confirmed) {
-      onRemove(container.id);
-    }
+    onRequestRemove(container.id, container.name || 'container', environment.id);
   };
+
+  const isDeployed = environment?.deployed || false;
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
@@ -926,22 +1685,26 @@ function ContainerEditor({ container, draftContainer, setDraftContainer, hasChan
           <p className="text-xs text-slate-500">Image: {container.imageUrl}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowChanges(true)}
-            disabled={!hasChanges || isApplying}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-            } disabled:opacity-50`}
-          >
-            Show Changes
-          </button>
-          <button
-            onClick={onApply}
-            disabled={!hasChanges || isApplying}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isApplying ? 'Applying…' : 'Apply'}
-          </button>
+          {isDeployed && (
+            <>
+              <button
+                onClick={() => setShowChanges(true)}
+                disabled={!hasChanges || isApplying}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                  hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                } disabled:opacity-50`}
+              >
+                Show Changes
+              </button>
+              <button
+                onClick={onApply}
+                disabled={!hasChanges || isApplying}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+              >
+                {isApplying ? 'Applying…' : 'Apply'}
+              </button>
+            </>
+          )}
           <button
             onClick={handleRemove}
             disabled={isApplying}
@@ -989,10 +1752,25 @@ function ContainerEditor({ container, draftContainer, setDraftContainer, hasChan
         );
       })()}
 
+      {/* Section: Image URL */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Container Image</h4>
+        <div>
+          <label className="block text-xs text-slate-600 mb-1">Image URL</label>
+          <input
+            type="text"
+            value={draftContainer.imageUrl}
+            onChange={(e) => setDraftContainer({ ...draftContainer, imageUrl: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+            placeholder="ghcr.io/username/image:tag"
+          />
+        </div>
+      </div>
+
       {/* Section: Resources */}
       <div>
         <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs text-slate-600 mb-1">CPU</label>
             <select
@@ -1033,13 +1811,40 @@ function ContainerEditor({ container, draftContainer, setDraftContainer, hasChan
               type="number"
               min={1}
               value={draftContainer.resources.replicas.min}
-              onChange={(e) => setDraftContainer({
-                ...draftContainer,
-                resources: {
-                  ...draftContainer.resources,
-                  replicas: { ...draftContainer.resources.replicas, min: Math.max(1, parseInt(e.target.value) || 1) }
-                }
-              })}
+              onChange={(e) => {
+                const newMin = Math.max(1, parseInt(e.target.value) || 1);
+                const currentMax = draftContainer.resources.replicas.max;
+                setDraftContainer({
+                  ...draftContainer,
+                  resources: {
+                    ...draftContainer.resources,
+                    replicas: { 
+                      ...draftContainer.resources.replicas, 
+                      min: newMin,
+                      max: Math.max(newMin, currentMax)
+                    }
+                  }
+                });
+              }}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Replicas (max)</label>
+            <input
+              type="number"
+              min={draftContainer.resources.replicas.min}
+              value={draftContainer.resources.replicas.max}
+              onChange={(e) => {
+                const newMax = Math.max(draftContainer.resources.replicas.min, parseInt(e.target.value) || 1);
+                setDraftContainer({
+                  ...draftContainer,
+                  resources: {
+                    ...draftContainer.resources,
+                    replicas: { ...draftContainer.resources.replicas, max: newMax }
+                  }
+                });
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
@@ -1357,7 +2162,7 @@ function ChangesPreview({ current, draft, onClose }: any) {
 }
 
 // Simplified Database Editor
-function DatabaseEditor({ database, draftDatabase, setDraftDatabase, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+function DatabaseEditor({ database, environment, draftDatabase, setDraftDatabase, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
   const handleRemove = () => {
     // Check if any container is still using the database
     const containers = state.containers || [];
@@ -1381,31 +2186,41 @@ function DatabaseEditor({ database, draftDatabase, setDraftDatabase, hasChanges,
           <h3 className="text-xl font-bold text-slate-900">PostgreSQL Database</h3>
           <p className="text-xs text-slate-500">Managed {draftDatabase.engine} instance</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowChanges(true)}
-            disabled={!hasChanges || isApplying}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-            } disabled:opacity-50`}
-          >
-            Show Changes
-          </button>
-          <button
-            onClick={onApply}
-            disabled={!hasChanges || isApplying}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isApplying ? 'Applying…' : 'Apply'}
-          </button>
+        {environment?.deployed && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowChanges(true)}
+              disabled={!hasChanges || isApplying}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+              } disabled:opacity-50`}
+            >
+              Show Changes
+            </button>
+            <button
+              onClick={onApply}
+              disabled={!hasChanges || isApplying}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+            >
+              {isApplying ? 'Applying…' : 'Apply'}
+            </button>
+            <button
+              onClick={handleRemove}
+              disabled={isApplying}
+              className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+        {!environment?.deployed && (
           <button
             onClick={handleRemove}
-            disabled={isApplying}
-            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50"
           >
             Remove
           </button>
-        </div>
+        )}
       </div>
 
       {/* Resources */}
@@ -1546,7 +2361,7 @@ function DatabaseEditor({ database, draftDatabase, setDraftDatabase, hasChanges,
 }
 
 // Simplified Cache Editor
-function CacheEditor({ cache, draftCache, setDraftCache, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
+function CacheEditor({ cache, environment, draftCache, setDraftCache, hasChanges, showChanges, setShowChanges, onApply, isApplying, state, onRemove }: any) {
   const handleRemove = () => {
     // Check if any container is still using the cache
     const containers = state.containers || [];
@@ -1570,31 +2385,41 @@ function CacheEditor({ cache, draftCache, setDraftCache, hasChanges, showChanges
           <h3 className="text-xl font-bold text-slate-900">Redis Cache</h3>
           <p className="text-xs text-slate-500">Managed {draftCache.engine} instance</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowChanges(true)}
-            disabled={!hasChanges || isApplying}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-            } disabled:opacity-50`}
-          >
-            Show Changes
-          </button>
-          <button
-            onClick={onApply}
-            disabled={!hasChanges || isApplying}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isApplying ? 'Applying…' : 'Apply'}
-          </button>
+        {environment?.deployed && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowChanges(true)}
+              disabled={!hasChanges || isApplying}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+                hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+              } disabled:opacity-50`}
+            >
+              Show Changes
+            </button>
+            <button
+              onClick={onApply}
+              disabled={!hasChanges || isApplying}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+            >
+              {isApplying ? 'Applying…' : 'Apply'}
+            </button>
+            <button
+              onClick={handleRemove}
+              disabled={isApplying}
+              className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+        {!environment?.deployed && (
           <button
             onClick={handleRemove}
-            disabled={isApplying}
-            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50"
           >
             Remove
           </button>
-        </div>
+        )}
       </div>
 
       {/* Resources */}

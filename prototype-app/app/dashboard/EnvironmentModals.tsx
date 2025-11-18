@@ -67,18 +67,7 @@ export function CloneModal({ sourceEnvironment, onClose, onConfirm }: CloneModal
                 <span className="text-green-600">✓</span>
                 <span>{sourceEnvironment.containers.length} container{sourceEnvironment.containers.length !== 1 ? 's' : ''} (configuration only)</span>
               </div>
-              {sourceEnvironment.database && (
-                <div className="flex items-center gap-2 text-sm text-slate-700">
-                  <span className="text-green-600">✓</span>
-                  <span>Database ({sourceEnvironment.database.storage})</span>
-                </div>
-              )}
-              {sourceEnvironment.cache && (
-                <div className="flex items-center gap-2 text-sm text-slate-700">
-                  <span className="text-green-600">✓</span>
-                  <span>Cache ({sourceEnvironment.cache.memory})</span>
-                </div>
-              )}
+
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <span className="text-green-600">✓</span>
                 <span>Environment variables</span>
@@ -209,23 +198,6 @@ export function PromoteModal({ sourceEnvironment, availableTargets, onClose, onC
                   </div>
                 </div>
 
-                {sourceEnvironment.database && (
-                  <div>
-                    <div className="text-sm font-medium text-slate-900 mb-2">Database:</div>
-                    <div className="text-sm text-slate-700 pl-4">
-                      • Configuration will be updated ({sourceEnvironment.database.storage} storage)
-                    </div>
-                  </div>
-                )}
-
-                {sourceEnvironment.cache && (
-                  <div>
-                    <div className="text-sm font-medium text-slate-900 mb-2">Cache:</div>
-                    <div className="text-sm text-slate-700 pl-4">
-                      • Configuration will be updated ({sourceEnvironment.cache.memory})
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -325,18 +297,7 @@ export function DeleteModal({ environment, onClose, onConfirm }: DeleteModalProp
                 <span>•</span>
                 <span>{environment.containers.length} container{environment.containers.length !== 1 ? 's' : ''}</span>
               </div>
-              {environment.database && (
-                <div className="flex items-center gap-2 text-sm text-red-900">
-                  <span>•</span>
-                  <span>Database ({environment.database.storage})</span>
-                </div>
-              )}
-              {environment.cache && (
-                <div className="flex items-center gap-2 text-sm text-red-900">
-                  <span>•</span>
-                  <span>Cache ({environment.cache.memory})</span>
-                </div>
-              )}
+
               <div className="flex items-center gap-2 text-sm text-red-900">
                 <span>•</span>
                 <span>All environment variables</span>
@@ -471,22 +432,7 @@ export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps)
                   <strong>Containers:</strong> Scale all replicas to 0 (no running instances)
                 </div>
               </div>
-              {environment.database && (
-                <div className="flex items-start gap-2 text-sm text-blue-900">
-                  <span className="text-lg">💾</span>
-                  <div>
-                    <strong>Database:</strong> Stop compute instances (data preserved in storage)
-                  </div>
-                </div>
-              )}
-              {environment.cache && (
-                <div className="flex items-start gap-2 text-sm text-blue-900">
-                  <span className="text-lg">⚡</span>
-                  <div>
-                    <strong>Cache:</strong> Stop cache service (data will be lost)
-                  </div>
-                </div>
-              )}
+
               <div className="flex items-start gap-2 text-sm text-blue-900">
                 <span className="text-lg">🌐</span>
                 <div>
@@ -519,8 +465,7 @@ export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps)
                 <div className="font-medium text-yellow-900 mb-1">Good to know:</div>
                 <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
                   <li>Configuration is preserved - you can resume anytime</li>
-                  <li>Database data is safe in persistent storage</li>
-                  <li>Cache data will be cleared when paused</li>
+                  <li>Container data in volumes is safe in persistent storage</li>
                   <li>Environment URLs will be unavailable until resumed</li>
                   <li>Resume takes ~30 seconds to restore services</li>
                 </ul>
@@ -605,22 +550,7 @@ export function ResumeModal({ environment, onClose, onConfirm }: ResumeModalProp
                   <strong>Containers:</strong> Scale replicas back to configured values
                 </div>
               </div>
-              {environment.database && (
-                <div className="flex items-start gap-2 text-sm text-green-900">
-                  <span className="text-lg">💾</span>
-                  <div>
-                    <strong>Database:</strong> Start compute instances (data restored from storage)
-                  </div>
-                </div>
-              )}
-              {environment.cache && (
-                <div className="flex items-start gap-2 text-sm text-green-900">
-                  <span className="text-lg">⚡</span>
-                  <div>
-                    <strong>Cache:</strong> Start cache service (empty, will warm up gradually)
-                  </div>
-                </div>
-              )}
+
               <div className="flex items-start gap-2 text-sm text-green-900">
                 <span className="text-lg">🌐</span>
                 <div>
@@ -643,7 +573,7 @@ export function ResumeModal({ environment, onClose, onConfirm }: ResumeModalProp
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm">2</div>
                 <div className="flex-1 text-sm text-slate-700">
-                  <strong>10-20s:</strong> Starting database and cache services
+                  <strong>10-20s:</strong> Preparing container services
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -696,6 +626,124 @@ export function ResumeModal({ environment, onClose, onConfirm }: ResumeModalProp
               <>
                 <span>▶️</span>
                 <span>Resume Environment</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Create Environment Modal
+interface CreateEnvironmentModalProps {
+  onClose: () => void;
+  onConfirm: (name: string, type: 'prod' | 'non-prod') => void;
+}
+
+export function CreateEnvironmentModal({ onClose, onConfirm }: CreateEnvironmentModalProps) {
+  const [name, setName] = useState('');
+  const [type, setType] = useState<'prod' | 'non-prod'>('non-prod');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const nameValid = name.length >= 3 && name.length <= 63 && /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])$/.test(name);
+
+  const handleCreate = () => {
+    if (!nameValid) return;
+    setIsCreating(true);
+    setTimeout(() => {
+      onConfirm(name, type);
+      setIsCreating(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-900">Create Environment</h2>
+          <p className="text-slate-600 mt-1">Add a new environment to your project</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Environment Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value.toLowerCase())}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="staging"
+              autoFocus
+            />
+            {name && !nameValid && (
+              <p className="text-sm text-red-600 mt-1">
+                3-63 characters, lowercase alphanumeric + hyphens, start/end with alphanumeric
+              </p>
+            )}
+            <div className="text-xs text-slate-500 mt-1">
+              Lowercase letters, numbers, and hyphens only.
+            </div>
+          </div>
+
+          {/* Type */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              Environment Type *
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setType('non-prod')}
+                className={`p-4 border-2 rounded-lg transition text-left ${
+                  type === 'non-prod'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="font-semibold text-slate-900 mb-1">Non-Production</div>
+                <div className="text-sm text-slate-600">Development, testing, staging</div>
+              </button>
+              <button
+                onClick={() => setType('prod')}
+                className={`p-4 border-2 rounded-lg transition text-left ${
+                  type === 'prod'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="font-semibold text-slate-900 mb-1">Production</div>
+                <div className="text-sm text-slate-600">Live, customer-facing</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={isCreating}
+            className="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={isCreating || !nameValid}
+            className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold disabled:opacity-50 flex items-center gap-2"
+          >
+            {isCreating ? (
+              <>
+                <span className="animate-spin">⚙️</span>
+                <span>Creating...</span>
+              </>
+            ) : (
+              <>
+                <span>✨</span>
+                <span>Create Environment</span>
               </>
             )}
           </button>
