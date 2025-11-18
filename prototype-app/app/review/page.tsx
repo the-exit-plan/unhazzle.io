@@ -1,37 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
 import { CostBreakdown } from '@/lib/context/DeploymentContext';
 
-export default function ReviewAndDeploy() {
+function ReviewAndDeployContent() {
   const router = useRouter();
-  const { state, updateCost, updateContainer, updateResources, removeContainer, removeDatabase, removeCache } = useDeployment();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode') || 'deploy'; // 'deploy' or 'changes'
+  const { state, updateCost, updateContainer, updateResources, removeContainer, getActiveEnvironment, deployEnvironment, applyEnvironmentChanges, updateEnvironmentConfig } = useDeployment();
   
   const [cost, setCost] = useState<CostBreakdown | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+
+  // Get active environment
+  const activeEnv = getActiveEnvironment();
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Calculate costs for all containers
+  // Check if we have an active environment with containers
   useEffect(() => {
-    if (!state.resources || !state.questionnaire) {
-      router.push('/');
+    if (!activeEnv) {
+      console.log('No active environment, redirecting to dashboard');
+      router.push('/dashboard');
+      return;
+    }
+    
+    if (activeEnv.containers.length === 0) {
+      console.log('No containers in environment, redirecting to dashboard');
+      router.push('/dashboard');
       return;
     }
 
+    console.log('UseEffect triggered - activeEnv:', activeEnv.name, 'containers:', activeEnv.containers.length);
+
     // Small delay to ensure state has propagated from context
     const timer = setTimeout(() => {
-      recalculateCost();
+      console.log('About to call recalculateCost');
+      try {
+        recalculateCost();
+      } catch (error) {
+        console.error('Error in recalculateCost:', error);
+      }
     }, 10);
 
     return () => clearTimeout(timer);
-  }, [state.resources, state.questionnaire, state.containers, router]);
+  }, [activeEnv]);
 
   // Helper to parse CPU values (handles numeric strings and " vCPU" suffix)
   const parseCPU = (cpu: string | number): number => {
@@ -111,16 +130,22 @@ export default function ReviewAndDeploy() {
   };
 
   const recalculateCost = () => {
-    if (!state.resources) return;
+    if (!activeEnv) {
+      console.log('No active environment for cost calculation');
+      return;
+    }
 
     console.log('=== COST CALCULATION START ===');
+    console.log('Active Environment:', activeEnv.name, activeEnv.id);
+    console.log('Containers:', activeEnv.containers);
     
-    // Calculate total cost across all containers
+    // Calculate total cost across all containers in the active environment
     let totalApplicationCost = 0;
     
-    state.containers.forEach((container, index) => {
+    activeEnv.containers.forEach((container, index) => {
       const containerCost = calculateContainerCost(container);
       console.log(`Container ${index + 1}:`, {
+        name: container.name,
         cpu: container.resources.cpu,
         memory: container.resources.memory,
         replicas: container.resources.replicas.min,
@@ -132,33 +157,33 @@ export default function ReviewAndDeploy() {
 
     console.log('Total Application Cost:', totalApplicationCost.toFixed(2));
 
-    // Database and cache costs (shared resources)
+    // Database and cache costs (from active environment)
     let databaseCost = 0;
-    if (state.resources.database) {
-      const dbCPU = parseCPU(state.resources.database.cpu);
-      const dbMemory = parseMemoryToGB(state.resources.database.memory);
-      const dbStorageGB = parseStorageToGB(state.resources.database.storage);
+    if (activeEnv.database) {
+      const dbCPU = parseCPU(activeEnv.database.cpu);
+      const dbMemory = parseMemoryToGB(activeEnv.database.memory);
+      const dbStorageGB = parseStorageToGB(activeEnv.database.storage);
       
       databaseCost = (dbCPU * 10) + (dbMemory * 4) + (dbStorageGB * 0.10);
       
       console.log('Database:', {
-        cpu: state.resources.database.cpu,
+        cpu: activeEnv.database.cpu,
         cpuParsed: dbCPU,
-        memory: state.resources.database.memory,
+        memory: activeEnv.database.memory,
         memoryGB: dbMemory.toFixed(2),
-        storage: state.resources.database.storage,
+        storage: activeEnv.database.storage,
         storageGB: dbStorageGB.toFixed(2),
         cost: databaseCost.toFixed(2)
       });
     }
 
     let cacheCost = 0;
-    if (state.resources.cache) {
-      const cacheMemoryGB = parseMemoryToGB(state.resources.cache.memory);
+    if (activeEnv.cache) {
+      const cacheMemoryGB = parseMemoryToGB(activeEnv.cache.memory);
       cacheCost = cacheMemoryGB * 5.0;
       
       console.log('Cache:', {
-        memory: state.resources.cache.memory,
+        memory: activeEnv.cache.memory,
         memoryGB: cacheMemoryGB.toFixed(2),
         cost: cacheCost.toFixed(2)
       });
@@ -168,8 +193,8 @@ export default function ReviewAndDeploy() {
 
     const calculatedCost: CostBreakdown = {
       application: totalApplicationCost,
-      database: state.resources.database ? databaseCost : undefined,
-      cache: state.resources.cache ? cacheCost : undefined,
+      database: activeEnv.database ? databaseCost : undefined,
+      cache: activeEnv.cache ? cacheCost : undefined,
       loadBalancer: loadBalancerCost,
       bandwidth: 0,
       total: totalApplicationCost + databaseCost + cacheCost + loadBalancerCost
@@ -183,7 +208,9 @@ export default function ReviewAndDeploy() {
       total: calculatedCost.total.toFixed(2)
     });
 
+    console.log('Setting cost state with:', calculatedCost);
     setCost(calculatedCost);
+    console.log('Cost state should be set now');
     updateCost(calculatedCost);
   };
 
@@ -199,34 +226,83 @@ export default function ReviewAndDeploy() {
   };
 
   const handleDeploy = () => {
+    if (!activeEnv) return;
+    
     setIsDeploying(true);
+    
+    // Mark environment as deploying and navigate
+    deployEnvironment(activeEnv.id);
+    
     setTimeout(() => {
-      router.push('/deploying');
+      router.push('/deploying?mode=deploy');
     }, 500);
   };
 
-  if (!cost || !state.resources) {
-    return null;
+  const handleApplyChanges = () => {
+    if (!activeEnv) return;
+    
+    setIsDeploying(true);
+    
+    // Apply changes to environment
+    applyEnvironmentChanges(activeEnv.id);
+    
+    setTimeout(() => {
+      router.push('/deploying?mode=changes');
+    }, 500);
+  };
+
+  // Show loading state while activeEnv or cost is being fetched/calculated
+  if (!activeEnv || !cost) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin text-6xl mb-4">⚙️</div>
+          <p className="text-slate-600">{!activeEnv ? 'Loading environment...' : 'Calculating costs...'}</p>
+        </div>
+      </div>
+    );
   }
 
-  const resources = state.resources;
-  const containerCount = state.containers.length;
+  const resources = activeEnv ? { database: activeEnv.database, cache: activeEnv.cache } : null;
+  const containerCount = activeEnv ? activeEnv.containers.length : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
-            <span>📊</span>
-            <span>Review & Edit Configuration</span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
+            mode === 'deploy' 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            <span>{mode === 'deploy' ? '🚀' : '⚡'}</span>
+            <span>{mode === 'deploy' ? 'Initial Deployment' : 'Review Changes'}</span>
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Ready to Deploy
+            {mode === 'deploy' ? 'Ready to Deploy' : 'Review & Apply Changes'}
           </h1>
           <p className="text-lg text-slate-600">
-            Review and adjust resources before deployment
+            {mode === 'deploy' 
+              ? 'Review and adjust resources before deployment' 
+              : 'Review the changes you made before applying them to your environment'}
           </p>
+          {(state.projectName || state.region) && (
+            <div className="mt-4 flex items-center justify-center gap-3">
+              {state.projectName && (
+                <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm">
+                  <span>📁</span>
+                  <span>{state.projectName}</span>
+                </span>
+              )}
+              {state.region && (
+                <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm">
+                  <span role="img" aria-label={state.region.country}>{state.region.flag}</span>
+                  <span>{state.region.label}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Cost Summary - Hero Section */}
@@ -290,7 +366,7 @@ export default function ReviewAndDeploy() {
         {/* Configuration Cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Container Cards (Dynamic - one per container) */}
-          {state.containers.map((container, index) => {
+          {activeEnv.containers.map((container, index) => {
             const totalContainerCost = calculateContainerCost(container);
 
             return (
@@ -300,24 +376,16 @@ export default function ReviewAndDeploy() {
                     <span>🚀</span>
                     <span>{container.name}</span>
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => router.push(`/resources#container-${container.id}`)}
-                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        const confirmed = window.confirm(`Remove application "${container.name}"?`);
-                        if (!confirmed) return;
-                        removeContainer(container.id);
-                      }}
-                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const confirmed = window.confirm(`Remove application "${container.name}"?`);
+                      if (!confirmed) return;
+                      removeContainer(container.id);
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
+                  >
+                    Remove
+                  </button>
                 </div>
                 
                 {/* Public Endpoint Info */}
@@ -465,183 +533,6 @@ export default function ReviewAndDeploy() {
             );
           })}
 
-          {/* Database Card */}
-          {resources.database && (() => {
-            const dbCPU = parseCPU(resources.database.cpu);
-            const dbMemory = parseMemoryToGB(resources.database.memory);
-            const dbStorageGB = parseStorageToGB(resources.database.storage);
-            const databaseCost = (dbCPU * 10) + (dbMemory * 4) + (dbStorageGB * 0.10);
-            
-            return (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <span>🐘</span>
-                    <span>Database ({resources.database.engine.toUpperCase()})</span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => router.push('/resources#database')}
-                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        const confirmed = window.confirm('Remove database from configuration?');
-                        if (!confirmed) return;
-                        removeDatabase();
-                      }}
-                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">CPU</span>
-                    <select
-                      value={resources.database.cpu}
-                      onChange={(e) => {
-                        updateResources({
-                          ...resources,
-                          database: { ...resources.database!, cpu: e.target.value }
-                        });
-                        recalculateAndUpdateCost();
-                      }}
-                      disabled={isRecalculating}
-                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="1 vCPU">1 vCPU</option>
-                      <option value="2 vCPU">2 vCPU</option>
-                      <option value="4 vCPU">4 vCPU</option>
-                      <option value="8 vCPU">8 vCPU</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Memory</span>
-                    <select
-                      value={resources.database.memory}
-                      onChange={(e) => {
-                        updateResources({
-                          ...resources,
-                          database: { ...resources.database!, memory: e.target.value }
-                        });
-                        recalculateAndUpdateCost();
-                      }}
-                      disabled={isRecalculating}
-                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="2GB">2GB</option>
-                      <option value="4GB">4GB</option>
-                      <option value="8GB">8GB</option>
-                      <option value="16GB">16GB</option>
-                      <option value="32GB">32GB</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Storage</span>
-                    <select
-                      value={resources.database.storage}
-                      onChange={(e) => {
-                        updateResources({
-                          ...resources,
-                          database: { ...resources.database!, storage: e.target.value }
-                        });
-                        recalculateAndUpdateCost();
-                      }}
-                      disabled={isRecalculating}
-                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="10GB">10GB</option>
-                      <option value="20GB">20GB</option>
-                      <option value="50GB">50GB</option>
-                      <option value="100GB">100GB</option>
-                      <option value="250GB">250GB</option>
-                      <option value="500GB">500GB</option>
-                      <option value="1TB">1TB</option>
-                    </select>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <div className="flex justify-between font-semibold">
-                      <span className="text-green-600">Database Cost:</span>
-                      <span className="text-green-900">€{databaseCost.toFixed(2)}/mo</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Cache Card */}
-          {resources.cache && (() => {
-            const cacheMemoryGB = parseMemoryToGB(resources.cache.memory);
-            const cacheCost = cacheMemoryGB * 5.0;
-            
-            return (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <span>⚡</span>
-                    <span>Cache ({resources.cache.engine})</span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => router.push('/resources#cache')}
-                      className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 px-2 py-1 rounded hover:bg-purple-50 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        const confirmed = window.confirm('Remove cache from configuration?');
-                        if (!confirmed) return;
-                        removeCache();
-                      }}
-                      className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Memory</span>
-                    <select
-                      value={resources.cache.memory}
-                      onChange={(e) => {
-                        updateResources({
-                          ...resources,
-                          cache: { ...resources.cache!, memory: e.target.value }
-                        });
-                        recalculateAndUpdateCost();
-                      }}
-                      disabled={isRecalculating}
-                      className="text-slate-900 font-semibold px-2 py-1 border border-slate-200 rounded hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="256MB">256MB</option>
-                      <option value="512MB">512MB</option>
-                      <option value="1GB">1GB</option>
-                      <option value="2GB">2GB</option>
-                      <option value="4GB">4GB</option>
-                      <option value="8GB">8GB</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Persistence</span>
-                    <span className="text-slate-900 font-semibold">{resources.cache.persistence}</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <div className="flex justify-between font-semibold">
-                      <span className="text-red-600">Cache Cost:</span>
-                      <span className="text-red-900">€{cacheCost.toFixed(2)}/mo</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
 
         {/* What's Included */}
@@ -739,15 +630,19 @@ export default function ReviewAndDeploy() {
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push('/resources')}
+            onClick={() => router.push('/dashboard')}
             className="px-6 py-3 text-slate-600 hover:text-slate-900 font-medium transition"
           >
-            ← Back to Resources
+            ← Back to Dashboard
           </button>
           <button
-            onClick={handleDeploy}
+            onClick={mode === 'deploy' ? handleDeploy : handleApplyChanges}
             disabled={isDeploying}
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold px-10 py-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg"
+            className={`inline-flex items-center gap-3 font-bold px-10 py-4 rounded-lg transition-all transform hover:scale-105 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg ${
+              mode === 'deploy'
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
+                : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white'
+            }`}
           >
             {isDeploying ? (
               <>
@@ -755,17 +650,25 @@ export default function ReviewAndDeploy() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Deploying...</span>
+                <span>{mode === 'deploy' ? 'Deploying...' : 'Applying...'}</span>
               </>
             ) : (
               <>
-                <span>🚀</span>
-                <span>Deploy Now</span>
+                <span>{mode === 'deploy' ? '🚀' : '⚡'}</span>
+                <span>{mode === 'deploy' ? 'Deploy Now' : 'Apply Changes'}</span>
               </>
             )}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ReviewAndDeploy() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ReviewAndDeployContent />
+    </Suspense>
   );
 }

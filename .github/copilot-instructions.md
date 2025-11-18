@@ -8,17 +8,17 @@ Unhazzle.io is a spec-driven, demo-mode Infrastructure-as-a-Service prototype. I
   - Pages: `/app/` (questionnaire, application, resources, review, deploying, dashboard)
   - State: `/lib/context/DeploymentContext.tsx` (global deployment config)
   - Pricing: `/lib/utils/costCalculator.ts`
-- **Specs**: `/journey/product-journey-docs/` and `/journey/feedback-docs/first-round/features-spec/`
- - **Specs**: `/journey/product-journey-docs/` and `/journey/feedback-docs/first-round/features-spec/` (e.g. `remove-resource.md` for deletion capability)
-- **Glossary**: `/journey/GLOSSARY.md` (standard terminology)
+- **Specs**: `/mvp/features` and `/journey/feedback-docs/first-round/features-spec/`
+- **Glossary**: `/mvp/GLOSSARY.md` (standard terminology)
 
 ## Development Workflow
 1. **Read the spec** before coding (see feature .md files above).
 2. **Follow existing UI/component patterns**—study similar pages/components.
 3. **Use smart defaults**: Pre-fill forms with realistic data, base on questionnaire answers.
 4. **Type safety**: Strict TypeScript, define interfaces, avoid `any`.
-5. **Manual testing**: Run `npm run dev`, click through flows, verify with different data, check responsive design.
-6. **Build validation**: Run `npm run build` to catch TypeScript errors.
+5. **Build validation**: Run `npm run build` to catch TypeScript errors.
+6. **Manual testing**: Run `npm run dev`, click through flows, verify with different data, check responsive design.
+7. **Update /mvp/flow.md** with new user flows or changes.
 
 ## Demo Mode Principles
 - All data is mock/simulated; outcomes are predetermined.
@@ -53,8 +53,8 @@ Unhazzle.io is a spec-driven, demo-mode Infrastructure-as-a-Service prototype. I
 - Don't break existing flows—test the full journey.
 
 ## Resources
-- Specs: `/journey/product-journey-docs/`, `/journey/feedback-docs/first-round/features-spec/`
-- Glossary: `/journey/GLOSSARY.md`
+- Specs: `/mvp/`
+- Glossary: `/mvp/GLOSSARY.md`
 - State: `/prototype-app/lib/context/DeploymentContext.tsx`
 - Cost: `/prototype-app/lib/utils/costCalculator.ts`
 

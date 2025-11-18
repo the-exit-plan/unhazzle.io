@@ -1,14 +1,58 @@
 'use client';
 
-import { useState } from 'react';
-import { Project } from '@/lib/context/DeploymentContext';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Project, useDeployment } from '@/lib/context/DeploymentContext';
+
+const MOCK_GHCR_IMAGES = [
+  {
+    name: 'acme/ecommerce-shop',
+    tag: 'v2.1.0',
+    size: '324 MB',
+    lastUpdated: '2024-10-28T14:30:00Z',
+    description: 'Main e-commerce application with Next.js frontend'
+  },
+  {
+    name: 'acme/api-gateway',
+    tag: 'v1.5.2',
+    size: '156 MB',
+    lastUpdated: '2024-10-25T09:15:00Z',
+    description: 'GraphQL API gateway service'
+  },
+  {
+    name: 'acme/payment-processor',
+    tag: 'v3.0.1',
+    size: '89 MB',
+    lastUpdated: '2024-10-30T16:45:00Z',
+    description: 'Payment processing microservice'
+  },
+  {
+    name: 'acme/notification-service',
+    tag: 'v2.3.0',
+    size: '112 MB',
+    lastUpdated: '2024-10-29T11:20:00Z',
+    description: 'Email and SMS notification handler'
+  },
+  {
+    name: 'acme/background-worker',
+    tag: 'v1.8.4',
+    size: '78 MB',
+    lastUpdated: '2024-10-27T13:10:00Z',
+    description: 'Background job processing worker'
+  }
+];
 
 interface ProjectSettingsProps {
   project: Project;
   onSave: (updates: Partial<Project>) => void;
+  initialTab?: 'general' | 'repository' | 'registry' | 'pr-environments' | 'environments';
+  onCreateEnvironment: () => void;
 }
 
-export default function ProjectSettings({ project, onSave }: ProjectSettingsProps) {
+export default function ProjectSettings({ project, onSave, initialTab = 'general', onCreateEnvironment }: ProjectSettingsProps) {
+  const router = useRouter();
+  const { createAppsFromImages, getActiveEnvironment, setActiveEnvironment } = useDeployment();
+  
   // General settings
   const [name, setName] = useState(project.name);
   const [slug, setSlug] = useState(project.slug);
@@ -20,6 +64,12 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
   const [configPath, setConfigPath] = useState(project.repository?.configPath || 'unhazzle.yaml');
   const [autoDeployEnabled, setAutoDeployEnabled] = useState(project.repository?.autoDeployEnabled ?? true);
   
+  // Container Registry
+  const [githubPAT, setGithubPAT] = useState(project.githubPAT || '');
+  const [showImages, setShowImages] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  
   // PR environments
   const [prEnvsEnabled, setPrEnvsEnabled] = useState(project.prEnvironmentSettings?.enabled ?? false);
   const [prAutoCreate, setPrAutoCreate] = useState(project.prEnvironmentSettings?.autoCreateOnPR ?? true);
@@ -27,14 +77,20 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
   const [prExpirationHours, setPrExpirationHours] = useState(project.prEnvironmentSettings?.expirationHours ?? 72);
   const [prNameTemplate, setPrNameTemplate] = useState(project.prEnvironmentSettings?.nameTemplate || 'pr-{number}');
   
-  const [activeSection, setActiveSection] = useState<'general' | 'repository' | 'pr-environments'>('general');
+  const [activeSection, setActiveSection] = useState<'general' | 'repository' | 'registry' | 'pr-environments' | 'environments'>(initialTab);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Sync activeSection with initialTab when it changes
+  useEffect(() => {
+    setActiveSection(initialTab);
+  }, [initialTab]);
 
   const handleSave = () => {
     onSave({
       name,
       slug,
       description,
+      githubPAT,
       repository: {
         url: repoUrl,
         branch,
@@ -50,6 +106,70 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
       },
     });
     setHasChanges(false);
+  };
+
+  const handleFetchImages = () => {
+    if (!githubPAT.trim()) {
+      alert('Please enter a GitHub Personal Access Token');
+      return;
+    }
+    onSave({ githubPAT });
+    setShowImages(true);
+  };
+
+  const toggleImage = (imageName: string) => {
+    if (selectedImages.includes(imageName)) {
+      setSelectedImages(selectedImages.filter(img => img !== imageName));
+    } else {
+      if (selectedImages.length >= 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      setSelectedImages([...selectedImages, imageName]);
+    }
+  };
+
+  const handleContinueWithContainers = () => {
+    const activeEnv = getActiveEnvironment();
+    if (!activeEnv) return;
+    
+    setIsCreating(true);
+    
+    const imagesToCreate = selectedImages.map(imgName => {
+      const img = MOCK_GHCR_IMAGES.find(i => `${i.name}:${i.tag}` === imgName);
+      if (!img) return null;
+      
+      const autoName = img.name.split('/').pop()?.split(':')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') || 'app';
+      
+      return {
+        name: `${img.name}:${img.tag}`,
+        url: `ghcr.io/${img.name}:${img.tag}`,
+        autoName,
+        tag: img.tag,
+        description: img.description
+      };
+    }).filter(Boolean) as Array<{name: string; url: string; autoName: string; tag?: string; description?: string}>;
+    
+    if (imagesToCreate.length > 0) {
+      createAppsFromImages(activeEnv.id, imagesToCreate);
+    }
+    
+    setTimeout(() => {
+      setIsCreating(false);
+      setActiveEnvironment(activeEnv.id);
+      router.push(`/dashboard?selection=environment&env=${activeEnv.id}`);
+    }, 1000);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
   };
 
   const handleReset = () => {
@@ -92,6 +212,16 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
             General
           </button>
           <button
+            onClick={() => setActiveSection('environments')}
+            className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeSection === 'environments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Environments
+          </button>
+          <button
             onClick={() => setActiveSection('repository')}
             className={`py-3 text-sm font-medium border-b-2 transition-colors ${
               activeSection === 'repository'
@@ -100,6 +230,16 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
             }`}
           >
             Repository Integration
+          </button>
+          <button
+            onClick={() => setActiveSection('registry')}
+            className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeSection === 'registry'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Container Registry
           </button>
           <button
             onClick={() => setActiveSection('pr-environments')}
@@ -117,6 +257,93 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6 max-w-2xl">
+          {activeSection === 'environments' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Environments</h3>
+                <button
+                  onClick={onCreateEnvironment}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <span className="text-base">🌍</span>
+                  <span>Create Environment</span>
+                </button>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {project.environments.map((env) => {
+                      // Calculate estimated cost (simplified logic from EnvironmentInfo)
+                      let cost = 0;
+                      if (env.containers.length > 0) {
+                        env.containers.forEach(c => {
+                          const cpu = parseFloat(c.resources.cpu);
+                          const mem = parseFloat(c.resources.memory);
+                          const replicas = (c.resources.replicas.min + c.resources.replicas.max) / 2;
+                          let base = 4.99;
+                          if (cpu > 1 || mem > 2) base = 5.49;
+                          if (cpu > 2 || mem > 4) base = 9.49;
+                          if (cpu > 4 || mem > 8) base = 17.49;
+                          cost += Math.ceil(replicas / 2) * base;
+                          if (c.volume) cost += c.volume.sizeGB * 0.044;
+                        });
+                        cost += 22; // LB + Bandwidth
+                        cost *= 1.3; // Margin
+                      }
+
+                      return (
+                        <tr 
+                          key={env.id} 
+                          onClick={() => {
+                            setActiveEnvironment(env.id);
+                            router.push(`/dashboard?selection=environment&env=${env.id}`);
+                          }}
+                          className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{env.name}</div>
+                            <div className="text-xs text-gray-500">{env.baseDomain}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              env.type === 'prod' ? 'bg-purple-100 text-purple-800' : 
+                              env.type === 'non-prod' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {env.type === 'prod' ? 'Production' : env.type === 'non-prod' ? 'Non-Prod' : 'Standard'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              env.status === 'active' ? 'bg-green-100 text-green-800' :
+                              env.status === 'provisioning' ? 'bg-yellow-100 text-yellow-800' :
+                              env.status === 'paused' ? 'bg-amber-100 text-amber-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {env.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            €{cost.toFixed(2)}/mo
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {activeSection === 'general' && (
             <div className="space-y-6">
               <div>
@@ -287,130 +514,158 @@ export default function ProjectSettings({ project, onSave }: ProjectSettingsProp
             </div>
           )}
 
-          {activeSection === 'pr-environments' && (
+          {activeSection === 'registry' && (
             <div className="space-y-6">
-              <div className="flex items-start space-x-3">
-                <input
-                  type="checkbox"
-                  id="pr-enabled"
-                  checked={prEnvsEnabled}
-                  onChange={(e) => {
-                    setPrEnvsEnabled(e.target.checked);
-                    setHasChanges(true);
-                  }}
-                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <label htmlFor="pr-enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Enable PR Environments
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Automatically create ephemeral environments for pull requests
-                  </p>
-                </div>
-              </div>
-
-              {prEnvsEnabled && (
+              {!showImages ? (
                 <>
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      id="pr-auto-create"
-                      checked={prAutoCreate}
-                      onChange={(e) => {
-                        setPrAutoCreate(e.target.checked);
-                        setHasChanges(true);
-                      }}
-                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <div>
-                      <label htmlFor="pr-auto-create" className="text-sm font-medium text-gray-700 cursor-pointer">
-                        Auto-create on PR Open
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Create environment automatically when a pull request is opened
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      id="pr-auto-delete"
-                      checked={prAutoDelete}
-                      onChange={(e) => {
-                        setPrAutoDelete(e.target.checked);
-                        setHasChanges(true);
-                      }}
-                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <div>
-                      <label htmlFor="pr-auto-delete" className="text-sm font-medium text-gray-700 cursor-pointer">
-                        Auto-delete on PR Merge
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Delete environment automatically when pull request is merged or closed
-                      </p>
-                    </div>
-                  </div>
-
+                  {/* PAT Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expiration Time
+                      GitHub Personal Access Token
                     </label>
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="number"
-                        value={prExpirationHours}
-                        onChange={(e) => {
-                          setPrExpirationHours(parseInt(e.target.value) || 72);
-                          setHasChanges(true);
-                        }}
-                        min="1"
-                        max="720"
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">hours</span>
-                    </div>
+                    <input
+                      type="password"
+                      value={githubPAT}
+                      onChange={(e) => {
+                        setGithubPAT(e.target.value);
+                        setHasChanges(true);
+                      }}
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                     <p className="text-xs text-gray-500 mt-1">
-                      PR environments expire after this many hours of inactivity
+                      Token needs <code className="bg-gray-100 px-1 rounded">read:packages</code> scope to access ghcr.io
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name Template
-                    </label>
-                    <input
-                      type="text"
-                      value={prNameTemplate}
-                      onChange={(e) => {
-                        setPrNameTemplate(e.target.value);
-                        setHasChanges(true);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="pr-{number}"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Use {'{number}'} for PR number, {'{branch}'} for branch name
-                    </p>
+                  {/* Info */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <span className="text-xl">ℹ️</span>
+                      <div className="flex-1 text-sm text-blue-900">
+                        <p className="font-medium mb-1">Connect to GitHub Container Registry</p>
+                        <p>
+                          Link your GitHub account to quickly import container images from ghcr.io. 
+                          This is optional - you can always add containers manually.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-amber-900 mb-2">Cost Estimate</h4>
-                      <p className="text-xs text-gray-600">
-                        Each PR environment costs approximately <span className="font-semibold">€0.08/2 hours</span> or{' '}
-                        <span className="font-semibold">€0.96/day</span> when active.
-                      </p>
-                      <p className="text-xs text-gray-600 mt-2">
-                        With expiration set to {prExpirationHours}h, maximum cost per PR is{' '}
-                        <span className="font-semibold">€{((prExpirationHours / 2) * 0.08).toFixed(2)}</span>
-                      </p>
+                  {/* Actions */}
+                  <div>
+                    <button
+                      onClick={handleFetchImages}
+                      disabled={!githubPAT.trim()}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    >
+                      Fetch Images
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Image Selection */}
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">
+                      Select Images to Deploy (max 5)
+                    </h3>
+                    <div className="space-y-3">
+                      {MOCK_GHCR_IMAGES.map(img => {
+                        const fullName = `${img.name}:${img.tag}`;
+                        const isSelected = selectedImages.includes(fullName);
+                        
+                        return (
+                          <button
+                            key={fullName}
+                            onClick={() => toggleImage(fullName)}
+                            className={`w-full p-4 border-2 rounded-lg text-left transition ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${
+                                isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-full h-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-gray-900 mb-1">
+                                  ghcr.io/{img.name}:<span className="text-blue-600">{img.tag}</span>
+                                </div>
+                                <div className="text-sm text-gray-600 mb-2">{img.description}</div>
+                                <div className="flex items-center gap-4 text-xs text-gray-500">
+                                  <span>{img.size}</span>
+                                  <span>•</span>
+                                  <span>Updated {formatDate(img.lastUpdated)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+
+                  {/* Selection Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-gray-700">
+                      {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                      {selectedImages.length > 0 && ' - containers will be auto-configured with smart defaults'}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-between">
+                    <button
+                      onClick={() => router.push('/dashboard')}
+                      className="px-6 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition font-medium text-gray-700"
+                    >
+                      Skip & Add Manually
+                    </button>
+                    <button
+                      onClick={handleContinueWithContainers}
+                      disabled={selectedImages.length === 0 || isCreating}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isCreating ? (
+                        <>
+                          <span className="animate-spin">⚙️</span>
+                          <span>Creating Containers...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Continue with {selectedImages.length} Container{selectedImages.length !== 1 ? 's' : ''}</span>
+                          <span>→</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {activeSection === 'pr-environments' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-start gap-4">
+                <span className="text-2xl">🚀</span>
+                <div>
+                  <h3 className="text-lg font-bold text-blue-900 mb-2">Coming Soon</h3>
+                  <p className="text-blue-800 mb-4">
+                    PR Environments are a high-priority feature for Unhazzle, but they won't be available in the initial MVP release.
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    We're working on a seamless integration with GitHub Actions to automatically spin up ephemeral environments for every pull request. Stay tuned!
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

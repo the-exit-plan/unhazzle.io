@@ -2,6 +2,7 @@
 
 import { Environment } from '@/lib/context/DeploymentContext';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface EnvironmentInfoProps {
   environment: Environment;
@@ -10,13 +11,27 @@ interface EnvironmentInfoProps {
   onDelete?: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  onAddContainer?: () => void;
 }
 
-export default function EnvironmentInfo({ environment, onClone, onPromote, onDelete, onPause, onResume }: EnvironmentInfoProps) {
+export default function EnvironmentInfo({ environment, onClone, onPromote, onDelete, onPause, onResume, onAddContainer }: EnvironmentInfoProps) {
   const [showActions, setShowActions] = useState(false);
+  const router = useRouter();
+
+  const handleDeploy = () => {
+    // Navigate to review page in deploy mode
+    router.push('/review?mode=deploy');
+  };
+
+  const handleApplyChanges = () => {
+    // Navigate to review page in changes mode
+    router.push('/review?mode=changes');
+  };
 
   // Calculate environment cost
   const calculateEnvCost = () => {
+    if (environment.containers.length === 0) return 0;
+
     let total = 0;
     
     // Container costs - simplified calculation
@@ -39,44 +54,7 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
         total += container.volume.sizeGB * 0.044;
       }
     });
-    
-    // Database cost
-    if (environment.database) {
-      const cpuCores = parseFloat(environment.database.cpu);
-      const memoryGB = parseFloat(environment.database.memory);
-      let storageGB = parseFloat(environment.database.storage);
-      if (environment.database.storage.includes('TB')) {
-        storageGB *= 1000;
-      }
-      
-      let computeCost = 4.99;
-      if (cpuCores > 1 || memoryGB > 2) computeCost = 5.49;
-      if (cpuCores > 2 || memoryGB > 4) computeCost = 9.49;
-      if (cpuCores > 4 || memoryGB > 8) computeCost = 17.49;
-      if (cpuCores > 8 || memoryGB > 16) computeCost = 34.49;
-      
-      const storageCost = storageGB * 0.044;
-      
-      if (environment.database.replicas.includes('HA') || environment.database.replicas.includes('Multi-region')) {
-        computeCost *= 2;
-      }
-      
-      total += computeCost + storageCost;
-    }
-    
-    // Cache cost
-    if (environment.cache) {
-      const memoryMB = parseFloat(environment.cache.memory.replace('MB', '').replace('GB', '')) * 
-                       (environment.cache.memory.includes('GB') ? 1024 : 1);
-      
-      if (memoryMB < 1024) {
-        // Shared with app, no extra cost
-      } else if (memoryMB <= 2048) {
-        total += 4.99;
-      } else {
-        total += 5.49;
-      }
-    }
+
     
     // Load balancer + bandwidth estimate
     total += 12; // Load balancer
@@ -203,37 +181,94 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
 
       {/* Content */}
       <div className="p-6 space-y-6">
+        {/* Deploy or Apply Changes Button */}
+        {!isDeleted && !isPR && !environment.deployed && environment.containers.length > 0 && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-green-900 mb-1">Ready to Deploy</h4>
+                <p className="text-sm text-green-700">
+                  Your environment is configured with {environment.containers.length} container{environment.containers.length !== 1 ? 's' : ''}. Deploy to provision infrastructure.
+                </p>
+              </div>
+              <button
+                onClick={handleDeploy}
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition font-bold shadow-lg flex items-center gap-2"
+              >
+                <span>🚀</span>
+                <span>Deploy Environment</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isDeleted && !isPR && environment.deployed && environment.pendingChanges && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-amber-900 mb-1">Pending Changes</h4>
+                <p className="text-sm text-amber-700">
+                  You have uncommitted changes to this environment. Review and apply them to update the infrastructure.
+                </p>
+              </div>
+              <button
+                onClick={handleApplyChanges}
+                className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg transition font-bold shadow-lg flex items-center gap-2"
+              >
+                <span>⚡</span>
+                <span>Apply Changes</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
-        {!isDeleted && !isPR && environment.status === 'active' && (
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={onPause}
-              className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>⏸️</span>
-              <span>Pause</span>
-            </button>
-            <button
-              onClick={onClone}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>📋</span>
-              <span>Clone</span>
-            </button>
-            <button
-              onClick={onPromote}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>🚀</span>
-              <span>Promote</span>
-            </button>
-            <button
-              onClick={onDelete}
-              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>🗑️</span>
-              <span>Delete</span>
-            </button>
+        {!isDeleted && !isPR && (
+          <div className="space-y-3">
+            {/* Add Resources Actions */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onAddContainer}
+                className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <span>📦</span>
+                <span>Add Container</span>
+              </button>
+            </div>
+            
+            {/* Environment Management Actions - Only show for active/paused environments */}
+            {environment.status === 'active' && (
+              <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onPause}
+                className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <span>⏸️</span>
+                <span>Pause</span>
+              </button>
+              <button
+                onClick={onClone}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <span>📋</span>
+                <span>Clone</span>
+              </button>
+              <button
+                onClick={onPromote}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <span>🚀</span>
+                <span>Promote</span>
+              </button>
+              <button
+                onClick={onDelete}
+                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <span>🗑️</span>
+                <span>Delete</span>
+              </button>
+            </div>
+            )}
           </div>
         )}
 
@@ -275,7 +310,7 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
             <div>
               <div className="text-sm text-slate-600 mb-1">Type</div>
               <div className="font-medium text-slate-900">
-                {environment.type === 'standard' ? 'Standard' : 'Pull Request'}
+                {environment.type === 'prod' ? 'Production' : environment.type === 'non-prod' ? 'Non-Production' : environment.type === 'pr' ? 'Pull Request' : 'Standard'}
               </div>
             </div>
             <div>
@@ -341,30 +376,7 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
               </div>
               <span className="text-slate-600">{environment.containers.length}</span>
             </div>
-            
-            {environment.database && (
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">💾</span>
-                  <span className="font-medium text-slate-900">Database</span>
-                </div>
-                <span className="text-slate-600">
-                  {environment.database.engine === 'postgres' ? 'PostgreSQL' : environment.database.engine} • {environment.database.storage}
-                </span>
-              </div>
-            )}
-            
-            {environment.cache && (
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">⚡</span>
-                  <span className="font-medium text-slate-900">Cache</span>
-                </div>
-                <span className="text-slate-600">
-                  {environment.cache.engine === 'redis' ? 'Redis' : environment.cache.engine} • {environment.cache.memory}
-                </span>
-              </div>
-            )}
+
           </div>
         </div>
 
@@ -374,10 +386,10 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
             <span className="text-xl">💡</span>
             <div className="flex-1">
               <div className="font-medium text-blue-900 mb-1">
-                {environment.type === 'standard' ? 'Edit Resources' : 'View Only'}
+                {environment.type !== 'pr' ? 'Edit Resources' : 'View Only'}
               </div>
               <div className="text-sm text-blue-700">
-                {environment.type === 'standard' 
+                {environment.type !== 'pr'
                   ? 'Click on a resource in the sidebar to edit its configuration.'
                   : 'PR environments are read-only. To edit configuration, update the unhazzle.yaml manifest.'}
               </div>
