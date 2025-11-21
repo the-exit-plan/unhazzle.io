@@ -1,12 +1,12 @@
 'use client';
 
-interface DeleteContainerModalProps {
-  containerName: string;
+interface DeleteApplicationModalProps {
+  applicationName: string;
   onClose: () => void;
   onConfirm: () => void;
 }
 
-export default function DeleteContainerModal({ containerName, onClose, onConfirm }: DeleteContainerModalProps) {
+export default function DeleteApplicationModal({ applicationName, onClose, onConfirm }: DeleteApplicationModalProps) {
   const handleConfirm = () => {
     onConfirm();
     onClose();
@@ -20,7 +20,7 @@ export default function DeleteContainerModal({ containerName, onClose, onConfirm
           <div className="flex items-center gap-3">
             <div className="text-3xl">🗑️</div>
             <div>
-              <h2 className="text-2xl font-bold mb-1">Remove Container</h2>
+              <h2 className="text-2xl font-bold mb-1">Remove Application</h2>
               <p className="text-red-100 text-sm">This action cannot be undone</p>
             </div>
           </div>
@@ -30,7 +30,7 @@ export default function DeleteContainerModal({ containerName, onClose, onConfirm
         <div className="p-6 space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-slate-900">
-              Are you sure you want to remove the container <span className="font-semibold text-red-700">"{containerName}"</span>?
+              Are you sure you want to remove the application <span className="font-semibold text-red-700">"{applicationName}"</span>?
             </p>
           </div>
 
@@ -40,7 +40,7 @@ export default function DeleteContainerModal({ containerName, onClose, onConfirm
               <div className="flex-1">
                 <div className="font-medium text-amber-900 mb-1 text-sm">Warning</div>
                 <div className="text-xs text-amber-700 space-y-1">
-                  <div>• All container configurations will be lost</div>
+                  <div>• All application configurations will be lost</div>
                   <div>• Environment variables will be removed</div>
                   <div>• This change takes effect immediately in demo mode</div>
                 </div>
@@ -61,7 +61,7 @@ export default function DeleteContainerModal({ containerName, onClose, onConfirm
             onClick={handleConfirm}
             className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-semibold transition shadow-lg"
           >
-            Remove Container
+            Remove Application
           </button>
         </div>
       </div>

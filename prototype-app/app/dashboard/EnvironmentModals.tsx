@@ -7,18 +7,19 @@ import { useState } from 'react';
 interface CloneModalProps {
   sourceEnvironment: Environment;
   onClose: () => void;
-  onConfirm: (newName: string) => void;
+  onConfirm: (newName: string, autoDeploy: boolean) => void;
 }
 
 export function CloneModal({ sourceEnvironment, onClose, onConfirm }: CloneModalProps) {
   const [newName, setNewName] = useState(`${sourceEnvironment.name}-copy`);
+  const [autoDeploy, setAutoDeploy] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
 
   const handleClone = () => {
     if (!newName.trim()) return;
     setIsCloning(true);
     setTimeout(() => {
-      onConfirm(newName.trim());
+      onConfirm(newName.trim(), autoDeploy);
       setIsCloning(false);
     }, 1000);
   };
@@ -59,13 +60,32 @@ export function CloneModal({ sourceEnvironment, onClose, onConfirm }: CloneModal
             </div>
           </div>
 
+          {/* Auto Deploy Option */}
+          <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <input
+              type="checkbox"
+              id="autoDeploy"
+              checked={autoDeploy}
+              onChange={(e) => setAutoDeploy(e.target.checked)}
+              className="mt-1 h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+            />
+            <div>
+              <label htmlFor="autoDeploy" className="text-sm font-medium text-slate-900 block">
+                Auto-deploy after cloning
+              </label>
+              <p className="text-xs text-slate-600 mt-1">
+                If checked, the new environment will be deployed immediately. Otherwise, it will be created in a 'provisioning' state waiting for deployment.
+              </p>
+            </div>
+          </div>
+
           {/* What will be cloned */}
           <div>
             <div className="text-sm font-medium text-slate-700 mb-3">What will be cloned:</div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <span className="text-green-600">✓</span>
-                <span>{sourceEnvironment.containers.length} container{sourceEnvironment.containers.length !== 1 ? 's' : ''} (configuration only)</span>
+                <span>{sourceEnvironment.applications.length} application{sourceEnvironment.applications.length !== 1 ? 's' : ''} (configuration only)</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-slate-700">
@@ -124,276 +144,26 @@ export function CloneModal({ sourceEnvironment, onClose, onConfirm }: CloneModal
   );
 }
 
-// Promote Environment Modal
-interface PromoteModalProps {
-  sourceEnvironment: Environment;
-  availableTargets: Environment[];
-  onClose: () => void;
-  onConfirm: (targetEnvId: string) => void;
-}
 
-export function PromoteModal({ sourceEnvironment, availableTargets, onClose, onConfirm }: PromoteModalProps) {
-  const [selectedTarget, setSelectedTarget] = useState<string>('');
-  const [isPromoting, setIsPromoting] = useState(false);
 
-  const handlePromote = () => {
-    if (!selectedTarget) return;
-    setIsPromoting(true);
-    setTimeout(() => {
-      onConfirm(selectedTarget);
-      setIsPromoting(false);
-    }, 1500);
-  };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200">
-          <h2 className="text-2xl font-bold text-slate-900">Promote Environment</h2>
-          <p className="text-slate-600 mt-1">Copy configuration to another environment</p>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {/* Source */}
-          <div>
-            <div className="text-sm font-medium text-slate-700 mb-2">Source Environment</div>
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200">
-              <div className="font-semibold text-slate-900">{sourceEnvironment.name}</div>
-              <div className="text-sm text-slate-600 mt-1">{sourceEnvironment.baseDomain}</div>
-            </div>
-          </div>
-
-          {/* Target Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Target Environment
-            </label>
-            <select
-              value={selectedTarget}
-              onChange={(e) => setSelectedTarget(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="">Select target environment...</option>
-              {availableTargets.map(env => (
-                <option key={env.id} value={env.id}>
-                  {env.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Changes Preview */}
-          {selectedTarget && (
-            <div>
-              <div className="text-sm font-medium text-slate-700 mb-3">Changes to be applied:</div>
-              <div className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
-                <div>
-                  <div className="text-sm font-medium text-slate-900 mb-2">Containers:</div>
-                  <div className="space-y-1">
-                    {sourceEnvironment.containers.map((container, idx) => (
-                      <div key={container.id} className="text-sm text-slate-700 pl-4">
-                        • {container.name || `Container ${idx + 1}`}: Image will be updated
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* Warning */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex gap-3">
-              <span className="text-xl">⚠️</span>
-              <div className="flex-1">
-                <div className="font-medium text-yellow-900 mb-1">Warning</div>
-                <div className="text-sm text-yellow-800">
-                  This will redeploy the target environment with the source configuration. 
-                  The target environment will experience downtime during the update.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={isPromoting}
-            className="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePromote}
-            disabled={isPromoting || !selectedTarget}
-            className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition font-semibold disabled:opacity-50 flex items-center gap-2"
-          >
-            {isPromoting ? (
-              <>
-                <span className="animate-spin">⚙️</span>
-                <span>Promoting...</span>
-              </>
-            ) : (
-              <>
-                <span>🚀</span>
-                <span>Promote to {availableTargets.find(e => e.id === selectedTarget)?.name || 'Target'}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Delete Environment Modal
-interface DeleteModalProps {
-  environment: Environment;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-export function DeleteModal({ environment, onClose, onConfirm }: DeleteModalProps) {
-  const [confirmText, setConfirmText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  const isPR = environment.type === 'pr';
-  const requiresConfirmation = !isPR; // Standard envs require typing name
-  const canDelete = isPR || confirmText === environment.name;
-
-  const handleDelete = () => {
-    if (!canDelete) return;
-    setIsDeleting(true);
-    setTimeout(() => {
-      onConfirm();
-      setIsDeleting(false);
-    }, 1000);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200 bg-red-50">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">⚠️</span>
-            <div>
-              <h2 className="text-2xl font-bold text-red-900">Delete Environment</h2>
-              <p className="text-red-700 mt-1">
-                {isPR ? 'Delete this PR environment?' : `Delete "${environment.name}" environment?`}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {/* What will be deleted */}
-          <div>
-            <div className="text-sm font-medium text-slate-700 mb-3">This will permanently delete:</div>
-            <div className="space-y-2 bg-red-50 rounded-lg p-4 border border-red-200">
-              <div className="flex items-center gap-2 text-sm text-red-900">
-                <span>•</span>
-                <span>{environment.containers.length} container{environment.containers.length !== 1 ? 's' : ''}</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-red-900">
-                <span>•</span>
-                <span>All environment variables</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-red-900">
-                <span>•</span>
-                <span>Persistent volumes (if configured)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Cost savings */}
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
-            <div className="text-sm font-medium text-slate-700 mb-1">Cost Savings</div>
-            <div className="text-2xl font-bold text-slate-900">
-              {isPR ? '€0.08/2 hours' : '€169/month'}
-            </div>
-          </div>
-
-          {/* Warning */}
-          <div className="bg-red-100 border-2 border-red-300 rounded-lg p-4">
-            <div className="flex gap-3">
-              <span className="text-xl">❌</span>
-              <div className="flex-1">
-                <div className="font-bold text-red-900 mb-1">This action cannot be undone</div>
-                <div className="text-sm text-red-800">
-                  All data in this environment will be permanently lost. Make sure you have backups if needed.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Confirmation for standard environments */}
-          {requiresConfirmation && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Type <code className="bg-slate-100 px-2 py-0.5 rounded text-red-600 font-bold">{environment.name}</code> to confirm:
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder={environment.name}
-                autoFocus
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={isDeleting}
-            className="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting || !canDelete}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50 disabled:bg-slate-400 flex items-center gap-2"
-          >
-            {isDeleting ? (
-              <>
-                <span className="animate-spin">⚙️</span>
-                <span>Deleting...</span>
-              </>
-            ) : (
-              <>
-                <span>🗑️</span>
-                <span>Delete Environment</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Pause Environment Modal
 interface PauseModalProps {
   environment: Environment;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (schedule?: string) => void;
 }
 
 export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps) {
   const [isPausing, setIsPausing] = useState(false);
+  const [schedule, setSchedule] = useState('');
+  const [useSchedule, setUseSchedule] = useState(false);
 
   const handlePause = () => {
     setIsPausing(true);
     setTimeout(() => {
-      onConfirm();
+      onConfirm(useSchedule ? schedule : undefined);
       setIsPausing(false);
     }, 1000);
   };
@@ -429,7 +199,7 @@ export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps)
               <div className="flex items-start gap-2 text-sm text-blue-900">
                 <span className="text-lg">📦</span>
                 <div>
-                  <strong>Containers:</strong> Scale all replicas to 0 (no running instances)
+                  <strong>Applications:</strong> Scale all replicas to 0 (no running instances)
                 </div>
               </div>
 
@@ -440,6 +210,37 @@ export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps)
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Schedule Option */}
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                id="useSchedule"
+                checked={useSchedule}
+                onChange={(e) => setUseSchedule(e.target.checked)}
+                className="h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+              />
+              <label htmlFor="useSchedule" className="text-sm font-medium text-slate-900">
+                Set Pause Schedule (Cron)
+              </label>
+            </div>
+            
+            {useSchedule && (
+              <div>
+                <input
+                  type="text"
+                  value={schedule}
+                  onChange={(e) => setSchedule(e.target.value)}
+                  placeholder="0 18 * * 1-5"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Example: <code>0 18 * * 1-5</code> (Every weekday at 6 PM)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Cost Savings Banner */}
@@ -465,7 +266,7 @@ export function PauseModal({ environment, onClose, onConfirm }: PauseModalProps)
                 <div className="font-medium text-yellow-900 mb-1">Good to know:</div>
                 <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
                   <li>Configuration is preserved - you can resume anytime</li>
-                  <li>Container data in volumes is safe in persistent storage</li>
+                  <li>Application data in volumes is safe in persistent storage</li>
                   <li>Environment URLs will be unavailable until resumed</li>
                   <li>Resume takes ~30 seconds to restore services</li>
                 </ul>
@@ -547,7 +348,7 @@ export function ResumeModal({ environment, onClose, onConfirm }: ResumeModalProp
               <div className="flex items-start gap-2 text-sm text-green-900">
                 <span className="text-lg">📦</span>
                 <div>
-                  <strong>Containers:</strong> Scale replicas back to configured values
+                  <strong>Applications:</strong> Scale replicas back to configured values
                 </div>
               </div>
 
@@ -573,13 +374,13 @@ export function ResumeModal({ environment, onClose, onConfirm }: ResumeModalProp
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm">2</div>
                 <div className="flex-1 text-sm text-slate-700">
-                  <strong>10-20s:</strong> Preparing container services
+                  <strong>10-20s:</strong> Preparing application services
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm">3</div>
                 <div className="flex-1 text-sm text-slate-700">
-                  <strong>20-30s:</strong> Deploying containers
+                  <strong>20-30s:</strong> Deploying applications
                 </div>
               </div>
               <div className="flex items-center gap-3">

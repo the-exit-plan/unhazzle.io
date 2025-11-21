@@ -81,9 +81,9 @@ function calculateApplicationCost(
   if (cpuCores <= 1 && memoryGB <= 2) {
     monthlyPerInstance = 4.99; // CX22: 2 vCPU, 4 GB
   } else if (cpuCores <= 2 && memoryGB <= 4) {
-    monthlyPerInstance = 5.49; // CX33: 4 vCPU, 8 GB (split between 2 containers)
+    monthlyPerInstance = 5.49; // CX33: 4 vCPU, 8 GB (split between 2 applications)
   } else if (cpuCores <= 4 && memoryGB <= 8) {
-    monthlyPerInstance = 9.49; // CX43: 8 vCPU, 16 GB (split between 2 containers)
+    monthlyPerInstance = 9.49; // CX43: 8 vCPU, 16 GB (split between 2 applications)
   } else {
     monthlyPerInstance = 17.49; // CX53: 16 vCPU, 32 GB
   }
@@ -91,8 +91,8 @@ function calculateApplicationCost(
   // Calculate based on average between min and max replicas
   const avgReplicas = (replicas.min + replicas.max) / 2;
 
-  // Total monthly cost (containers share underlying servers)
-  // For simplicity: 2 containers per server on average
+  // Total monthly cost (applications share underlying servers)
+  // For simplicity: 2 applications per server on average
   const serversNeeded = Math.ceil(avgReplicas / 2);
   
   return Math.round(serversNeeded * monthlyPerInstance);
@@ -145,7 +145,7 @@ function calculateCacheCost(memory: string): number {
   // Large cache (> 2GB): CX33 instance €5.49/month
   
   if (memoryMB < 1024) {
-    return 0; // Shared with application containers
+    return 0; // Shared with application instances
   } else if (memoryMB <= 2048) {
     return 4.99;
   } else {
@@ -169,7 +169,7 @@ function estimateBandwidth(traffic: string): number {
 }
 
 // Calculate monthly cost impact for resource changes
-export function calculateContainerCostImpact(
+export function calculateApplicationCostImpact(
   currentCpu: string,
   currentMemory: string,
   currentReplicas: { min: number; max: number },
@@ -200,25 +200,25 @@ export function calculateCacheCostImpact(
   return Math.round((newCost - currentCost) * 100) / 100;
 }
 
-// Calculate total environment cost from containers, database, and cache
+// Calculate total environment cost from applications, database, and cache
 export function calculateEnvironmentCost(environment: any): { current: number; max: number; breakdown: any } {
   let totalCurrent = 0;
   let totalMax = 0;
   const breakdown: any = {
-    containers: [],
+    applications: [],
     database: undefined,
     cache: undefined,
     loadBalancer: 12,
     bandwidth: 10,
   };
 
-  // Calculate cost for each container
-  if (environment.containers && environment.containers.length > 0) {
-    environment.containers.forEach((container: any) => {
-      const cpuCores = parseFloat(container.resources?.cpu || '0.5');
-      const memoryGB = parseFloat(container.resources?.memory || '512') / 1024;
-      const minReplicas = container.resources?.replicas?.min || 1;
-      const maxReplicas = container.resources?.replicas?.max || 1;
+  // Calculate cost for each application
+  if (environment.applications && environment.applications.length > 0) {
+    environment.applications.forEach((app: any) => {
+      const cpuCores = parseFloat(app.resources?.cpu || '0.5');
+      const memoryGB = parseFloat(app.resources?.memory || '512') / 1024;
+      const minReplicas = app.resources?.replicas?.min || 1;
+      const maxReplicas = app.resources?.replicas?.max || 1;
 
       // Calculate per-instance cost
       let monthlyPerInstance: number;
@@ -235,8 +235,8 @@ export function calculateEnvironmentCost(environment: any): { current: number; m
       const currentCost = Math.ceil(minReplicas / 2) * monthlyPerInstance;
       const maxCost = Math.ceil(maxReplicas / 2) * monthlyPerInstance;
 
-      breakdown.containers.push({
-        name: container.name,
+      breakdown.applications.push({
+        name: app.name,
         current: currentCost,
         max: maxCost,
       });

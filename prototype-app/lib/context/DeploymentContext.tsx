@@ -58,14 +58,12 @@ export interface ServiceOverride {
 }
 
 export type EnvironmentType = 'standard' | 'pr' | 'non-prod' | 'prod';
-export type EnvironmentStatus = 'provisioning' | 'active' | 'paused' | 'deleting' | 'deleted' | 'expired';
 
 export interface Environment {
   id: string;
   name: string; // 'dev', 'staging', 'prod', 'feature-fix-carts-pr-128'
   slug: string; // kebab-case, 3-63 chars
   type: EnvironmentType;
-  status: EnvironmentStatus;
   deployed: boolean; // false = configuration phase, true = provisioned
   deployedAt?: string; // ISO 8601 timestamp of first deployment
   pendingChanges: boolean; // true when deployed env has unsaved modifications
@@ -78,7 +76,7 @@ export interface Environment {
   serviceOverride?: ServiceOverride;
   
   // Configuration
-  containers: ContainerConfig[];
+  applications: ApplicationConfig[];
   database?: {
     engine: string;
     version: string;
@@ -98,7 +96,7 @@ export interface Environment {
   
   // Access
   baseDomain: string; // {env-slug}.{project-slug}.demo.unhazzle.io
-  publicContainers: string[]; // container names with exposure='public'
+  publicApplications: string[]; // application names with exposure='public'
 }
 
 export interface ConfigRepo {
@@ -161,7 +159,7 @@ export interface VolumeConfig {
   deleteWithContainer: boolean;
 }
 
-export interface ContainerConfig {
+export interface ApplicationConfig {
   id: string;
   name: string;
   imageUrl: string;
@@ -187,16 +185,24 @@ export interface ContainerConfig {
   serviceAccess: {
     database: boolean;
     cache: boolean;
+    applications?: string[]; // List of application IDs this app can talk to
   };
   environmentVariables: {
     key: string;
     value: string;
     masked?: boolean;
   }[];
+  // New fields for Application-Level Deployment Lifecycle
+  status: 'deploying' | 'running' | 'paused' | 'failed' | 'stopped';
+  isDirty: boolean; // true if config changed since last deploy
+  pauseSchedule?: string; // Cron expression (e.g., "0 18 * * 1-5")
+  deployedAt?: string;
 }
 
+export type ContainerConfig = ApplicationConfig; // Alias for backward compatibility
+
 // Legacy single container support (deprecated but maintained for backward compatibility)
-export interface ApplicationConfig {
+export interface LegacyApplicationConfig {
   imageUrl: string;
   registryUsername?: string;
   registryToken?: string;
@@ -249,8 +255,8 @@ export interface CostBreakdown {
 export interface DeploymentState {
   user: UserInfo | null;
   questionnaire: QuestionnaireAnswers | null;
-  application: ApplicationConfig | null; // Legacy support
-  containers: ContainerConfig[]; // Legacy: will be migrated to project.environments[0].containers
+  application: LegacyApplicationConfig | null; // Legacy support
+  applications: ApplicationConfig[]; // Was containers
   resources: ResourceConfig | null;
   environment: EnvironmentVariables | null;
   domain: DomainConfig | null;
@@ -271,11 +277,11 @@ interface DeploymentContextType {
   updateState: (partial: Partial<DeploymentState>) => void;
   updateUser: (user: UserInfo) => void;
   updateQuestionnaire: (answers: QuestionnaireAnswers) => void;
-  updateApplication: (config: ApplicationConfig) => void; // Legacy
-  addContainer: (container: ContainerConfig) => void;
-  clearContainers: () => void;
-  updateContainer: (id: string, container: Partial<ContainerConfig>) => void;
-  removeContainer: (id: string, envId?: string) => void;
+  updateApplication: (config: LegacyApplicationConfig) => void; // Legacy
+  addApplication: (app: ApplicationConfig) => void;
+  clearApplications: () => void;
+  updateApplicationConfig: (id: string, app: Partial<ApplicationConfig>) => void;
+  removeApplication: (id: string, envId?: string) => void;
   updateResources: (config: ResourceConfig) => void;
   updateEnvironment: (env: EnvironmentVariables) => void;
   updateDomain: (domain: DomainConfig) => void;
@@ -289,9 +295,9 @@ interface DeploymentContextType {
   createEnvironment: (envData: Partial<Environment> & { name: string }) => Environment;
   updateEnvironmentConfig: (envId: string, updates: Partial<Environment>) => void;
   deleteEnvironment: (envId: string) => void;
-  cloneEnvironment: (sourceEnvId: string, newName: string) => Environment;
+  cloneEnvironment: (sourceEnvId: string, newName: string, autoDeploy?: boolean) => Environment;
   promoteEnvironment: (sourceEnvId: string, targetEnvId: string) => void;
-  pauseEnvironment: (envId: string) => void;
+  pauseEnvironment: (envId: string, schedule?: string) => void;
   resumeEnvironment: (envId: string) => void;
   setActiveEnvironment: (envId: string) => void;
   getActiveEnvironment: () => Environment | null;
@@ -300,6 +306,10 @@ interface DeploymentContextType {
   markEnvironmentChanged: (environmentId: string) => void;
   deployEnvironment: (environmentId: string) => void;
   applyEnvironmentChanges: (environmentId: string) => void;
+  // New: Application-Level Deployment Lifecycle
+  updateApplicationStatus: (appId: string, status: ApplicationConfig['status']) => void;
+  promoteApplication: (sourceAppId: string, targetEnvId: string) => void;
+  pauseApplication: (appId: string, schedule?: string) => void;
 }
 
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
@@ -308,7 +318,7 @@ const initialState: DeploymentState = {
   user: null,
   questionnaire: null,
   application: null,
-  containers: [],
+  applications: [],
   resources: null,
   environment: null,
   domain: null,
@@ -330,17 +340,17 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Ensure containers array exists for backward compatibility
-          const containers = parsed.containers || [];
+          // Ensure applications array exists (migrate from containers if needed)
+          const applications = parsed.applications || parsed.containers || [];
           
           // If deployed but no project structure, create it from legacy data
           let project = parsed.project;
-          if (parsed.deployed && !project && containers.length > 0) {
+          if (parsed.deployed && !project && applications.length > 0) {
             const now = new Date().toISOString();
             const projectSlug = parsed.questionnaire?.appType ? `${parsed.questionnaire.appType.toLowerCase()}-app` : 'my-app';
-            const publicContainers = containers
-              .filter((c: ContainerConfig) => c.exposure === 'public')
-              .map((c: ContainerConfig) => c.name);
+            const publicApplications = applications
+              .filter((c: ApplicationConfig) => c.exposure === 'public')
+              .map((c: ApplicationConfig) => c.name);
               
             project = {
               id: 'proj-' + Date.now(),
@@ -360,11 +370,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
                   name: 'dev',
                   slug: 'dev',
                   type: 'standard' as EnvironmentType,
-                  status: 'active' as EnvironmentStatus,
                   createdAt: now,
                   baseDomain: `dev.${projectSlug}.demo.unhazzle.io`,
-                  publicContainers,
-                  containers: containers,
+                  publicApplications,
+                  applications: applications,
                   database: parsed.resources?.database,
                   cache: parsed.resources?.cache,
                 }
@@ -375,9 +384,19 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
             };
           }
           
+          // Ensure existing project environments have applications array (migrate from containers)
+          if (project && project.environments) {
+            project.environments = project.environments.map((env: any) => ({
+              ...env,
+              applications: env.applications || env.containers || [],
+              containers: undefined // Clear legacy
+            }));
+          }
+
           return {
             ...parsed,
-            containers,
+            applications,
+            containers: undefined, // Clear legacy
             project
           };
         } catch (e) {
@@ -419,7 +438,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateApplication = (config: ApplicationConfig) => {
+  const updateApplication = (config: LegacyApplicationConfig) => {
     setState(prev => {
       const newState = { ...prev, application: config };
       if (typeof window !== 'undefined') {
@@ -429,10 +448,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addContainer = (container: ContainerConfig) => {
+  const addApplication = (app: ApplicationConfig) => {
     setState(prev => {
-      const existingContainers = prev.containers || [];
-      const newState = { ...prev, containers: [...existingContainers, container] };
+      const existingApps = prev.applications || [];
+      const newState = { ...prev, applications: [...existingApps, app] };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
@@ -440,9 +459,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const clearContainers = () => {
+  const clearApplications = () => {
     setState(prev => {
-      const newState = { ...prev, containers: [] };
+      const newState = { ...prev, applications: [] };
       if (typeof window !== 'undefined') {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
@@ -450,11 +469,11 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateContainer = (id: string, updates: Partial<ContainerConfig>) => {
+  const updateApplicationConfig = (id: string, updates: Partial<ApplicationConfig>) => {
     setState(prev => {
-      // 1. Update global containers (legacy support)
-      const existingContainers = prev.containers || [];
-      const updatedGlobalContainers = existingContainers.map(c => 
+      // 1. Update global applications (legacy support)
+      const existingApps = prev.applications || [];
+      const updatedGlobalApps = existingApps.map(c => 
         c.id === id ? { ...c, ...updates } : c
       );
       
@@ -464,25 +483,25 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         updatedProject = {
           ...prev.project,
           environments: prev.project.environments.map((env: Environment) => {
-            // Check if this environment has the container
-            const hasContainer = env.containers.some(c => c.id === id);
+            // Check if this environment has the application
+            const hasApp = env.applications.some(c => c.id === id);
             
-            if (hasContainer) {
-              // Update the container within this environment
-              const updatedEnvContainers = env.containers.map(c => 
+            if (hasApp) {
+              // Update the application within this environment
+              const updatedEnvApps = env.applications.map(c => 
                 c.id === id ? { ...c, ...updates } : c
               );
               
               return {
                 ...env,
-                containers: updatedEnvContainers,
-                // Update publicContainers list if name changed
-                publicContainers: updates.name 
-                  ? env.publicContainers.map(name => {
-                      const oldContainer = env.containers.find(c => c.id === id);
-                      return oldContainer && oldContainer.name === name ? updates.name! : name;
+                applications: updatedEnvApps,
+                // Update publicApplications list if name changed
+                publicApplications: updates.name 
+                  ? env.publicApplications.map(name => {
+                      const oldApp = env.applications.find(c => c.id === id);
+                      return oldApp && oldApp.name === name ? updates.name! : name;
                     })
-                  : env.publicContainers
+                  : env.publicApplications
               };
             }
             return env;
@@ -492,7 +511,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       
       const newState = {
         ...prev,
-        containers: updatedGlobalContainers,
+        applications: updatedGlobalApps,
         project: updatedProject
       };
       if (typeof window !== 'undefined') {
@@ -502,10 +521,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeContainer = (id: string, envId?: string) => {
+  const removeApplication = (id: string, envId?: string) => {
     setState(prev => {
-      const existingContainers = prev.containers || [];
-      const updatedContainers = existingContainers.filter(c => c.id !== id);
+      const existingApps = prev.applications || [];
+      const updatedApps = existingApps.filter(c => c.id !== id);
       
       // Also update project environment structure
       let updatedProject = prev.project;
@@ -519,17 +538,17 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
               return env;
             }
             
-            // Remove container from this environment
-            const envContainers = env.containers || [];
-            const containerToRemove = envContainers.find(c => c.id === id);
-            const updatedEnvContainers = envContainers.filter(c => c.id !== id);
+            // Remove application from this environment
+            const envApps = env.applications || [];
+            const appToRemove = envApps.find(c => c.id === id);
+            const updatedEnvApps = envApps.filter(c => c.id !== id);
             
             return {
               ...env,
-              containers: updatedEnvContainers,
-              publicContainers: containerToRemove 
-                ? env.publicContainers.filter(name => name !== containerToRemove.name)
-                : env.publicContainers,
+              applications: updatedEnvApps,
+              publicApplications: appToRemove 
+                ? env.publicApplications.filter(name => name !== appToRemove.name)
+                : env.publicApplications,
             };
           })
         };
@@ -537,7 +556,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       
       const newState = {
         ...prev,
-        containers: updatedContainers,
+        applications: updatedApps,
         project: updatedProject
       };
       if (typeof window !== 'undefined') {
@@ -547,11 +566,11 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Remove database service from resources and clean up container references
+  // Remove database service from resources and clean up application references
   const removeDatabase = () => {
     setState(prev => {
-      // Toggle off DB access and remove related env vars from all containers
-      const cleanedContainers = (prev.containers || []).map(c => {
+      // Toggle off DB access and remove related env vars from all applications
+      const cleanedApps = (prev.applications || []).map(c => {
         if (!c.serviceAccess?.database) return c;
         const filteredEnv = (c.environmentVariables || []).filter(v => v.key !== 'UNHAZZLE_POSTGRES_URL' && v.key !== 'DATABASE_URL');
         return {
@@ -582,7 +601,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
             if (idx === 0) {
               return {
                 ...env,
-                containers: cleanedContainers,
+                applications: cleanedApps,
                 database: undefined,
               };
             }
@@ -593,7 +612,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
       const newState = { 
         ...prev, 
-        containers: cleanedContainers, 
+        applications: cleanedApps, 
         resources: newResources, 
         environment: newEnv,
         project: updatedProject
@@ -605,11 +624,11 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Remove cache service from resources and clean up container references
+  // Remove cache service from resources and clean up application references
   const removeCache = () => {
     setState(prev => {
-      // Toggle off cache access and remove related env vars from all containers
-      const cleanedContainers = (prev.containers || []).map(c => {
+      // Toggle off cache access and remove related env vars from all applications
+      const cleanedApps = (prev.applications || []).map(c => {
         if (!c.serviceAccess?.cache) return c;
         const filteredEnv = (c.environmentVariables || []).filter(v => v.key !== 'UNHAZZLE_REDIS_URL' && v.key !== 'REDIS_URL');
         return {
@@ -640,7 +659,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
             if (idx === 0) {
               return {
                 ...env,
-                containers: cleanedContainers,
+                applications: cleanedApps,
                 cache: undefined,
               };
             }
@@ -651,7 +670,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
       const newState = { 
         ...prev, 
-        containers: cleanedContainers, 
+        applications: cleanedApps, 
         resources: newResources, 
         environment: newEnv,
         project: updatedProject
@@ -737,7 +756,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         ? providedName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
         : `project-${timestamp.toString().slice(-6)}`;
       
-      const publicContainers = (prev.containers || [])
+      const publicApplications = (prev.applications || [])
         .filter(c => c.exposure === 'public')
         .map(c => c.name);
       
@@ -747,14 +766,13 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         name: 'dev',
         slug: 'dev',
         type: 'standard' as EnvironmentType,
-        status: 'active' as EnvironmentStatus,
         deployed: true,
         deployedAt: now,
         pendingChanges: false,
         createdAt: now,
         baseDomain: `dev.${projectSlug}.demo.unhazzle.io`,
-        publicContainers,
-        containers: prev.containers || [],
+        publicApplications,
+        applications: prev.applications || [],
         database: prev.resources?.database,
         cache: prev.resources?.cache,
       };
@@ -833,7 +851,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
     const now = new Date().toISOString();
     const slug = envData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const publicContainers = (envData.containers || [])
+    const publicApplications = (envData.applications || [])
       .filter(c => c.exposure === 'public')
       .map(c => c.name);
 
@@ -841,14 +859,13 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       id: `env-${slug}-${Date.now()}`,
       slug,
       type: envData.type || 'standard',
-      status: envData.status || 'active',
       deployed: envData.deployed || false,
       deployedAt: envData.deployedAt,
       pendingChanges: envData.pendingChanges || false,
       createdAt: now,
       baseDomain: `${slug}.${state.project.slug}.demo.unhazzle.io`,
-      publicContainers,
-      containers: envData.containers || [],
+      publicApplications,
+      applications: envData.applications || [],
       database: envData.database,
       cache: envData.cache,
       ...envData,
@@ -893,9 +910,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       const updatedEnvironments = prev.project.environments.map(env => {
         if (env.id === envId) {
           const updatedEnv = { ...env, ...updates };
-          // Recalculate publicContainers if containers changed
-          if (updates.containers) {
-            updatedEnv.publicContainers = updates.containers
+          // Recalculate publicApplications if applications changed
+          if (updates.applications) {
+            updatedEnv.publicApplications = updates.applications
               .filter(c => c.exposure === 'public')
               .map(c => c.name);
           }
@@ -923,14 +940,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       if (!prev.project) return prev;
 
       const now = new Date().toISOString();
-      const updatedEnvironments = prev.project.environments.map(env => 
-        env.id === envId 
-          ? { ...env, status: 'deleted' as EnvironmentStatus }
-          : env
-      );
-
-      const prEnvCount = updatedEnvironments.filter(e => e.type === 'pr' && e.status !== 'deleted').length;
-      const standardEnvCount = updatedEnvironments.filter(e => e.type === 'standard' && e.status !== 'deleted').length;
+      const updatedEnvironments = prev.project.environments.filter(env => env.id !== envId);
+      const prEnvCount = updatedEnvironments.filter(e => e.type === 'pr').length;
+      const standardEnvCount = updatedEnvironments.filter(e => e.type === 'standard').length;
 
       const updatedProject = {
         ...prev.project,
@@ -957,7 +969,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const cloneEnvironment = (sourceEnvId: string, newName: string): Environment => {
+  const cloneEnvironment = (sourceEnvId: string, newName: string, autoDeploy: boolean = false): Environment => {
     if (!state.project) {
       throw new Error('Cannot clone environment without a project');
     }
@@ -971,7 +983,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     const clonedEnv = createEnvironment({
       name: newName,
       type: 'standard',
-      containers: JSON.parse(JSON.stringify(sourceEnv.containers)), // Deep clone
+      deployed: autoDeploy,
+      deployedAt: autoDeploy ? new Date().toISOString() : undefined,
+      applications: JSON.parse(JSON.stringify(sourceEnv.applications)), // Deep clone
       database: sourceEnv.database ? JSON.parse(JSON.stringify(sourceEnv.database)) : undefined,
       cache: sourceEnv.cache ? JSON.parse(JSON.stringify(sourceEnv.cache)) : undefined,
     });
@@ -993,16 +1007,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 
     // Copy configuration from source to target
     updateEnvironmentConfig(targetEnvId, {
-      containers: JSON.parse(JSON.stringify(sourceEnv.containers)),
+      applications: JSON.parse(JSON.stringify(sourceEnv.applications)),
       database: sourceEnv.database ? JSON.parse(JSON.stringify(sourceEnv.database)) : undefined,
       cache: sourceEnv.cache ? JSON.parse(JSON.stringify(sourceEnv.cache)) : undefined,
-      status: 'provisioning', // Trigger redeploy
     });
-
-    // After a short delay, mark as active (simulated deployment)
-    setTimeout(() => {
-      updateEnvironmentConfig(targetEnvId, { status: 'active' });
-    }, 100);
   };
 
   const setActiveEnvironment = (envId: string) => {
@@ -1020,17 +1028,26 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     return state.project.environments.find(e => e.id === state.activeEnvironmentId) || null;
   };
 
-  const pauseEnvironment = (envId: string) => {
+  const pauseEnvironment = (envId: string, schedule?: string) => {
     setState(prev => {
       if (!prev.project) return prev;
 
       const updatedEnvironments = prev.project.environments.map(env => {
-        if (env.id === envId && env.status === 'active') {
-          // Mark as paused - in a real system, this would scale replicas to 0
-          // and stop database/cache services
+        if (env.id === envId) {
+          // Mark as paused and scale all apps to 0
+          const pausedApps = env.applications.map(app => ({
+            ...app,
+            status: 'paused' as const,
+            pauseSchedule: schedule,
+            resources: {
+              ...app.resources,
+              replicas: { ...app.resources.replicas, min: 0, max: 0 }
+            }
+          }));
+
           return {
             ...env,
-            status: 'paused' as EnvironmentStatus,
+            applications: pausedApps
           };
         }
         return env;
@@ -1055,12 +1072,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       if (!prev.project) return prev;
 
       const updatedEnvironments = prev.project.environments.map(env => {
-        if (env.id === envId && env.status === 'paused') {
-          // Mark as provisioning, then transition to active
+        if (env.id === envId) {
           // In a real system, this would restore replicas and restart services
           return {
             ...env,
-            status: 'provisioning' as EnvironmentStatus,
           };
         }
         return env;
@@ -1077,15 +1092,13 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
       }
 
-      // Simulate provisioning delay, then mark as active
+      // Simulate resume delay
       setTimeout(() => {
         setState(current => {
           if (!current.project) return current;
 
           const envs = current.project.environments.map(e => 
-            e.id === envId && e.status === 'provisioning'
-              ? { ...e, status: 'active' as EnvironmentStatus }
-              : e
+            e.id === envId ? { ...e } : e
           );
 
           const proj = {
@@ -1117,8 +1130,8 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       const env = prev.project.environments.find(e => e.id === environmentId);
       if (!env) return prev;
 
-      const newContainers: ContainerConfig[] = images.map((img, idx) => ({
-        id: `container-${Date.now()}-${idx}`,
+      const newApps: ApplicationConfig[] = images.map((img, idx) => ({
+        id: `app-${Date.now()}-${idx}`,
         name: img.autoName,
         imageUrl: img.url,
         registryToken: img.url.startsWith('ghcr.io') ? prev.project?.githubPAT : undefined,
@@ -1141,15 +1154,17 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
           }
         },
         serviceAccess: { database: false, cache: false },
-        environmentVariables: []
+        environmentVariables: [],
+        status: 'stopped',
+        isDirty: false
       }));
 
       const updatedEnvironments = prev.project.environments.map(e => {
         if (e.id === environmentId) {
           return {
             ...e,
-            containers: [...e.containers, ...newContainers],
-            publicContainers: [...e.publicContainers, ...newContainers.filter(c => c.exposure === 'public').map(c => c.name)]
+            applications: [...e.applications, ...newApps],
+            publicApplications: [...e.publicApplications, ...newApps.filter(c => c.exposure === 'public').map(c => c.name)]
           };
         }
         return e;
@@ -1209,7 +1224,6 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
             ...env,
             deployed: true,
             deployedAt: new Date().toISOString(),
-            status: 'active' as EnvironmentStatus,
             pendingChanges: false
           };
         }
@@ -1260,6 +1274,129 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // New: Application-Level Deployment Lifecycle
+  const updateApplicationStatus = (appId: string, status: ApplicationConfig['status']) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        const hasApp = env.applications.some(a => a.id === appId);
+        if (hasApp) {
+          const updatedApps = env.applications.map(app => 
+            app.id === appId ? { ...app, status } : app
+          );
+          return { ...env, applications: updatedApps };
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString()
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const promoteApplication = (sourceAppId: string, targetEnvId: string) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      // Find source app
+      let sourceApp: ApplicationConfig | undefined;
+      for (const env of prev.project.environments) {
+        const app = env.applications.find(a => a.id === sourceAppId);
+        if (app) {
+          sourceApp = app;
+          break;
+        }
+      }
+
+      if (!sourceApp) return prev;
+
+      // Find target env
+      const targetEnv = prev.project.environments.find(e => e.id === targetEnvId);
+      if (!targetEnv) return prev;
+
+      // Create new app config for target env
+      const newApp: ApplicationConfig = {
+        ...sourceApp,
+        id: `app-${Date.now()}`, // New ID
+        status: 'stopped', // Pending deploy
+        isDirty: false,
+        deployedAt: undefined
+      };
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        if (env.id === targetEnvId) {
+          return {
+            ...env,
+            applications: [...env.applications, newApp],
+            publicApplications: newApp.exposure === 'public' 
+              ? [...env.publicApplications, newApp.name]
+              : env.publicApplications
+          };
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString()
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const pauseApplication = (appId: string, schedule?: string) => {
+    setState(prev => {
+      if (!prev.project) return prev;
+
+      const updatedEnvironments = prev.project.environments.map(env => {
+        const hasApp = env.applications.some(a => a.id === appId);
+        if (hasApp) {
+          const updatedApps = env.applications.map(app => 
+            app.id === appId ? { 
+              ...app, 
+              status: 'paused' as const,
+              pauseSchedule: schedule,
+              resources: {
+                ...app.resources,
+                replicas: { ...app.resources.replicas, min: 0, max: 0 }
+              }
+            } : app
+          );
+          return { ...env, applications: updatedApps };
+        }
+        return env;
+      });
+
+      const updatedProject = {
+        ...prev.project,
+        environments: updatedEnvironments,
+        updatedAt: new Date().toISOString()
+      };
+
+      const newState = { ...prev, project: updatedProject };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('unhazzle-deployment-state', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
   return (
     <DeploymentContext.Provider
       value={{
@@ -1268,10 +1405,10 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         updateUser,
         updateQuestionnaire,
         updateApplication,
-        addContainer,
-        clearContainers,
-        updateContainer,
-        removeContainer,
+        addApplication,
+        clearApplications,
+        updateApplicationConfig,
+        removeApplication,
         updateResources,
         updateEnvironment,
         updateDomain,
@@ -1294,6 +1431,9 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
         markEnvironmentChanged,
         deployEnvironment,
         applyEnvironmentChanges,
+        updateApplicationStatus,
+        promoteApplication,
+        pauseApplication,
       }}
     >
       {children}

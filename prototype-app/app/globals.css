@@ -71,3 +71,19 @@ textarea:focus::-moz-placeholder {
   color: rgb(100 116 139) !important;
   opacity: 1 !important;
 }
+
+/* Animation for deployment logs */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}

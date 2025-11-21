@@ -3,7 +3,7 @@
 import { Environment, Project } from '@/lib/context/DeploymentContext';
 import { useEffect, useState } from 'react';
 
-type SelectionKind = 'container' | 'database' | 'architecture' | 'environment' | 'project-settings' | 'create-environment' | 'add-container';
+type SelectionKind = 'application' | 'database' | 'architecture' | 'environment' | 'project-settings' | 'create-environment' | 'add-application';
 
 interface EnvironmentNavigatorProps {
   project: Project;
@@ -50,43 +50,7 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
   }, []);
 
   const getStatusBadge = (env: Environment) => {
-    // Don't show status badge for undeployed environments
-    if (!env.deployed) {
-      return null;
-    }
-    
-    if (env.status === 'provisioning') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">
-          <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full animate-pulse"></span>
-          Provisioning
-        </span>
-      );
-    }
-    if (env.status === 'paused') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
-          <span className="w-1.5 h-1.5 bg-amber-600 rounded-full"></span>
-          Paused
-        </span>
-      );
-    }
-    if (env.status === 'deleting') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
-          <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
-          Deleting
-        </span>
-      );
-    }
-    if (env.status === 'deleted' || env.status === 'expired') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full">
-          <span className="w-1.5 h-1.5 bg-slate-600 rounded-full"></span>
-          {env.status === 'expired' ? 'Expired' : 'Deleted'}
-        </span>
-      );
-    }
+    // All environments are now considered "Live" by default
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
         <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
@@ -106,10 +70,9 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
     return null;
   };
 
-  // Filter out deleted/expired environments
-  const activeEnvironments = project.environments.filter(e => e.status !== 'deleted' && e.status !== 'expired');
-  const standardEnvs = activeEnvironments.filter(e => e.type === 'standard' || e.type === 'non-prod' || e.type === 'prod');
-  const prEnvs = activeEnvironments.filter(e => e.type === 'pr');
+  // Separate environments by type
+  const standardEnvs = project.environments.filter(e => e.type === 'standard' || e.type === 'non-prod' || e.type === 'prod');
+  const prEnvs = project.environments.filter(e => e.type === 'pr');
 
   return (
     <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 space-y-4 sticky top-4 border border-slate-200">
@@ -131,7 +94,7 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
           </span>
         </div>
         <div className="text-xs text-slate-600 space-y-1">
-          <div>{activeEnvironments.length} environment{activeEnvironments.length !== 1 ? 's' : ''}</div>
+          <div>{project.environments.length} environment{project.environments.length !== 1 ? 's' : ''}</div>
           {prEnvs.length > 0 && (
             <div className="text-blue-600 font-medium">
               {prEnvs.length}/{project.prEnvs.maxEnvs} PR environments
@@ -142,7 +105,7 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
 
       {/* Standard Environments */}
       {standardEnvs.map((env: Environment) => {
-        const containers = env.containers || [];
+        const applications = env.applications || [];
         const hasDatabase = !!env.database;
         const isEnvSelected = selected.kind === 'environment' && selected.envId === env.id;
         const isExpanded = expandedEnvId === env.id;
@@ -198,30 +161,35 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
             {/* Resources - Only show when expanded */}
             {isExpanded && (
               <div className="p-3 space-y-3 border-t border-slate-200">
-              {/* Containers */}
-              {containers.length > 0 && (
+              {/* Applications */}
+              {applications.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
                     <span>🚀</span>
-                    <span>Containers ({containers.length})</span>
+                    <span>Applications ({applications.length})</span>
                   </div>
                   <div className="space-y-1">
-                    {containers.map((container: any, idx: number) => {
-                      const displayName = container.name || container.imageUrl.split('/').pop()?.split(':')[0] || `app-${idx + 1}`;
-                      const isSelected = selected.kind === 'container' && selected.id === container.id;
+                    {applications.map((app: any, idx: number) => {
+                      const displayName = app.name || app.imageUrl.split('/').pop()?.split(':')[0] || `app-${idx + 1}`;
+                      const isSelected = selected.kind === 'application' && selected.id === app.id;
 
                       return (
                         <button
-                          key={container.id}
-                          onClick={() => onSelect({ kind: 'container', id: container.id, envId: env.id })}
+                          key={app.id}
+                          onClick={() => onSelect({ kind: 'application', id: app.id, envId: env.id })}
                           className={`w-full text-left px-3 py-2 rounded-lg border transition ${
                             isSelected
                               ? 'border-purple-400 bg-purple-50 shadow-sm'
                               : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50'
                           }`}
                         >
-                          <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
-                          {container.exposure === 'public' && (
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+                            {app.status === 'paused' && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">Paused</span>
+                            )}
+                          </div>
+                          {app.exposure === 'public' && (
                             <div className="text-xs text-slate-500">Public</div>
                           )}
                         </button>
@@ -254,14 +222,14 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
               )}
 
               
-              {/* Add Container Action Button */}
+              {/* Add Application Action Button */}
               <div className="mt-3 pt-3 border-t border-slate-200">
                 <button
-                  onClick={() => onSelect({ kind: 'add-container', envId: env.id })}
+                  onClick={() => onSelect({ kind: 'add-application', envId: env.id })}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:border-blue-400 hover:bg-blue-50 bg-white transition text-xs font-medium text-slate-700 hover:text-blue-700"
                 >
                   <span className="text-sm">📦</span>
-                  <span>Add Container</span>
+                  <span>Add Application</span>
                 </button>
               </div>
             </div>
@@ -315,7 +283,7 @@ export default function EnvironmentNavigator({ project, selected, onSelect }: En
                   </div>
                   <div className="flex items-center justify-between text-xs ml-6">
                     {getStatusBadge(env)}
-                    {env.expiresAt && env.status === 'active' && (
+                    {env.expiresAt && (
                       <span className="text-slate-600">
                         ⏱️ {timeRemaining}
                       </span>

@@ -9,7 +9,7 @@ function ReviewAndDeployContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode') || 'deploy'; // 'deploy' or 'changes'
-  const { state, updateCost, updateContainer, updateResources, removeContainer, getActiveEnvironment, deployEnvironment, applyEnvironmentChanges, updateEnvironmentConfig } = useDeployment();
+  const { state, updateCost, updateApplication, updateApplicationConfig, updateResources, removeApplication, getActiveEnvironment, deployEnvironment, applyEnvironmentChanges, updateEnvironmentConfig } = useDeployment();
   
   const [cost, setCost] = useState<CostBreakdown | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -31,13 +31,13 @@ function ReviewAndDeployContent() {
       return;
     }
     
-    if (activeEnv.containers.length === 0) {
-      console.log('No containers in environment, redirecting to dashboard');
+    if (activeEnv.applications.length === 0) {
+      console.log('No applications in environment, redirecting to dashboard');
       router.push('/dashboard');
       return;
     }
 
-    console.log('UseEffect triggered - activeEnv:', activeEnv.name, 'containers:', activeEnv.containers.length);
+    console.log('UseEffect triggered - activeEnv:', activeEnv.name, 'applications:', activeEnv.applications.length);
 
     // Small delay to ensure state has propagated from context
     const timer = setTimeout(() => {
@@ -107,20 +107,20 @@ function ReviewAndDeployContent() {
     return value;
   };
 
-  // Helper to calculate container cost (used both in display and total calculation)
-  const calculateContainerCost = (container: any) => {
-    const cpuValue = parseCPU(container.resources.cpu);
+  // Helper to calculate application cost (used both in display and total calculation)
+  const calculateApplicationCost = (app: any) => {
+    const cpuValue = parseCPU(app.resources.cpu);
     const cpuCost = cpuValue * 7.0; // €7/vCPU
-    const memoryGB = parseMemoryToGB(container.resources.memory);
+    const memoryGB = parseMemoryToGB(app.resources.memory);
     const memoryCost = memoryGB * 3.5; // €3.5/GB
-    const replicaCost = (cpuCost + memoryCost) * container.resources.replicas.min;
+    const replicaCost = (cpuCost + memoryCost) * app.resources.replicas.min;
     
     // Volume cost: storage + backups
     let volumeCost = 0;
-    if (container.volume) {
-      const storageGB = parseStorageToGB(container.volume.sizeGB);
+    if (app.volume) {
+      const storageGB = parseStorageToGB(app.volume.sizeGB);
       const storageCost = storageGB * 0.044; // €0.044/GB/month
-      const backupCost = container.volume.backupFrequency !== 'disabled' 
+      const backupCost = app.volume.backupFrequency !== 'disabled' 
         ? replicaCost * 0.20 
         : 0;
       volumeCost = storageCost + backupCost;
@@ -137,22 +137,22 @@ function ReviewAndDeployContent() {
 
     console.log('=== COST CALCULATION START ===');
     console.log('Active Environment:', activeEnv.name, activeEnv.id);
-    console.log('Containers:', activeEnv.containers);
+    console.log('Applications:', activeEnv.applications);
     
-    // Calculate total cost across all containers in the active environment
+    // Calculate total cost across all applications in the active environment
     let totalApplicationCost = 0;
     
-    activeEnv.containers.forEach((container, index) => {
-      const containerCost = calculateContainerCost(container);
-      console.log(`Container ${index + 1}:`, {
-        name: container.name,
-        cpu: container.resources.cpu,
-        memory: container.resources.memory,
-        replicas: container.resources.replicas.min,
-        volume: container.volume?.sizeGB,
-        cost: containerCost.toFixed(2)
+    activeEnv.applications.forEach((app, index) => {
+      const appCost = calculateApplicationCost(app);
+      console.log(`Application ${index + 1}:`, {
+        name: app.name,
+        cpu: app.resources.cpu,
+        memory: app.resources.memory,
+        replicas: app.resources.replicas.min,
+        volume: app.volume?.sizeGB,
+        cost: appCost.toFixed(2)
       });
-      totalApplicationCost += containerCost;
+      totalApplicationCost += appCost;
     });
 
     console.log('Total Application Cost:', totalApplicationCost.toFixed(2));
@@ -216,7 +216,7 @@ function ReviewAndDeployContent() {
 
   const recalculateAndUpdateCost = () => {
     // Just show the loading state; the useEffect will trigger recalculation
-    // when state.resources or state.containers updates
+    // when state.resources or state.applications updates
     setIsRecalculating(true);
     
     // Clear the loading state after a short delay
@@ -264,7 +264,7 @@ function ReviewAndDeployContent() {
   }
 
   const resources = activeEnv ? { database: activeEnv.database, cache: activeEnv.cache } : null;
-  const containerCount = activeEnv ? activeEnv.containers.length : 0;
+  const applicationCount = activeEnv ? activeEnv.applications.length : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
@@ -324,7 +324,7 @@ function ReviewAndDeployContent() {
                 <div>
                   <p className="text-purple-100 text-sm">Application</p>
                   <p className="text-2xl font-bold">€{cost.application.toFixed(2)}</p>
-                  <p className="text-purple-200 text-xs mt-1">{containerCount} app{containerCount > 1 ? 's' : ''}</p>
+                  <p className="text-purple-200 text-xs mt-1">{applicationCount} app{applicationCount > 1 ? 's' : ''}</p>
                 </div>
                 <div className="text-3xl">🚀</div>
               </div>
@@ -365,22 +365,22 @@ function ReviewAndDeployContent() {
 
         {/* Configuration Cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Container Cards (Dynamic - one per container) */}
-          {activeEnv.containers.map((container, index) => {
-            const totalContainerCost = calculateContainerCost(container);
+          {/* Application Cards (Dynamic - one per application) */}
+          {activeEnv.applications.map((app, index) => {
+            const totalAppCost = calculateApplicationCost(app);
 
             return (
-              <div key={container.id} className="bg-white rounded-xl shadow-lg p-6">
+              <div key={app.id} className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                     <span>🚀</span>
-                    <span>{container.name}</span>
+                    <span>{app.name}</span>
                   </h3>
                   <button
                     onClick={() => {
-                      const confirmed = window.confirm(`Remove application "${container.name}"?`);
+                      const confirmed = window.confirm(`Remove application "${app.name}"?`);
                       if (!confirmed) return;
-                      removeContainer(container.id);
+                      removeApplication(app.id);
                     }}
                     className="text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition"
                   >
@@ -389,7 +389,7 @@ function ReviewAndDeployContent() {
                 </div>
                 
                 {/* Public Endpoint Info */}
-                {container.exposure === 'public' && (
+                {app.exposure === 'public' && (
                   <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <div className="flex items-start gap-2">
                       <span className="text-blue-600 text-lg">ℹ️</span>
@@ -407,10 +407,10 @@ function ReviewAndDeployContent() {
                   <div className="flex justify-between">
                     <span className="text-slate-600">CPU</span>
                     <select
-                      value={container.resources.cpu}
+                      value={app.resources.cpu}
                       onChange={(e) => {
-                        updateContainer(container.id, {
-                          resources: { ...container.resources, cpu: e.target.value }
+                        updateApplicationConfig(app.id, {
+                          resources: { ...app.resources, cpu: e.target.value }
                         });
                         recalculateAndUpdateCost();
                       }}
@@ -427,10 +427,10 @@ function ReviewAndDeployContent() {
                   <div className="flex justify-between">
                     <span className="text-slate-600">Memory</span>
                     <select
-                      value={container.resources.memory}
+                      value={app.resources.memory}
                       onChange={(e) => {
-                        updateContainer(container.id, {
-                          resources: { ...container.resources, memory: e.target.value }
+                        updateApplicationConfig(app.id, {
+                          resources: { ...app.resources, memory: e.target.value }
                         });
                         recalculateAndUpdateCost();
                       }}
@@ -450,15 +450,15 @@ function ReviewAndDeployContent() {
                       type="number"
                       min="1"
                       max="10"
-                      value={container.resources.replicas.min}
+                      value={app.resources.replicas.min}
                       onChange={(e) => {
                         const newMin = parseInt(e.target.value) || 1;
                         if (newMin > 0 && newMin <= 10) {
-                          updateContainer(container.id, {
+                          updateApplicationConfig(app.id, {
                             resources: {
-                              ...container.resources,
+                              ...app.resources,
                               replicas: {
-                                ...container.resources.replicas,
+                                ...app.resources.replicas,
                                 min: newMin
                               }
                             }
@@ -470,7 +470,7 @@ function ReviewAndDeployContent() {
                       className="w-16 px-2 py-1 border border-slate-200 rounded text-center text-sm font-semibold hover:border-purple-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
-                  {container.volume && (
+                  {app.volume && (
                     <>
                       <div className="border-t border-slate-200 my-3 pt-3">
                         <div className="flex items-center gap-1 mb-2">
@@ -481,11 +481,11 @@ function ReviewAndDeployContent() {
                       <div className="flex justify-between">
                         <span className="text-slate-600">Size</span>
                         <select
-                          value={container.volume.sizeGB}
+                          value={app.volume.sizeGB}
                           onChange={(e) => {
-                            updateContainer(container.id, {
+                            updateApplicationConfig(app.id, {
                               volume: {
-                                ...container.volume!,
+                                ...app.volume!,
                                 sizeGB: parseInt(e.target.value)
                               }
                             });
@@ -505,7 +505,7 @@ function ReviewAndDeployContent() {
                       <div className="flex justify-between">
                         <span className="text-slate-600">Mount path</span>
                         <code className="text-slate-900 font-mono text-xs bg-slate-100 px-2 py-1 rounded">
-                          {container.volume.mountPath}
+                          {app.volume.mountPath}
                         </code>
                       </div>
                     </>
@@ -513,19 +513,19 @@ function ReviewAndDeployContent() {
                   <div className="flex justify-between">
                     <span className="text-slate-600">Exposure</span>
                     <span className="font-semibold">
-                      {container.exposure === 'public' ? '🌐 Public' : '🔒 Private'}
+                      {app.exposure === 'public' ? '🌐 Public' : '🔒 Private'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Port</span>
                     <code className="bg-slate-100 px-2 py-1 rounded text-slate-900 font-mono text-xs">
-                      {container.port}
+                      {app.port}
                     </code>
                   </div>
                   <div className="pt-2 border-t border-slate-200">
                     <div className="flex justify-between font-semibold">
                       <span className="text-purple-600">App Cost:</span>
-                      <span className="text-purple-900">€{totalContainerCost.toFixed(2)}/mo</span>
+                      <span className="text-purple-900">€{totalAppCost.toFixed(2)}/mo</span>
                     </div>
                   </div>
                 </div>

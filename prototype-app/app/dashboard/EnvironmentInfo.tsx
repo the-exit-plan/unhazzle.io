@@ -7,38 +7,26 @@ import { useRouter } from 'next/navigation';
 interface EnvironmentInfoProps {
   environment: Environment;
   onClone?: () => void;
-  onPromote?: () => void;
-  onDelete?: () => void;
   onPause?: () => void;
   onResume?: () => void;
-  onAddContainer?: () => void;
+  onAddApplication?: () => void;
 }
 
-export default function EnvironmentInfo({ environment, onClone, onPromote, onDelete, onPause, onResume, onAddContainer }: EnvironmentInfoProps) {
+export default function EnvironmentInfo({ environment, onClone, onPause, onResume, onAddApplication }: EnvironmentInfoProps) {
   const [showActions, setShowActions] = useState(false);
   const router = useRouter();
 
-  const handleDeploy = () => {
-    // Navigate to review page in deploy mode
-    router.push('/review?mode=deploy');
-  };
-
-  const handleApplyChanges = () => {
-    // Navigate to review page in changes mode
-    router.push('/review?mode=changes');
-  };
-
   // Calculate environment cost
   const calculateEnvCost = () => {
-    if (environment.containers.length === 0) return 0;
+    if (environment.applications.length === 0) return 0;
 
     let total = 0;
     
-    // Container costs - simplified calculation
-    environment.containers.forEach(container => {
-      const cpuCores = parseFloat(container.resources.cpu);
-      const memoryGB = parseFloat(container.resources.memory);
-      const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
+    // Application costs - simplified calculation
+    environment.applications.forEach(app => {
+      const cpuCores = parseFloat(app.resources.cpu);
+      const memoryGB = parseFloat(app.resources.memory);
+      const avgReplicas = (app.resources.replicas.min + app.resources.replicas.max) / 2;
       
       // Simplified cost model
       let monthlyPerInstance = 4.99;
@@ -50,8 +38,8 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
       total += serversNeeded * monthlyPerInstance;
       
       // Volume cost
-      if (container.volume) {
-        total += container.volume.sizeGB * 0.044;
+      if (app.volume) {
+        total += app.volume.sizeGB * 0.044;
       }
     });
 
@@ -68,7 +56,6 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
 
   const monthlyCost = calculateEnvCost();
   const isPR = environment.type === 'pr';
-  const isDeleted = environment.status === 'deleted' || environment.status === 'expired';
 
   // Format creation date
   const formatDate = (dateString: string) => {
@@ -116,46 +103,17 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
             </div>
             <div className="text-purple-100 text-sm space-y-1">
               <div>{environment.baseDomain}</div>
-              {environment.status === 'active' && environment.publicContainers.length > 0 && (
+              {environment.publicApplications.length > 0 && (
                 <div>
-                  {environment.publicContainers.length} public container{environment.publicContainers.length !== 1 ? 's' : ''}
+                  {environment.publicApplications.length} public application{environment.publicApplications.length !== 1 ? 's' : ''}
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Status Badge */}
-          <div>
-            {environment.status === 'active' && (
-              <span className="inline-flex items-center gap-2 bg-green-500/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
-                Live
-              </span>
-            )}
-            {environment.status === 'paused' && (
-              <span className="inline-flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                <span className="w-2 h-2 bg-amber-300 rounded-full"></span>
-                Paused
-              </span>
-            )}
-            {environment.status === 'provisioning' && (
-              <span className="inline-flex items-center gap-2 bg-yellow-500/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                <span className="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></span>
-                Provisioning
-              </span>
-            )}
-            {environment.status === 'deleting' && (
-              <span className="inline-flex items-center gap-2 bg-red-500/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                <span className="w-2 h-2 bg-red-300 rounded-full"></span>
-                Deleting
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Cost Banner */}
-        {!isDeleted && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-purple-100 text-sm mb-1">Estimated Cost</div>
@@ -176,75 +134,32 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
               )}
             </div>
           </div>
-        )}
       </div>
 
       {/* Content */}
       <div className="p-6 space-y-6">
-        {/* Deploy or Apply Changes Button */}
-        {!isDeleted && !isPR && !environment.deployed && environment.containers.length > 0 && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-green-900 mb-1">Ready to Deploy</h4>
-                <p className="text-sm text-green-700">
-                  Your environment is configured with {environment.containers.length} container{environment.containers.length !== 1 ? 's' : ''}. Deploy to provision infrastructure.
-                </p>
-              </div>
-              <button
-                onClick={handleDeploy}
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition font-bold shadow-lg flex items-center gap-2"
-              >
-                <span>🚀</span>
-                <span>Deploy Environment</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!isDeleted && !isPR && environment.deployed && environment.pendingChanges && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-amber-900 mb-1">Pending Changes</h4>
-                <p className="text-sm text-amber-700">
-                  You have uncommitted changes to this environment. Review and apply them to update the infrastructure.
-                </p>
-              </div>
-              <button
-                onClick={handleApplyChanges}
-                className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg transition font-bold shadow-lg flex items-center gap-2"
-              >
-                <span>⚡</span>
-                <span>Apply Changes</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Actions */}
-        {!isDeleted && !isPR && (
+        {!isPR && (
           <div className="space-y-3">
             {/* Add Resources Actions */}
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={onAddContainer}
+                onClick={onAddApplication}
                 className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-lg transition font-medium flex items-center gap-2"
               >
                 <span>📦</span>
-                <span>Add Container</span>
+                <span>Add Application</span>
               </button>
             </div>
             
-            {/* Environment Management Actions - Only show for active/paused environments */}
-            {environment.status === 'active' && (
-              <div className="flex flex-wrap gap-3">
+            {/* Environment Management Actions */}
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={onPause}
                 className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition font-medium flex items-center gap-2"
               >
                 <span>⏸️</span>
-                <span>Pause</span>
+                <span>Pause All Apps</span>
               </button>
               <button
                 onClick={onClone}
@@ -253,53 +168,7 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
                 <span>📋</span>
                 <span>Clone</span>
               </button>
-              <button
-                onClick={onPromote}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition font-medium flex items-center gap-2"
-              >
-                <span>🚀</span>
-                <span>Promote</span>
-              </button>
-              <button
-                onClick={onDelete}
-                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition font-medium flex items-center gap-2"
-              >
-                <span>🗑️</span>
-                <span>Delete</span>
-              </button>
             </div>
-            )}
-          </div>
-        )}
-
-        {!isDeleted && !isPR && environment.status === 'paused' && (
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={onResume}
-              className="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-900 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>▶️</span>
-              <span>Resume</span>
-            </button>
-            <button
-              onClick={onDelete}
-              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>🗑️</span>
-              <span>Delete</span>
-            </button>
-          </div>
-        )}
-
-        {!isDeleted && isPR && (
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={onDelete}
-              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <span>🗑️</span>
-              <span>Delete</span>
-            </button>
           </div>
         )}
 
@@ -312,10 +181,6 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
               <div className="font-medium text-slate-900">
                 {environment.type === 'prod' ? 'Production' : environment.type === 'non-prod' ? 'Non-Production' : environment.type === 'pr' ? 'Pull Request' : 'Standard'}
               </div>
-            </div>
-            <div>
-              <div className="text-sm text-slate-600 mb-1">Status</div>
-              <div className="font-medium text-slate-900 capitalize">{environment.status}</div>
             </div>
             <div>
               <div className="text-sm text-slate-600 mb-1">Created</div>
@@ -357,7 +222,7 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
                 <div>
                   <div className="text-sm text-slate-600 mb-1">Override</div>
                   <div className="font-medium text-slate-900">
-                    Container <code className="bg-white px-2 py-0.5 rounded text-sm">{environment.serviceOverride.serviceName}</code> using custom image
+                    Application <code className="bg-white px-2 py-0.5 rounded text-sm">{environment.serviceOverride.serviceName}</code> using custom image
                   </div>
                 </div>
               )}
@@ -372,9 +237,9 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🚀</span>
-                <span className="font-medium text-slate-900">Containers</span>
+                <span className="font-medium text-slate-900">Applications</span>
               </div>
-              <span className="text-slate-600">{environment.containers.length}</span>
+              <span className="text-slate-600">{environment.applications.length}</span>
             </div>
 
           </div>
@@ -386,11 +251,11 @@ export default function EnvironmentInfo({ environment, onClone, onPromote, onDel
             <span className="text-xl">💡</span>
             <div className="flex-1">
               <div className="font-medium text-blue-900 mb-1">
-                {environment.type !== 'pr' ? 'Edit Resources' : 'View Only'}
+                {environment.type !== 'pr' ? 'Manage Applications' : 'View Only'}
               </div>
               <div className="text-sm text-blue-700">
                 {environment.type !== 'pr'
-                  ? 'Click on a resource in the sidebar to edit its configuration.'
+                  ? 'Click on an application in the sidebar to edit its configuration. Applications can be deployed independently.'
                   : 'PR environments are read-only. To edit configuration, update the unhazzle.yaml manifest.'}
               </div>
             </div>

@@ -68,17 +68,17 @@ export default function CostHeader({ environment }: CostHeaderProps) {
         <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-4 z-10">
           <h4 className="text-sm font-bold text-slate-900 mb-3">Cost Breakdown</h4>
           
-          {/* Containers */}
-          {breakdown.containers && breakdown.containers.length > 0 && (
+          {/* Applications */}
+          {breakdown.applications && breakdown.applications.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-semibold text-slate-600 mb-2">Containers</div>
-              {breakdown.containers.map((container: any, idx: number) => (
+              <div className="text-xs font-semibold text-slate-600 mb-2">Applications</div>
+              {breakdown.applications.map((app: any, idx: number) => (
                 <div key={idx} className="flex items-center justify-between text-xs py-1">
-                  <span className="text-slate-700">{container.name}</span>
+                  <span className="text-slate-700">{app.name}</span>
                   <span className="font-mono text-slate-900">
-                    €{container.current.toFixed(2)}
-                    {container.max !== container.current && (
-                      <span className="text-slate-500"> - €{container.max.toFixed(2)}</span>
+                    €{app.current.toFixed(2)}
+                    {app.max !== app.current && (
+                      <span className="text-slate-500"> - €{app.max.toFixed(2)}</span>
                     )}
                   </span>
                 </div>
