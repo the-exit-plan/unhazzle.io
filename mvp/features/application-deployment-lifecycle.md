@@ -3,6 +3,9 @@
 ## Goal
 Refactor the deployment model to make **Applications** the primary and **only** deployable entities, decoupling their lifecycle from Environments. This aligns with software lifecycle best practices where applications are promoted across environments (e.g., Dev → Staging → Prod). The Environment becomes a pure logical container - it has no deployment status, no "Ready to Deploy" flow, and imposes no restrictions on application actions. Applications can be added, edited, deployed, promoted, or deleted at any time, regardless of the environment's state.
 
+## Status
+DONE
+
 ## Scope
 In-scope:
 - **Data Model**:

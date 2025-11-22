@@ -3,6 +3,9 @@
 ## Goal
 Revamp the initial project creation step to capture basic project metadata (name, region) and optionally apply "Unhazzle Smart Assistance" recommendations derived from five targeted workload questions. Recommendations optimize for performance + cost and transparently show resource sizing and scaling rationale before the user proceeds.
 
+## Status
+DONE
+
 ## Scope
 In-scope:
 - Extend global deployment state with project basics and recommendations.

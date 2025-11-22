@@ -3,6 +3,9 @@
 ## Goal
 Transform the post-questionnaire flow from a linear multi-page journey into a dashboard-centric configuration experience. Users create a project, land on the dashboard, create environments, connect their OCI registry (GitHub Container Registry), select container images, configure apps, and deploy with full cost transparency. This enables iterative configuration and post-deployment modifications with explicit "Apply Changes" workflow.
 
+## Status
+DONE
+
 ## Scope
 In-scope:
 - Redirect from questionnaire to dashboard with empty project (no environments)

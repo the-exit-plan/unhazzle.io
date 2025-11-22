@@ -32,7 +32,7 @@ function CreateFirstEnvironment() {
 
   const handleCreate = () => {
     if (!nameValid || !state.project) return;
-    
+
     setIsCreating(true);
     const newEnv = createEnvironment({
       name: envName,
@@ -40,7 +40,7 @@ function CreateFirstEnvironment() {
       deployed: false,
       pendingChanges: false
     });
-    
+
     // Set as active environment and redirect to Project Settings → Container Registry
     setTimeout(() => {
       setIsCreating(false);
@@ -91,22 +91,20 @@ function CreateFirstEnvironment() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setEnvType('non-prod')}
-                className={`p-4 border-2 rounded-lg transition ${
-                  envType === 'non-prod'
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 border-2 rounded-lg transition ${envType === 'non-prod'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <div className="font-semibold text-slate-900 mb-1">Non-Production</div>
                 <div className="text-sm text-slate-600">Development, testing, staging</div>
               </button>
               <button
                 onClick={() => setEnvType('prod')}
-                className={`p-4 border-2 rounded-lg transition ${
-                  envType === 'prod'
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 border-2 rounded-lg transition ${envType === 'prod'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <div className="font-semibold text-slate-900 mb-1">Production</div>
                 <div className="text-sm text-slate-600">Live, customer-facing</div>
@@ -121,7 +119,7 @@ function CreateFirstEnvironment() {
               <div className="flex-1 text-sm text-blue-900">
                 <p className="font-medium mb-1">Naming Recommendation</p>
                 <p>
-                  Use descriptive names like &quot;production&quot;, &quot;staging&quot;, &quot;development&quot;, or &quot;test&quot;. 
+                  Use descriptive names like &quot;production&quot;, &quot;staging&quot;, &quot;development&quot;, or &quot;test&quot;.
                   Environment type helps Unhazzle apply appropriate safeguards (e.g., extra confirmations for production changes).
                 </p>
               </div>
@@ -222,12 +220,12 @@ function OCIRegistryModal() {
       alert('Please enter a GitHub Personal Access Token');
       return;
     }
-    
+
     // Save PAT to project
     if (state.project) {
       updateProject({ githubPAT });
     }
-    
+
     setShowImages(true);
   };
 
@@ -245,15 +243,15 @@ function OCIRegistryModal() {
 
   const handleContinue = () => {
     if (!activeEnv) return;
-    
+
     setIsCreating(true);
-    
+
     const imagesToCreate = selectedImages.map(imgName => {
       const img = MOCK_GHCR_IMAGES.find(i => `${i.name}:${i.tag}` === imgName);
       if (!img) return null;
-      
+
       const autoName = img.name.split('/').pop()?.split(':')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') || 'app';
-      
+
       return {
         name: `${img.name}:${img.tag}`,
         url: `ghcr.io/${img.name}:${img.tag}`,
@@ -261,12 +259,12 @@ function OCIRegistryModal() {
         tag: img.tag,
         description: img.description
       };
-    }).filter(Boolean) as Array<{name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private'}>;
-    
+    }).filter(Boolean) as Array<{ name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private' }>;
+
     if (imagesToCreate.length > 0) {
       createAppsFromImages(activeEnv.id, imagesToCreate);
     }
-    
+
     setTimeout(() => {
       setIsCreating(false);
       router.push('/dashboard');
@@ -281,7 +279,7 @@ function OCIRegistryModal() {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -327,7 +325,7 @@ function OCIRegistryModal() {
                   <div className="flex-1 text-sm text-blue-900">
                     <p className="font-medium mb-1">Optional Step</p>
                     <p>
-                      You can skip this step and add containers manually later. This is just a convenience 
+                      You can skip this step and add containers manually later. This is just a convenience
                       to quickly import multiple images from ghcr.io.
                     </p>
                   </div>
@@ -363,21 +361,19 @@ function OCIRegistryModal() {
                   {MOCK_GHCR_IMAGES.map(img => {
                     const fullName = `${img.name}:${img.tag}`;
                     const isSelected = selectedImages.includes(fullName);
-                    
+
                     return (
                       <button
                         key={fullName}
                         onClick={() => toggleImage(fullName)}
-                        className={`w-full p-4 border-2 rounded-lg text-left transition ${
-                          isSelected
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
+                        className={`w-full p-4 border-2 rounded-lg text-left transition ${isSelected
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-slate-200 hover:border-slate-300'
+                          }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${
-                            isSelected ? 'bg-purple-600 border-purple-600' : 'border-slate-300'
-                          }`}>
+                          <div className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${isSelected ? 'bg-purple-600 border-purple-600' : 'border-slate-300'
+                            }`}>
                             {isSelected && (
                               <svg className="w-full h-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -447,7 +443,7 @@ function OCIRegistryModal() {
 export default function Dashboard() {
   const router = useRouter();
   const { state, removeDatabase, removeCache, updateApplicationStatus } = useDeployment();
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('projects');
   const [uptime, setUptime] = useState(99.98);
   const [cpuUsage, setCpuUsage] = useState(42);
@@ -519,7 +515,7 @@ export default function Dashboard() {
                 No Projects Yet
               </h2>
               <p className="text-slate-600 mb-8 leading-relaxed">
-                Get started by creating your first project. Answer 5 quick questions about your workload, 
+                Get started by creating your first project. Answer 5 quick questions about your workload,
                 and we&apos;ll automatically configure production-ready infrastructure for you.
               </p>
               <button
@@ -605,15 +601,14 @@ export default function Dashboard() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-6 py-4 font-medium transition text-center relative ${
-                  tab === 'nextSteps'
-                    ? activeTab === tab
-                      ? 'border-b-2 border-amber-500 text-amber-600 bg-amber-50'
-                      : 'border-b-2 border-transparent text-amber-600 hover:text-amber-700 bg-gradient-to-b from-amber-50 to-transparent'
-                    : activeTab === tab
+                className={`flex-1 px-6 py-4 font-medium transition text-center relative ${tab === 'nextSteps'
+                  ? activeTab === tab
+                    ? 'border-b-2 border-amber-500 text-amber-600 bg-amber-50'
+                    : 'border-b-2 border-transparent text-amber-600 hover:text-amber-700 bg-gradient-to-b from-amber-50 to-transparent'
+                  : activeTab === tab
                     ? 'border-b-2 border-purple-600 text-purple-600 bg-purple-50'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   {tab === 'nextSteps' ? (
@@ -631,82 +626,82 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-              <div className="p-6">
-                {/* Projects Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
-                {activeTab === 'projects' && (
-                  <HybridOverview project={state.project} state={state} />
-                )}
+          <div className="p-6">
+            {/* Projects Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
+            {activeTab === 'projects' && (
+              <HybridOverview project={state.project} state={state} />
+            )}
 
-                {/* Logs Tab */}
-                {activeTab === 'logs' && (
-                  <div>
-                    <div className="mb-4 flex items-center gap-3">
-                      <label className="text-sm font-medium text-slate-600">Application:</label>
-                      <select
-                        value={selectedApplication}
-                        onChange={(e) => setSelectedApplication(e.target.value)}
-                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                      >
-                        <option value="all">All Applications</option>
-                        {state.applications.map((app, index) => {
-                          return (
-                            <option key={app.id} value={app.id}>{app.name}</option>
+            {/* Logs Tab */}
+            {activeTab === 'logs' && (
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <label className="text-sm font-medium text-slate-600">Application:</label>
+                  <select
+                    value={selectedApplication}
+                    onChange={(e) => setSelectedApplication(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  >
+                    <option value="all">All Applications</option>
+                    {state.applications.map((app, index) => {
+                      return (
+                        <option key={app.id} value={app.id}>{app.name}</option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
+                  {(() => {
+                    const allLogs: { application: string; message: string }[] = [];
+
+                    state.applications.forEach((app, index) => {
+                      if (selectedApplication === 'all' || selectedApplication === app.id) {
+                        allLogs.push(
+                          { application: app.name, message: '[2025-11-02 14:32:15] Application started successfully' },
+                          { application: app.name, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${app.port}` },
+                          { application: app.name, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
+                          { application: app.name, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
+                          { application: app.name, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
+                        );
+
+                        if (app.serviceAccess.database) {
+                          allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
+                        }
+                        if (app.serviceAccess.cache) {
+                          allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
+                        }
+
+                        if (app.exposure === 'public') {
+                          allLogs.push(
+                            { application: app.name, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
+                            { application: app.name, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
+                            { application: app.name, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
+                            { application: app.name, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
+                            { application: app.name, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
                           );
-                        })}
-                      </select>
-                    </div>
+                        } else {
+                          allLogs.push(
+                            { application: app.name, message: '[2025-11-02 14:35:42] Processing background job #1234' },
+                            { application: app.name, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
+                            { application: app.name, message: '[2025-11-02 14:35:44] Handling internal API call' }
+                          );
+                        }
+                      }
+                    });
 
-                    <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
-                      {(() => {
-                        const allLogs: { application: string; message: string }[] = [];
-
-                        state.applications.forEach((app, index) => {
-                          if (selectedApplication === 'all' || selectedApplication === app.id) {
-                            allLogs.push(
-                              { application: app.name, message: '[2025-11-02 14:32:15] Application started successfully' },
-                              { application: app.name, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${app.port}` },
-                              { application: app.name, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
-                              { application: app.name, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
-                              { application: app.name, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
-                            );
-
-                            if (app.serviceAccess.database) {
-                              allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
-                            }
-                            if (app.serviceAccess.cache) {
-                              allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
-                            }
-
-                            if (app.exposure === 'public') {
-                              allLogs.push(
-                                { application: app.name, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
-                                { application: app.name, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
-                                { application: app.name, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
-                                { application: app.name, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
-                                { application: app.name, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
-                              );
-                            } else {
-                              allLogs.push(
-                                { application: app.name, message: '[2025-11-02 14:35:42] Processing background job #1234' },
-                                { application: app.name, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
-                                { application: app.name, message: '[2025-11-02 14:35:44] Handling internal API call' }
-                              );
-                            }
-                          }
-                        });
-
-                        return allLogs.map((log, i) => (
-                          <div key={i}>
-                            {selectedApplication === 'all' && (
-                              <span className="text-purple-400">[{log.application}] </span>
-                            )}
-                            {log.message}
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                )}
+                    return allLogs.map((log, i) => (
+                      <div key={i}>
+                        {selectedApplication === 'all' && (
+                          <span className="text-purple-400">[{log.application}] </span>
+                        )}
+                        {log.message}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Metrics Tab */}
             {activeTab === 'metrics' && (
@@ -835,7 +830,7 @@ export default function Dashboard() {
                   <p className="text-slate-600 ml-11">
                     Below is your infrastructure configuration in YAML format. This file describes all your resources, environment variables, and settings. Copy it to your repository for version control and CI/CD integration.
                   </p>
-                  
+
                   <div className="ml-11 space-y-3">
                     <div className="bg-slate-900 rounded-lg overflow-hidden">
                       <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
@@ -887,7 +882,7 @@ export default function Dashboard() {
                   <p className="text-slate-600 ml-11">
                     Create a GitHub Actions workflow to automatically deploy on every push:
                   </p>
-                  
+
                   <div className="ml-11 space-y-3">
                     <div className="bg-slate-900 rounded-lg overflow-hidden">
                       <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
@@ -1011,22 +1006,22 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { updateApplicationConfig, updateResources, removeDatabase, removeCache, removeApplication, cloneEnvironment, promoteEnvironment, deleteEnvironment, pauseEnvironment, resumeEnvironment, updateProject, createAppsFromImages, getActiveEnvironment, updateEnvironmentConfig, createEnvironment, promoteApplication, pauseApplication, updateApplicationStatus } = useDeployment();
-  
+
   type SelectionKind = 'application' | 'database' | 'architecture' | 'environment' | 'project-settings' | 'create-environment' | 'add-application';
-  
+
   const [selected, setSelected] = useState<{ kind: SelectionKind; id?: string; envId?: string }>({ kind: 'project-settings' });
-  
+
   // Derive project settings tab from URL
   const tabParam = searchParams.get('tab');
-  const projectSettingsTab = (tabParam === 'registry' || tabParam === 'repository' || tabParam === 'pr-environments' || tabParam === 'general') 
-    ? tabParam 
+  const projectSettingsTab = (tabParam === 'registry' || tabParam === 'repository' || tabParam === 'pr-environments' || tabParam === 'general')
+    ? tabParam
     : 'general';
 
   // Environment modals state
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
-  
+
   // Add Application/Cache modals state
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [showCreateEnvironmentModal, setShowCreateEnvironmentModal] = useState(false);
@@ -1055,7 +1050,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   // Get the currently selected resource from project structure
   const getSelectedResource = () => {
     if (!project?.environments) return null;
-    
+
     if (selected.kind === 'application') {
       for (const env of project.environments) {
         const app = env.applications?.find((c: any) => c.id === selected.id);
@@ -1075,7 +1070,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     const selection = searchParams.get('selection');
     const envId = searchParams.get('env');
     const applicationId = searchParams.get('id');
-    
+
     if (selection === 'project-settings') {
       setSelected({ kind: 'project-settings' });
     } else if (selection === 'application' && applicationId && envId) {
@@ -1093,7 +1088,9 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
       if (!Array.isArray(deep.environmentVariables)) deep.environmentVariables = [];
       setDraftApplication(deep);
     } else if (selected.kind === 'database' && resource?.data) {
-      setDraftDatabase(JSON.parse(JSON.stringify(resource.data)));
+      const dbData = JSON.parse(JSON.stringify(resource.data));
+      if (!dbData.type) dbData.type = 'container'; // Default for existing
+      setDraftDatabase(dbData);
       setDraftApplication(null);
     } else {
       setDraftApplication(null);
@@ -1104,7 +1101,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
 
   const hasApplicationChanges = () => {
     if (!selectedResource?.data || !draftApplication || selected.kind !== 'application') return false;
-    
+
     // If application is new (stopped), allow applying to trigger deployment
     if (selectedResource.data.status === 'stopped') return true;
 
@@ -1135,7 +1132,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const applyApplicationChanges = () => {
     if (!selectedResource?.data || !draftApplication) return;
     setShowConfirmation(false);
-    
+
     // Update the config first
     updateApplicationConfig(selectedResource.data.id, {
       name: draftApplication.name,
@@ -1174,12 +1171,12 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
       alert('Please enter a GitHub Personal Access Token');
       return;
     }
-    
+
     // Save PAT to project
     if (state.project) {
       updateProject({ githubPAT });
     }
-    
+
     setShowImages(true);
   };
 
@@ -1198,15 +1195,15 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
   const handleCreateApplications = () => {
     const activeEnv = getActiveEnvironment();
     if (!activeEnv) return;
-    
+
     setIsCreatingApplications(true);
-    
+
     const imagesToCreate = selectedImages.map(imgName => {
       const img = MOCK_GHCR_IMAGES.find(i => `${i.name}:${i.tag}` === imgName);
       if (!img) return null;
-      
+
       const autoName = img.name.split('/').pop()?.split(':')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') || 'app';
-      
+
       return {
         name: `${img.name}:${img.tag}`,
         url: `ghcr.io/${img.name}:${img.tag}`,
@@ -1214,12 +1211,12 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
         tag: img.tag,
         description: img.description
       };
-    }).filter(Boolean) as Array<{name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private'}>;
-    
+    }).filter(Boolean) as Array<{ name: string; url: string; autoName: string; tag?: string; description?: string; exposure?: 'public' | 'private' }>;
+
     if (imagesToCreate.length > 0) {
       createAppsFromImages(activeEnv.id, imagesToCreate);
     }
-    
+
     setTimeout(() => {
       setIsCreatingApplications(false);
       setShowImages(false);
@@ -1231,7 +1228,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -1258,9 +1255,9 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
     <div className="grid grid-cols-12 gap-6">
       {/* LEFT PANEL: Hierarchical Navigation */}
       <div className="col-span-12 lg:col-span-4 xl:col-span-3">
-        <EnvironmentNavigator 
-          project={project} 
-          selected={selected} 
+        <EnvironmentNavigator
+          project={project}
+          selected={selected}
           onSelect={(selection) => {
             // Handle modal triggers
             if (selection.kind === 'add-application') {
@@ -1273,7 +1270,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             }
             // Normal selection
             setSelected(selection);
-          }} 
+          }}
         />
       </div>
 
@@ -1308,7 +1305,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
                   setShowAddApplicationModal(true);
                 }}
               />
-              
+
               {/* Modals */}
               {showCloneModal && (
                 <CloneModal
@@ -1320,7 +1317,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
                   }}
                 />
               )}
-              
+
               {showPauseModal && (
                 <PauseModal
                   environment={selectedEnv}
@@ -1331,7 +1328,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
                   }}
                 />
               )}
-              
+
               {showResumeModal && (
                 <ResumeModal
                   environment={selectedEnv}
@@ -1357,10 +1354,10 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             onAdd={({ name, imageUrl, exposure }) => {
               const activeEnv = getActiveEnvironment();
               if (!activeEnv) return;
-              
+
               // Generate the application ID upfront (same logic as in createAppsFromImages)
               const newAppId = `app-${Date.now()}-0`;
-              
+
               // Create application with the correct signature
               createAppsFromImages(
                 activeEnv.id,
@@ -1373,9 +1370,9 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
                   exposure: exposure as 'public' | 'private'
                 }]
               );
-              
+
               setShowAddApplicationModal(false);
-              
+
               // Navigate to the newly created application using the generated ID via URL
               // Use a longer delay to ensure state has updated
               setTimeout(() => {
@@ -1384,7 +1381,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             }}
           />
         )}
-        
+
         {/* Delete Application Modal */}
         {showDeleteApplicationModal && applicationToDelete && (
           <DeleteApplicationModal
@@ -1420,7 +1417,7 @@ function HybridOverview({ project, state }: { project: any; state: any }) {
             }}
           />
         )}
-        
+
         {/* Promote Application Modal */}
         {showPromoteApplicationModal && applicationToPromote && (
           <PromoteApplicationModal
@@ -1587,9 +1584,8 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
           <button
             onClick={() => setShowChanges(true)}
             disabled={!hasChanges || isApplying || application.status === 'deploying'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-              hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-            } disabled:opacity-50`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border ${hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+              } disabled:opacity-50`}
           >
             Show Changes
           </button>
@@ -1600,7 +1596,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
           >
             {isApplying ? 'Applying…' : 'Apply'}
           </button>
-          
+
           {/* Actions Dropdown */}
           <div className="relative">
             <button
@@ -1610,7 +1606,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
               <span>Actions</span>
               <span className="text-xs">▼</span>
             </button>
-            
+
             {showActions && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowActions(false)}></div>
@@ -1720,8 +1716,8 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                   ...draftApplication,
                   resources: {
                     ...draftApplication.resources,
-                    replicas: { 
-                      ...draftApplication.resources.replicas, 
+                    replicas: {
+                      ...draftApplication.resources.replicas,
                       min: newMin,
                       max: Math.max(newMin, currentMax)
                     }
@@ -1754,147 +1750,226 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
         <p className="text-xs text-slate-500 mt-2">Set min=max for fixed scaling. Different values enable auto-scaling.</p>
       </div>
 
-      {/* Section: Application Access */}
-      {environment?.applications?.length >= 2 && (
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Application Access</h4>
-        <div className="space-y-2 text-sm">
-          {state.resources?.database && (
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draftApplication.serviceAccess.database}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  const envVarKey = 'UNHAZZLE_POSTGRES_URL';
-                  let updatedEnvVars = [...draftApplication.environmentVariables];
+      {/* Section: Dependencies (formerly Application Access) */}
+      {environment?.applications?.length >= 1 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-900 mb-3">Dependencies</h4>
+          <div className="space-y-4 text-sm">
+            {/* External Database */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <label className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  checked={draftApplication.externalDatabase?.enabled || false}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    const envVarKey = 'DATABASE_URL';
+                    let updatedEnvVars = [...draftApplication.environmentVariables];
 
-                  if (enabled) {
-                    const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                    if (!exists) {
-                      updatedEnvVars.push({
-                        key: envVarKey,
-                        value: '',
-                        masked: false
-                      });
+                    // Remove existing DATABASE_URL if present to avoid duplicates/conflicts
+                    if (!enabled) {
+                      updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                    } else {
+                      // If enabling, ensure we don't have a duplicate if it was already there manually
+                      const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                      if (!exists) {
+                        updatedEnvVars.push({
+                          key: envVarKey,
+                          value: draftApplication.externalDatabase?.connectionString || '',
+                          masked: true
+                        });
+                      }
                     }
-                  } else {
-                    updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                  }
 
-                  setDraftApplication({
-                    ...draftApplication,
-                    serviceAccess: { ...draftApplication.serviceAccess, database: enabled },
-                    environmentVariables: updatedEnvVars
-                  });
-                }}
-              />
-              <span className="text-slate-900">PostgreSQL</span>
-            </label>
-          )}
-          {state.resources?.cache && (
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draftApplication.serviceAccess.cache}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  const envVarKey = 'UNHAZZLE_REDIS_URL';
-                  let updatedEnvVars = [...draftApplication.environmentVariables];
+                    setDraftApplication({
+                      ...draftApplication,
+                      externalDatabase: {
+                        enabled,
+                        connectionString: draftApplication.externalDatabase?.connectionString || ''
+                      },
+                      environmentVariables: updatedEnvVars
+                    });
+                  }}
+                />
+                <span className="font-medium text-slate-900">Connect to External Database</span>
+              </label>
 
-                  if (enabled) {
-                    const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                    if (!exists) {
-                      updatedEnvVars.push({
-                        key: envVarKey,
-                        value: '',
-                        masked: false
-                      });
-                    }
-                  } else {
-                    updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                  }
+              {draftApplication.externalDatabase?.enabled && (
+                <div className="ml-6 mt-2 space-y-2">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Connection String</label>
+                    <input
+                      type="password"
+                      value={draftApplication.externalDatabase.connectionString}
+                      onChange={(e) => {
+                        const newVal = e.target.value;
+                        const envVarKey = 'DATABASE_URL';
 
-                  setDraftApplication({
-                    ...draftApplication,
-                    serviceAccess: { ...draftApplication.serviceAccess, cache: enabled },
-                    environmentVariables: updatedEnvVars
-                  });
-                }}
-              />
-              <span className="text-slate-900">Redis</span>
-            </label>
-          )}
-          {/* Internal Applications */}
-          {environment?.applications?.length > 1 && (
-            <div className="pt-2 mt-2 border-t border-slate-100">
-              <h5 className="text-xs font-semibold text-slate-500 uppercase mb-2">Internal Applications</h5>
-              <div className="space-y-2">
-                {environment.applications
-                  .filter((app: any) => app.id !== application.id)
-                  .map((otherApp: any) => {
-                    const envVarKey = `${otherApp.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}_URL`;
-                    const appName = otherApp.name || otherApp.serviceName || `app-${otherApp.id.substring(0, 8)}`;
-                    const internalUrl = `http://${appName}.${environment.slug || environment.name}`;
-                    
-                    // Check if this app is in the allowed list
-                    const isConnected = (draftApplication.serviceAccess.applications || []).includes(otherApp.id);
-                    
-                    return (
-                      <label key={otherApp.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isConnected}
-                          onChange={(e) => {
-                            const enabled = e.target.checked;
-                            let updatedEnvVars = [...draftApplication.environmentVariables];
-                            let updatedAllowedApps = [...(draftApplication.serviceAccess.applications || [])];
+                        // Update env var in real-time
+                        const updatedEnvVars = draftApplication.environmentVariables.map((v: any) =>
+                          v.key === envVarKey ? { ...v, value: newVal } : v
+                        );
 
-                            if (enabled) {
-                              // Add to allowed list
-                              if (!updatedAllowedApps.includes(otherApp.id)) {
-                                updatedAllowedApps.push(otherApp.id);
-                              }
-                              
-                              // Add env var
-                              const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                              if (!exists) {
-                                updatedEnvVars.push({
-                                  key: envVarKey,
-                                  value: internalUrl,
-                                  masked: false
-                                });
-                              }
-                            } else {
-                              // Remove from allowed list
-                              updatedAllowedApps = updatedAllowedApps.filter(id => id !== otherApp.id);
-                              
-                              // Remove env var
-                              updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                            }
-
-                            setDraftApplication({
-                              ...draftApplication,
-                              serviceAccess: { 
-                                ...draftApplication.serviceAccess, 
-                                applications: updatedAllowedApps 
-                              },
-                              environmentVariables: updatedEnvVars
-                            });
-                          }}
-                        />
-                        <div>
-                          <div className="text-slate-900">{otherApp.name}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
-              </div>
+                        setDraftApplication({
+                          ...draftApplication,
+                          externalDatabase: {
+                            ...draftApplication.externalDatabase,
+                            connectionString: newVal
+                          },
+                          environmentVariables: updatedEnvVars
+                        });
+                      }}
+                      placeholder="postgres://user:pass@host:5432/db"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Injected as <code>DATABASE_URL</code></p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+
+            {/* Platform Resources (if available) */}
+            {(state.resources?.database || state.resources?.cache) && (
+              <div className="space-y-2">
+                <h5 className="text-xs font-semibold text-slate-500 uppercase">Platform Resources</h5>
+                {state.resources?.database && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={draftApplication.serviceAccess.database}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        const envVarKey = 'UNHAZZLE_POSTGRES_URL';
+                        let updatedEnvVars = [...draftApplication.environmentVariables];
+
+                        if (enabled) {
+                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                          if (!exists) {
+                            updatedEnvVars.push({
+                              key: envVarKey,
+                              value: '',
+                              masked: false
+                            });
+                          }
+                        } else {
+                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                        }
+
+                        setDraftApplication({
+                          ...draftApplication,
+                          serviceAccess: { ...draftApplication.serviceAccess, database: enabled },
+                          environmentVariables: updatedEnvVars
+                        });
+                      }}
+                    />
+                    <span className="text-slate-900">Managed PostgreSQL (Platform)</span>
+                  </label>
+                )}
+                {state.resources?.cache && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={draftApplication.serviceAccess.cache}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        const envVarKey = 'UNHAZZLE_REDIS_URL';
+                        let updatedEnvVars = [...draftApplication.environmentVariables];
+
+                        if (enabled) {
+                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                          if (!exists) {
+                            updatedEnvVars.push({
+                              key: envVarKey,
+                              value: '',
+                              masked: false
+                            });
+                          }
+                        } else {
+                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                        }
+
+                        setDraftApplication({
+                          ...draftApplication,
+                          serviceAccess: { ...draftApplication.serviceAccess, cache: enabled },
+                          environmentVariables: updatedEnvVars
+                        });
+                      }}
+                    />
+                    <span className="text-slate-900">Managed Redis (Platform)</span>
+                  </label>
+                )}
+              </div>
+            )}
+            {/* Internal Applications */}
+            {environment?.applications?.length > 1 && (
+              <div className="pt-2 mt-2 border-t border-slate-100">
+                <h5 className="text-xs font-semibold text-slate-500 uppercase mb-2">Internal Applications</h5>
+                <div className="space-y-2">
+                  {environment.applications
+                    .filter((app: any) => app.id !== application.id)
+                    .map((otherApp: any) => {
+                      const envVarKey = `${otherApp.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}_URL`;
+                      const appName = otherApp.name || otherApp.serviceName || `app-${otherApp.id.substring(0, 8)}`;
+                      const internalUrl = `http://${appName}.${environment.slug || environment.name}`;
+
+                      // Check if this app is in the allowed list
+                      const isConnected = (draftApplication.serviceAccess.applications || []).includes(otherApp.id);
+
+                      return (
+                        <label key={otherApp.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isConnected}
+                            onChange={(e) => {
+                              const enabled = e.target.checked;
+                              let updatedEnvVars = [...draftApplication.environmentVariables];
+                              let updatedAllowedApps = [...(draftApplication.serviceAccess.applications || [])];
+
+                              if (enabled) {
+                                // Add to allowed list
+                                if (!updatedAllowedApps.includes(otherApp.id)) {
+                                  updatedAllowedApps.push(otherApp.id);
+                                }
+
+                                // Add env var
+                                const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                                if (!exists) {
+                                  updatedEnvVars.push({
+                                    key: envVarKey,
+                                    value: internalUrl,
+                                    masked: false
+                                  });
+                                }
+                              } else {
+                                // Remove from allowed list
+                                updatedAllowedApps = updatedAllowedApps.filter(id => id !== otherApp.id);
+
+                                // Remove env var
+                                updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                              }
+
+                              setDraftApplication({
+                                ...draftApplication,
+                                serviceAccess: {
+                                  ...draftApplication.serviceAccess,
+                                  applications: updatedAllowedApps
+                                },
+                                environmentVariables: updatedEnvVars
+                              });
+                            }}
+                          />
+                          <div>
+                            <div className="text-slate-900">{otherApp.name}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Section: Environment Variables (editable) */}
@@ -2038,13 +2113,13 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
           </div>
         </div>
       </div>
-      
+
       {/* Public Endpoint (if applicable) */}
       {application.exposure === 'public' && (() => {
         const displayName = application.imageUrl.split('/').pop()?.split(':')[0] || 'app';
         const stableId = application.id.substring(0, 6);
         const domain = `${displayName}-${stableId}.unhazzle.app`;
-        
+
         return (
           <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
             <div className="flex items-center justify-between">
@@ -2228,12 +2303,12 @@ function DatabaseEditor({ database, environment, draftDatabase, setDraftDatabase
     // Check if any application is still using the database
     const applications = state.applications || [];
     const inUse = applications.some((app: any) => app.serviceAccess?.database);
-    
+
     if (inUse) {
       alert('Cannot remove database: one or more applications are still connected. Disable database access in application settings first.');
       return;
     }
-    
+
     const confirmed = window.confirm('Remove database from deployed configuration? This action cannot be undone in demo mode.');
     if (confirmed) {
       onRemove();
@@ -2245,16 +2320,17 @@ function DatabaseEditor({ database, environment, draftDatabase, setDraftDatabase
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-bold text-slate-900">PostgreSQL Database</h3>
-          <p className="text-xs text-slate-500">Managed {draftDatabase.engine} instance</p>
+          <p className="text-xs text-slate-500">
+            {draftDatabase.type === 'external' ? 'External connection' : `Managed ${draftDatabase.engine} instance`}
+          </p>
         </div>
         {environment?.deployed && (
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowChanges(true)}
               disabled={!hasChanges || isApplying}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-                hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-              } disabled:opacity-50`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border ${hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                } disabled:opacity-50`}
             >
               Show Changes
             </button>
@@ -2284,150 +2360,222 @@ function DatabaseEditor({ database, environment, draftDatabase, setDraftDatabase
         )}
       </div>
 
-      {/* Connection URL */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Connection URL</h4>
-        <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 flex items-center justify-between">
-          <code className="break-all">postgres://unhazzle_user:***@db-prod-{state.domain?.defaultSubdomain || 'app'}.internal:5432/main</code>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`postgres://unhazzle_user:secret@db-prod-${state.domain?.defaultSubdomain || 'app'}.internal:5432/main`);
-              alert('Connection URL copied to clipboard!');
-            }}
-            className="ml-3 px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition"
-          >
-            Copy
-          </button>
-        </div>
-        <p className="text-xs text-slate-500 mt-2">Injected as DATABASE_URL environment variable.</p>
+      {/* Database Type Toggle */}
+      <div className="flex p-1 bg-slate-100 rounded-lg">
+        <button
+          onClick={() => setDraftDatabase({ ...draftDatabase, type: 'container' })}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition ${draftDatabase.type !== 'external' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            }`}
+        >
+          Container (DIY)
+        </button>
+        <button
+          onClick={() => setDraftDatabase({ ...draftDatabase, type: 'external' })}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition ${draftDatabase.type === 'external' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            }`}
+        >
+          External Database
+        </button>
       </div>
 
-      {/* Resources */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">CPU</label>
-            <select
-              value={draftDatabase.cpu}
-              onChange={(e) => setDraftDatabase({ ...draftDatabase, cpu: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="0.5">0.5</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="4">4</option>
-              <option value="8">8</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Memory</label>
-            <select
-              value={draftDatabase.memory}
-              onChange={(e) => setDraftDatabase({ ...draftDatabase, memory: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="1GB">1GB</option>
-              <option value="2GB">2GB</option>
-              <option value="4GB">4GB</option>
-              <option value="8GB">8GB</option>
-              <option value="16GB">16GB</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Storage</label>
-            <select
-              value={draftDatabase.storage}
-              onChange={(e) => setDraftDatabase({ ...draftDatabase, storage: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="10GB">10GB</option>
-              <option value="20GB">20GB</option>
-              <option value="50GB">50GB</option>
-              <option value="100GB">100GB</option>
-              <option value="200GB">200GB</option>
-              <option value="500GB">500GB</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Backups */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Backups</h4>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Frequency</label>
-            <select
-              value={draftDatabase.backups.frequency}
-              onChange={(e) => setDraftDatabase({
-                ...draftDatabase,
-                backups: { ...draftDatabase.backups, frequency: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="hourly">Hourly</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Retention</label>
-            <select
-              value={draftDatabase.backups.retention}
-              onChange={(e) => setDraftDatabase({
-                ...draftDatabase,
-                backups: { ...draftDatabase.backups, retention: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="7 days">7 days</option>
-              <option value="14 days">14 days</option>
-              <option value="30 days">30 days</option>
-              <option value="90 days">90 days</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Enabled</label>
-            <label className="flex items-center gap-2 mt-2">
-              <input
-                type="checkbox"
-                checked={draftDatabase.backups.enabled}
-                onChange={(e) => setDraftDatabase({
-                  ...draftDatabase,
-                  backups: { ...draftDatabase.backups, enabled: e.target.checked }
-                })}
-              />
-              <span className="text-sm text-slate-900">Automatic backups</span>
-            </label>
-          </div>
-        </div>
-        <p className="text-xs text-slate-500 mt-2">Point-in-time recovery available for all plans.</p>
-      </div>
-
-      {/* High Availability */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">High Availability</h4>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Replicas</label>
-            <select
-              value={draftDatabase.replicas}
-              onChange={(e) => setDraftDatabase({ ...draftDatabase, replicas: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="none">None (Single instance)</option>
-              <option value="1">1 Standby Replica</option>
-              <option value="2">2 Standby Replicas</option>
-            </select>
-          </div>
-          <div className="flex items-end">
-            <div className="text-xs text-slate-600">
-              <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded">✓ Connection pooling enabled</span>
+      {/* External Database Configuration */}
+      {draftDatabase.type === 'external' && (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <span className="text-xl">ℹ️</span>
+              <div className="flex-1 text-sm text-blue-900">
+                <p className="font-medium mb-1">External Database</p>
+                <p>Connect to a managed database provider (e.g., Aiven, Supabase, AWS RDS). We recommend using the same region as your project for best performance.</p>
+              </div>
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Connection String</label>
+            <div className="relative">
+              <input
+                type="password"
+                value={draftDatabase.externalUrl || ''}
+                onChange={(e) => setDraftDatabase({ ...draftDatabase, externalUrl: e.target.value })}
+                placeholder="postgres://user:pass@host:5432/db"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Must be a valid PostgreSQL connection URL.</p>
+          </div>
+
+          {/* Mock Validation */}
+          <div className="flex justify-end">
+            <button className="text-sm text-purple-600 font-medium hover:text-purple-700">
+              Test Connection
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Container Configuration (DIY) */}
+      {draftDatabase.type !== 'external' && (
+        <>
+          {/* Production Warning */}
+          {environment?.type === 'prod' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <span className="text-xl">⚠️</span>
+                <div className="flex-1 text-sm text-amber-900">
+                  <p className="font-medium mb-1">Not Recommended for Production</p>
+                  <p>Running a database in a container is risky for production data. We strongly recommend using a managed database provider.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Connection URL */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Connection URL</h4>
+            <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 flex items-center justify-between">
+              <code className="break-all">postgres://unhazzle_user:***@db-prod-{state.domain?.defaultSubdomain || 'app'}.internal:5432/main</code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`postgres://unhazzle_user:secret@db-prod-${state.domain?.defaultSubdomain || 'app'}.internal:5432/main`);
+                  alert('Connection URL copied to clipboard!');
+                }}
+                className="ml-3 px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition"
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Injected as DATABASE_URL environment variable.</p>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">CPU</label>
+                <select
+                  value={draftDatabase.cpu}
+                  onChange={(e) => setDraftDatabase({ ...draftDatabase, cpu: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="0.5">0.5</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="4">4</option>
+                  <option value="8">8</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Memory</label>
+                <select
+                  value={draftDatabase.memory}
+                  onChange={(e) => setDraftDatabase({ ...draftDatabase, memory: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="1GB">1GB</option>
+                  <option value="2GB">2GB</option>
+                  <option value="4GB">4GB</option>
+                  <option value="8GB">8GB</option>
+                  <option value="16GB">16GB</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Storage</label>
+                <select
+                  value={draftDatabase.storage}
+                  onChange={(e) => setDraftDatabase({ ...draftDatabase, storage: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="10GB">10GB</option>
+                  <option value="20GB">20GB</option>
+                  <option value="50GB">50GB</option>
+                  <option value="100GB">100GB</option>
+                  <option value="200GB">200GB</option>
+                  <option value="500GB">500GB</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Backups */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Backups</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Frequency</label>
+                <select
+                  value={draftDatabase.backups.frequency}
+                  onChange={(e) => setDraftDatabase({
+                    ...draftDatabase,
+                    backups: { ...draftDatabase.backups, frequency: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="hourly">Hourly</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Retention</label>
+                <select
+                  value={draftDatabase.backups.retention}
+                  onChange={(e) => setDraftDatabase({
+                    ...draftDatabase,
+                    backups: { ...draftDatabase.backups, retention: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="7 days">7 days</option>
+                  <option value="14 days">14 days</option>
+                  <option value="30 days">30 days</option>
+                  <option value="90 days">90 days</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Enabled</label>
+                <label className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={draftDatabase.backups.enabled}
+                    onChange={(e) => setDraftDatabase({
+                      ...draftDatabase,
+                      backups: { ...draftDatabase.backups, enabled: e.target.checked }
+                    })}
+                  />
+                  <span className="text-sm text-slate-900">Automatic backups</span>
+                </label>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Point-in-time recovery available for all plans.</p>
+          </div>
+
+          {/* High Availability */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">High Availability</h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Replicas</label>
+                <select
+                  value={draftDatabase.replicas}
+                  onChange={(e) => setDraftDatabase({ ...draftDatabase, replicas: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="none">None (Single instance)</option>
+                  <option value="1">1 Standby Replica</option>
+                  <option value="2">2 Standby Replicas</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <div className="text-xs text-slate-600">
+                  <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded">✓ Connection pooling enabled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Changes Preview */}
       {showChanges && hasChanges && (
@@ -2437,22 +2585,28 @@ function DatabaseEditor({ database, environment, draftDatabase, setDraftDatabase
             <button onClick={() => setShowChanges(false)} className="text-xs text-amber-700 underline">Hide</button>
           </div>
           <ul className="text-sm text-amber-900 list-disc ml-5 space-y-1">
-            {state.resources?.database && draftDatabase.cpu !== state.resources.database.cpu && (
+            {state.resources?.database && draftDatabase.type !== (state.resources.database.type || 'container') && (
+              <li>Type: {state.resources.database.type || 'container'} → {draftDatabase.type}</li>
+            )}
+            {draftDatabase.type === 'external' && state.resources?.database?.externalUrl !== draftDatabase.externalUrl && (
+              <li>Connection URL: Updated</li>
+            )}
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.cpu !== state.resources.database.cpu && (
               <li>CPU: {state.resources.database.cpu} → {draftDatabase.cpu}</li>
             )}
-            {state.resources?.database && draftDatabase.memory !== state.resources.database.memory && (
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.memory !== state.resources.database.memory && (
               <li>Memory: {state.resources.database.memory} → {draftDatabase.memory}</li>
             )}
-            {state.resources?.database && draftDatabase.storage !== state.resources.database.storage && (
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.storage !== state.resources.database.storage && (
               <li>Storage: {state.resources.database.storage} → {draftDatabase.storage}</li>
             )}
-            {state.resources?.database && draftDatabase.backups.frequency !== state.resources.database.backups.frequency && (
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.backups.frequency !== state.resources.database.backups.frequency && (
               <li>Backup frequency: {state.resources.database.backups.frequency} → {draftDatabase.backups.frequency}</li>
             )}
-            {state.resources?.database && draftDatabase.backups.retention !== state.resources.database.backups.retention && (
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.backups.retention !== state.resources.database.backups.retention && (
               <li>Backup retention: {state.resources.database.backups.retention} → {draftDatabase.backups.retention}</li>
             )}
-            {state.resources?.database && draftDatabase.replicas !== state.resources.database.replicas && (
+            {draftDatabase.type !== 'external' && state.resources?.database && draftDatabase.replicas !== state.resources.database.replicas && (
               <li>Replicas: {state.resources.database.replicas} → {draftDatabase.replicas}</li>
             )}
           </ul>
@@ -2471,12 +2625,12 @@ function CacheEditor({ cache, environment, draftCache, setDraftCache, hasChanges
     // Check if any application is still using the cache
     const applications = state.applications || [];
     const inUse = applications.some((app: any) => app.serviceAccess?.cache);
-    
+
     if (inUse) {
       alert('Cannot remove cache: one or more applications are still connected. Disable cache access in application settings first.');
       return;
     }
-    
+
     const confirmed = window.confirm('Remove cache from deployed configuration? This action cannot be undone in demo mode.');
     if (confirmed) {
       onRemove();
@@ -2495,9 +2649,8 @@ function CacheEditor({ cache, environment, draftCache, setDraftCache, hasChanges
             <button
               onClick={() => setShowChanges(true)}
               disabled={!hasChanges || isApplying}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-                hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-              } disabled:opacity-50`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border ${hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
+                } disabled:opacity-50`}
             >
               Show Changes
             </button>
@@ -2653,7 +2806,7 @@ function ConfirmationModal({ selected, selectedResource, draftApplication, draft
           <span className="text-2xl">⚠️</span>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-slate-900 mb-2">Apply Configuration Changes?</h3>
-            
+
             {/* Application Changes Summary */}
             {selected.kind === 'application' && selectedResource && draftApplication && (
               <>
@@ -2672,7 +2825,7 @@ function ConfirmationModal({ selected, selectedResource, draftApplication, draft
                     )}
                   </ul>
                 </div>
-                
+
                 <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
                   <p className="font-medium text-slate-900">Impact Assessment:</p>
                   <p className="text-slate-600">⚠️ Rolling restart required</p>
@@ -2718,7 +2871,7 @@ function ConfirmationModal({ selected, selectedResource, draftApplication, draft
                     )}
                   </ul>
                 </div>
-                
+
                 <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
                   <p className="font-medium text-slate-900">Impact Assessment:</p>
                   <p className="text-slate-600">⚠️ Maintenance window required for CPU/Memory changes</p>
@@ -2760,7 +2913,7 @@ function ConfirmationModal({ selected, selectedResource, draftApplication, draft
                     )}
                   </ul>
                 </div>
-                
+
                 <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
                   <p className="font-medium text-slate-900">Impact Assessment:</p>
                   <p className="text-slate-600">⚠️ Restart required (~30 seconds)</p>
@@ -2842,31 +2995,31 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
 
   const calculateEnvironmentCost = (env: any) => {
     let total = 0;
-    
+
     // Container costs
     env.containers?.forEach((container: any) => {
       const cpuCores = parseFloat(container.resources.cpu);
       const memoryGB = parseFloat(container.resources.memory);
       const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
-      
+
       // Simplified cost calculation
       let costPerInstance = 5;
       if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
       if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
-      
+
       total += costPerInstance * avgReplicas;
     });
-    
+
     // Database cost
     if (env.database) {
       total += 45; // Base database cost
     }
-    
+
     // Cache cost
     if (env.cache) {
       total += 15; // Base cache cost
     }
-    
+
     return Math.round(total * 1.3); // 30% margin
   };
 
@@ -2874,11 +3027,11 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
     const cpuCores = parseFloat(container.resources.cpu);
     const memoryGB = parseFloat(container.resources.memory);
     const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
-    
+
     let costPerInstance = 5;
     if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
     if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
-    
+
     return Math.round(costPerInstance * avgReplicas * 1.3);
   };
 
@@ -3097,7 +3250,7 @@ function ResourceDetailModal({ resource, project, onClose }: any) {
   // Find the resource data
   let resourceData = null;
   let resourceName = '';
-  
+
   if (resource.type === 'container') {
     project.environments?.forEach((env: any) => {
       const container = env.containers?.find((c: any) => c.id === resource.id);
@@ -3242,6 +3395,6 @@ function ResourceDetailModal({ resource, project, onClose }: any) {
         </div>
       </div>
     </div>
-    );
-  }
+  );
+}
 

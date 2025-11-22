@@ -16,6 +16,7 @@ export function generateResourceConfig(answers: QuestionnaireAnswers): ResourceC
     baseConfig.database = {
       engine: database,
       version: getDatabaseVersion(database),
+      type: 'container',
       cpu: getDatabaseCPU(traffic),
       memory: getDatabaseMemory(traffic),
       storage: getStorageSize(traffic),

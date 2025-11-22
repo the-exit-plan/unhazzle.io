@@ -2,44 +2,44 @@
 
 ## Platform basics
 
-**1. Project Management**
+**1. Project Management** DONE
 - Create project with name and region selection
 - Region visibility (show "Hetzner Falkenstein, Germany")
 - Optional questionnaire (5 questions) for auto-configuration
 
-**2. Environment Management**
+**2. Environment Management** DONE
 - Create environments (Production, Staging, Development) under project
 - Environment badges (visual labels, not in names)
 - Left panel navigation: Project → Environments → Apps
 
-**3. App Deployment**
+**3. App Deployment** DONE
 - Container image deployment (OCI registry support: public/private)
 - Health check configuration (single endpoint, auto-configure probes)
 - Environment variables + secrets (key-value UI with JSON file upload for batch import)
 - Persistent volume attachment (any deployment, not just StatefulSets)
 - Multi-app deployments (separate containers as separate apps)
 
-**4. Resource Management**
+**4. Resource Management** DONE
 - Questionnaire-driven auto-sizing (replicas, CPU/memory based on 5 questions)
 - Horizontal Pod Autoscaling (HPA) with configurable min/max replicas
 - Max cost transparency (show cost at max scale)
 - Manual resource adjustment (override auto-config)
 
-**5. Networking**
+**5. Networking** DONE
 - Auto-generated subdomain per app (`app-env-hash.unhazzle.app`)
 - Custom domain support with TLS automation (cert-manager)
-- Internal service discovery (explicit internal URLs shown in UI)
-- Inter-app networking configuration (frontend → backend connectivity)
+- Internal service discovery, explicit internal URLs shown in UI (`app-name.env-name`)
+- Inter-app networking configuration (e.g. frontend → backend connectivity)
 
 ## Data Layer
 
 **6. External Database**
-- Connection string input for external DB (Aiven, Supabase, etc.)
+- Connection string input for external DB managed services (Aiven, Supabase, etc.)
 - Region guidance (recommend same region as project)
-- Connection validation
+- Connection validation: Make sure the connection string is valid and the database is accessible from unhazzle infrastructure
 
 **7. Cache/Storage**
-- Deploy cache as standard pod (Redis, Memcached)
+- Deploy cache as standard pod (Redis, Memcached, Valkey)
 - Volume attachment for persistence
 - Standard container configuration (no special treatment)
 
