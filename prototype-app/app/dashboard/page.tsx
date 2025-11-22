@@ -2250,7 +2250,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
               className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition"
             >
               <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-                Kubernetes Events (Last 10)
+                Infrastructure Events (Last 10)
               </h3>
               <span className="text-slate-600 text-lg">
                 {expandedSections.k8sEvents ? '▼' : '▶'}
@@ -2303,7 +2303,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                   <span className="text-sm text-slate-500 mt-0.5">15m ago</span>
                   <div className="flex-1">
                     <p className="text-sm text-slate-900 font-mono">Scheduled</p>
-                    <p className="text-xs text-slate-600 mt-0.5">Successfully assigned pod to node</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Successfully assigned container to node</p>
                   </div>
                 </div>
 
@@ -2311,7 +2311,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                   <span className="text-sm text-blue-600 mt-0.5">1h ago</span>
                   <div className="flex-1">
                     <p className="text-sm text-blue-900 font-mono">SuccessfulCreate</p>
-                    <p className="text-xs text-blue-700 mt-0.5">Created pod: {application.name}-{Math.random().toString(36).substring(7)}</p>
+                    <p className="text-xs text-blue-700 mt-0.5">Created container: {application.name}-{Math.random().toString(36).substring(7)}</p>
                   </div>
                 </div>
 
