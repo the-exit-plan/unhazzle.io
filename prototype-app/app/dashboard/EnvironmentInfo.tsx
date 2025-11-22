@@ -1,6 +1,7 @@
 'use client';
 
 import { Environment } from '@/lib/context/DeploymentContext';
+import { calculateEnvironmentCost } from '@/lib/utils/costCalculator';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -16,53 +17,15 @@ export default function EnvironmentInfo({ environment, onClone, onPause, onResum
   const [showActions, setShowActions] = useState(false);
   const router = useRouter();
 
-  // Calculate environment cost
-  const calculateEnvCost = () => {
-    if (environment.applications.length === 0) return 0;
-
-    let total = 0;
-    
-    // Application costs - simplified calculation
-    environment.applications.forEach(app => {
-      const cpuCores = parseFloat(app.resources.cpu);
-      const memoryGB = parseFloat(app.resources.memory);
-      const avgReplicas = (app.resources.replicas.min + app.resources.replicas.max) / 2;
-      
-      // Simplified cost model
-      let monthlyPerInstance = 4.99;
-      if (cpuCores > 1 || memoryGB > 2) monthlyPerInstance = 5.49;
-      if (cpuCores > 2 || memoryGB > 4) monthlyPerInstance = 9.49;
-      if (cpuCores > 4 || memoryGB > 8) monthlyPerInstance = 17.49;
-      
-      const serversNeeded = Math.ceil(avgReplicas / 2);
-      total += serversNeeded * monthlyPerInstance;
-      
-      // Volume cost
-      if (app.volume) {
-        total += app.volume.sizeGB * 0.044;
-      }
-    });
-
-    
-    // Load balancer + bandwidth estimate
-    total += 12; // Load balancer
-    total += 10; // Bandwidth estimate
-    
-    // Apply 30% margin
-    total = total * 1.3;
-    
-    return total;
-  };
-
-  const monthlyCost = calculateEnvCost();
+  const { current: monthlyCost, max: maxMonthlyCost, breakdown } = calculateEnvironmentCost(environment);
   const isPR = environment.type === 'pr';
 
   // Format creation date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -75,12 +38,12 @@ export default function EnvironmentInfo({ environment, onClone, onPause, onResum
     const now = new Date().getTime();
     const expiry = new Date(environment.expiresAt).getTime();
     const diff = expiry - now;
-    
+
     if (diff <= 0) return 'Expired';
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -114,26 +77,31 @@ export default function EnvironmentInfo({ environment, onClone, onPause, onResum
 
         {/* Cost Banner */}
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-purple-100 text-sm mb-1">Estimated Cost</div>
-                <div className="text-3xl font-bold">
-                  €{isPR ? '0.08' : monthlyCost.toFixed(2)}
-                  <span className="text-lg font-normal text-purple-100 ml-2">
-                    /{isPR ? '2 hours' : 'month'}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-purple-100 text-sm mb-1">Estimated Cost</div>
+              <div className="text-3xl font-bold">
+                €{isPR ? '0.08' : monthlyCost.toFixed(2)}
+                {!isPR && (
+                  <span className="text-lg font-normal text-purple-200 ml-2">
+                    (Max: €{maxMonthlyCost.toFixed(2)})
                   </span>
+                )}
+                <span className="text-lg font-normal text-purple-100 ml-2">
+                  /{isPR ? '2 hours' : 'month'}
+                </span>
+              </div>
+            </div>
+            {isPR && environment.expiresAt && (
+              <div className="text-right">
+                <div className="text-purple-100 text-sm mb-1">Expires In</div>
+                <div className="text-2xl font-bold">
+                  {getTimeRemaining()}
                 </div>
               </div>
-              {isPR && environment.expiresAt && (
-                <div className="text-right">
-                  <div className="text-purple-100 text-sm mb-1">Expires In</div>
-                  <div className="text-2xl font-bold">
-                    {getTimeRemaining()}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -151,7 +119,7 @@ export default function EnvironmentInfo({ environment, onClone, onPause, onResum
                 <span>Add Application</span>
               </button>
             </div>
-            
+
             {/* Environment Management Actions */}
             <div className="flex flex-wrap gap-3">
               <button

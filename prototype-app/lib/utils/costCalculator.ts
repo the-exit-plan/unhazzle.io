@@ -11,7 +11,7 @@ export function calculateCost(
   const baseApplicationCost = calculateApplicationCost(resources.replicas, resources.cpu, resources.memory);
 
   // Volume cost (if configured)
-  const volumeCost = volumeConfig 
+  const volumeCost = volumeConfig
     ? calculateVolumeCost(volumeConfig, applicationCostForBackup || baseApplicationCost)
     : 0;
 
@@ -21,11 +21,11 @@ export function calculateCost(
   // Database cost
   const databaseCost = resources.database
     ? calculateDatabaseCost(
-        resources.database.cpu,
-        resources.database.memory,
-        resources.database.storage,
-        resources.database.replicas
-      )
+      resources.database.cpu,
+      resources.database.memory,
+      resources.database.storage,
+      resources.database.replicas
+    )
     : undefined;
 
   // Cache cost
@@ -38,7 +38,7 @@ export function calculateCost(
   const bandwidthCost = estimateBandwidth(answers.traffic);
 
   const subtotal = applicationCost + (databaseCost || 0) + (cacheCost || 0) + loadBalancerCost + bandwidthCost;
-  
+
   // Add 30% margin
   const total = Math.round(subtotal * 1.3 * 100) / 100;
 
@@ -55,17 +55,17 @@ export function calculateCost(
 function calculateVolumeCost(volume: VolumeConfig, containerCost: number): number {
   // Base storage cost: €0.044/GB/month
   const storageCost = volume.sizeGB * 0.044;
-  
+
   // Backup cost: 20% of container compute cost (if enabled)
   let backupCost = 0;
   if (volume.backupFrequency !== 'disabled') {
     backupCost = containerCost * 0.20;
   }
-  
+
   return Math.round((storageCost + backupCost) * 100) / 100;
 }
 
-function calculateApplicationCost(
+export function calculateApplicationCost(
   replicas: { min: number; max: number },
   cpu: string,
   memory: string
@@ -77,7 +77,7 @@ function calculateApplicationCost(
   // Map to Hetzner CX instance type based on resources
   // Using Hetzner Shared Regular Performance pricing (Germany)
   let monthlyPerInstance: number;
-  
+
   if (cpuCores <= 1 && memoryGB <= 2) {
     monthlyPerInstance = 4.99; // CX22: 2 vCPU, 4 GB
   } else if (cpuCores <= 2 && memoryGB <= 4) {
@@ -94,14 +94,48 @@ function calculateApplicationCost(
   // Total monthly cost (applications share underlying servers)
   // For simplicity: 2 applications per server on average
   const serversNeeded = Math.ceil(avgReplicas / 2);
-  
+
   return Math.round(serversNeeded * monthlyPerInstance);
+}
+
+export function calculateApplicationCostRange(
+  replicas: { min: number; max: number },
+  cpu: string,
+  memory: string
+): { min: number; max: number; avg: number } {
+  // Parse CPU and memory
+  const cpuCores = parseFloat(cpu);
+  const memoryGB = parseFloat(memory);
+
+  // Map to Hetzner CX instance type based on resources
+  let monthlyPerInstance: number;
+
+  if (cpuCores <= 1 && memoryGB <= 2) {
+    monthlyPerInstance = 4.99; // CX22: 2 vCPU, 4 GB
+  } else if (cpuCores <= 2 && memoryGB <= 4) {
+    monthlyPerInstance = 5.49; // CX33: 4 vCPU, 8 GB
+  } else if (cpuCores <= 4 && memoryGB <= 8) {
+    monthlyPerInstance = 9.49; // CX43: 8 vCPU, 16 GB
+  } else {
+    monthlyPerInstance = 17.49; // CX53: 16 vCPU, 32 GB
+  }
+
+  // Calculate costs
+  const minServers = Math.ceil(replicas.min / 2);
+  const maxServers = Math.ceil(replicas.max / 2);
+  const avgServers = Math.ceil((replicas.min + replicas.max) / 4); // Avg of min and max, divided by 2 apps/server
+
+  return {
+    min: Math.round(minServers * monthlyPerInstance),
+    max: Math.round(maxServers * monthlyPerInstance),
+    avg: Math.round(avgServers * monthlyPerInstance)
+  };
 }
 
 function calculateDatabaseCost(cpu: string, memory: string, storage: string, replicas: string): number {
   const cpuCores = parseFloat(cpu);
   const memoryGB = parseFloat(memory);
-  
+
   // Convert storage to GB (handle TB suffix)
   let storageGB: number;
   if (storage.includes('TB')) {
@@ -112,7 +146,7 @@ function calculateDatabaseCost(cpu: string, memory: string, storage: string, rep
 
   // Map to Hetzner CX instance type based on CPU and memory resources
   let computeCost: number;
-  
+
   if (cpuCores <= 1 && memoryGB <= 2) {
     computeCost = 4.99; // CX22: 2 vCPU, 4 GB
   } else if (cpuCores <= 2 && memoryGB <= 4) {
@@ -138,12 +172,12 @@ function calculateDatabaseCost(cpu: string, memory: string, storage: string, rep
 
 function calculateCacheCost(memory: string): number {
   const memoryMB = parseFloat(memory.replace('MB', '').replace('GB', '')) * (memory.includes('GB') ? 1024 : 1);
-  
+
   // Redis runs as container on shared server
   // Small cache (< 1GB): Share with app server, no extra cost
   // Medium cache (1-2GB): CX22 instance €4.99/month
   // Large cache (> 2GB): CX33 instance €5.49/month
-  
+
   if (memoryMB < 1024) {
     return 0; // Shared with application instances
   } else if (memoryMB <= 2048) {

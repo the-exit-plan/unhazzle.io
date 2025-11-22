@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeployment } from '@/lib/context/DeploymentContext';
-import { calculateApplicationCostImpact, calculateDatabaseCostImpact, calculateCacheCostImpact } from '@/lib/utils/costCalculator';
+import { calculateApplicationCostImpact, calculateDatabaseCostImpact, calculateCacheCostImpact, calculateApplicationCost, calculateApplicationCostRange, calculateEnvironmentCost } from '@/lib/utils/costCalculator';
 import EnvironmentNavigator from './EnvironmentNavigator';
 import EnvironmentInfo from './EnvironmentInfo';
 import ProjectSettings from './ProjectSettings';
-import CostHeader from './CostHeader';
 import { CloneModal, PauseModal, ResumeModal, CreateEnvironmentModal } from './EnvironmentModals';
 import AddApplicationModal from './AddApplicationModal';
 import DeleteApplicationModal from './DeleteApplicationModal';
@@ -16,6 +15,7 @@ import PauseApplicationModal from './PauseApplicationModal';
 import { generateYAML, generateGitHubActions } from '@/lib/utils/yamlGenerator';
 import ArchitectureDiagram from './ArchitectureDiagram';
 import DeploymentProgress from './DeploymentProgress';
+import UserProfileDropdown from './UserProfileDropdown';
 import type { EnvironmentType } from '@/lib/context/DeploymentContext';
 
 
@@ -576,18 +576,25 @@ export default function Dashboard() {
             </div>
             {activeEnv && (activeEnv.applications?.length || 0) > 0 && (
               <div className="ml-6">
-                <CostHeader environment={activeEnv} />
+                {/* Additional header content if needed */}
               </div>
             )}
-            {!state.project && (
-              <button
-                onClick={() => router.push('/questionnaire')}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg flex items-center gap-2"
-              >
-                <span className="text-xl">+</span>
-                <span>Create Project</span>
-              </button>
-            )}
+
+            <div className="flex items-center gap-4">
+              {!state.project && (
+                <button
+                  onClick={() => router.push('/questionnaire')}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-semibold shadow-lg flex items-center gap-2"
+                >
+                  <span className="text-xl">+</span>
+                  <span>Create Project</span>
+                </button>
+              )}
+
+              {state.user && (
+                <UserProfileDropdown user={state.user} />
+              )}
+            </div>
           </div>
         </div>
 
@@ -1149,7 +1156,15 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
     }
   }, [application.status]);
 
-  const [activeTab, setActiveTab] = useState<'configuration' | 'logs' | 'metrics' | 'events'>('configuration');
+  const [activeTab, setActiveTab] = useState<'configuration' | 'logs' | 'metrics' | 'events' | 'integrations'>('configuration');
+
+  // Accordion state for Events tab
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    deployments: true,
+    k8sEvents: false
+  });
+
+  const [showCostDropdown, setShowCostDropdown] = useState(false);
 
   const handleDeploymentComplete = useCallback(() => {
     // Hide deployment progress after animations complete
@@ -1171,6 +1186,12 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
     setShowActions(false);
   };
 
+  const handleRestart = () => {
+    // In a real implementation, this would trigger a rolling restart
+    alert(`Restarting ${application.name || 'application'}...\n\nThis will perform a rolling restart of all replicas with zero downtime.`);
+    setShowActions(false);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
       {/* Header */}
@@ -1185,14 +1206,57 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
           />
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowChanges(true)}
-            disabled={!hasChanges || isApplying || application.status === 'deploying'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border ${hasChanges ? 'border-amber-300 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-400'
-              } disabled:opacity-50`}
-          >
-            Show Changes
-          </button>
+          {/* Cost Estimator Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowCostDropdown(!showCostDropdown)}
+              className="px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            >
+              <span>💰</span>
+              <span>
+                €{calculateApplicationCostRange(
+                  draftApplication.resources.replicas,
+                  draftApplication.resources.cpu,
+                  draftApplication.resources.memory
+                ).min.toFixed(2)}
+              </span>
+              <span className="text-xs">▼</span>
+            </button>
+
+            {showCostDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowCostDropdown(false)}></div>
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-20 overflow-hidden p-4">
+                  <h4 className="text-sm font-bold text-slate-900 mb-3">Estimated Monthly Cost</h4>
+
+                  {(() => {
+                    const costs = calculateApplicationCostRange(
+                      draftApplication.resources.replicas,
+                      draftApplication.resources.cpu,
+                      draftApplication.resources.memory
+                    );
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-600">Baseline (Min Replicas)</span>
+                          <span className="text-sm font-bold text-slate-900">€{costs.min.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-600">Max Scaled (Max Replicas)</span>
+                          <span className="text-sm font-bold text-slate-900">€{costs.max.toFixed(2)}</span>
+                        </div>
+                        <div className="pt-3 border-t border-slate-100">
+                          <p className="text-xs text-slate-500">
+                            Costs are estimated based on instance types and replica counts. Actual usage may vary.
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={onApply}
             disabled={!hasChanges || isApplying || application.status === 'deploying'}
@@ -1229,6 +1293,13 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                     <span>⏸️</span>
                     <span>Pause</span>
                   </button>
+                  <button
+                    onClick={handleRestart}
+                    className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                  >
+                    <span>🔄</span>
+                    <span>Restart</span>
+                  </button>
                   <div className="border-t border-slate-100 my-1"></div>
                   <button
                     onClick={handleRemove}
@@ -1246,7 +1317,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
 
       {/* Tabs */}
       <div className="border-b border-slate-200 flex gap-6">
-        {(['configuration', 'logs', 'metrics', 'events'] as const).map(tab => (
+        {(['configuration', 'logs', 'metrics', 'events', 'integrations'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1302,7 +1373,6 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                   })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 >
-                  <option value="0.25">0.25</option>
                   <option value="0.5">0.5</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -1319,17 +1389,16 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                   })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 >
-                  <option value="0.5GB">0.5GB</option>
-                  <option value="1GB">1GB</option>
-                  <option value="2GB">2GB</option>
-                  <option value="4GB">4GB</option>
-                  <option value="8GB">8GB</option>
+                  <option value="512Mi">512MB</option>
+                  <option value="1Gi">1GB</option>
+                  <option value="2Gi">2GB</option>
+                  <option value="4Gi">4GB</option>
+                  <option value="8Gi">8GB</option>
                 </select>
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">Replicas (min)</label>
                 <input
-
                   type="number"
                   min={1}
                   value={draftApplication.resources.replicas.min}
@@ -1400,7 +1469,7 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
                     }
                   }}
                 />
-                <span className="font-medium text-slate-900">Enable Persistent Volume</span>
+                <span className="font-medium text-slate-900">Add Persistent Volume</span>
               </label>
 
               {draftApplication.volume && (
@@ -2026,28 +2095,84 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
 
       {/* Metrics Tab Content */}
       {activeTab === 'metrics' && (
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Performance Metrics</h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-slate-600 mb-3">Average Response Time</p>
-              <div className="text-4xl font-bold text-purple-600">45ms</div>
-              <p className="text-xs text-slate-500 mt-1">↓ 12% from yesterday</p>
+        <div className="space-y-6">
+          {/* Tier 1: K8s Events */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Tier 1: Instance Status</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Instance Status */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">Running Instances</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-green-600">
+                    {application.resources.replicas.min}
+                  </span>
+                  <span className="text-lg text-slate-400">/</span>
+                  <span className="text-lg text-slate-600">{application.resources.replicas.min}</span>
+                </div>
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                  All instances healthy
+                </p>
+              </div>
+
+              {/* Restart Count */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">Restart Count (24h)</p>
+                <div className="text-3xl font-bold text-slate-900">0</div>
+                <p className="text-xs text-slate-500 mt-1">No restarts detected</p>
+              </div>
+
+              {/* OOM Killed */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">OOM Killed (24h)</p>
+                <div className="text-3xl font-bold text-green-600">0</div>
+                <p className="text-xs text-slate-500 mt-1">No memory issues</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-3">Error Rate</p>
-              <div className="text-4xl font-bold text-green-600">0.02%</div>
-              <p className="text-xs text-slate-500 mt-1">Excellent reliability</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-3">99th Percentile (p99)</p>
-              <div className="text-4xl font-bold text-blue-600">234ms</div>
-              <p className="text-xs text-slate-500 mt-1">Well within SLA</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-3">Requests Today</p>
-              <div className="text-4xl font-bold text-slate-900">1.8M</div>
-              <p className="text-xs text-slate-500 mt-1">↑ 23% from yesterday</p>
+          </div>
+
+          {/* Tier 2: Basic Metrics */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Tier 2: Performance Metrics</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Request Rate */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">Request Rate</p>
+                <div className="text-3xl font-bold text-purple-600">1.2k</div>
+                <p className="text-xs text-slate-500 mt-1">requests/min</p>
+              </div>
+
+              {/* Error Rate */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">Error Rate</p>
+                <div className="text-3xl font-bold text-green-600">0.02%</div>
+                <p className="text-xs text-slate-500 mt-1">Excellent reliability</p>
+              </div>
+
+              {/* CPU Utilization */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">CPU Utilization</p>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-3xl font-bold text-blue-600">42%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '42%' }}></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">of {application.resources.cpu} cores</p>
+              </div>
+
+              {/* Memory Utilization */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2">Memory Utilization</p>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-3xl font-bold text-amber-600">58%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-amber-600 h-2 rounded-full" style={{ width: '58%' }}></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">of {application.resources.memory}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -2055,39 +2180,299 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
 
       {/* Events Tab Content */}
       {activeTab === 'events' && (
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Recent Events</h3>
-          <div className="space-y-3">
-            <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <span className="text-2xl">📤</span>
-              <div className="flex-1">
-                <p className="font-medium text-blue-900">Deployment Completed</p>
-                <p className="text-sm text-blue-700">All replicas healthy and serving traffic</p>
-                <p className="text-xs text-blue-600 mt-1">2 hours ago</p>
+        <div className="space-y-4">
+          {/* Deployment History Accordion */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setExpandedSections(prev => ({ ...prev, deployments: !prev.deployments }))}
+              className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition"
+            >
+              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                Deployment History (Last 5)
+              </h3>
+              <span className="text-slate-600 text-lg">
+                {expandedSections.deployments ? '▼' : '▶'}
+              </span>
+            </button>
+
+            {expandedSections.deployments && (
+              <div className="p-4 space-y-2 bg-white">
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-lg">✅</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-green-900 text-sm">v1.2.3</p>
+                      <span className="px-2 py-0.5 bg-green-600 text-white text-xs rounded-full">Current</span>
+                    </div>
+                    <p className="text-xs text-green-700 mt-0.5">Deployed successfully • 2 hours ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-lg">✅</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 text-sm">v1.2.2</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Deployed successfully • 1 day ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-lg">✅</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 text-sm">v1.2.1</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Deployed successfully • 3 days ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-lg">✅</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 text-sm">v1.2.0</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Deployed successfully • 1 week ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <span className="text-lg">⚠️</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-amber-900 text-sm">v1.1.9</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Rolled back due to errors • 2 weeks ago</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* K8s Events Accordion */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setExpandedSections(prev => ({ ...prev, k8sEvents: !prev.k8sEvents }))}
+              className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition"
+            >
+              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                Kubernetes Events (Last 10)
+              </h3>
+              <span className="text-slate-600 text-lg">
+                {expandedSections.k8sEvents ? '▼' : '▶'}
+              </span>
+            </button>
+
+            {expandedSections.k8sEvents && (
+              <div className="p-4 space-y-2 bg-white">
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">2m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">Scaled</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Scaled up replica set to 2</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">5m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">Pulled</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Successfully pulled image "{application.imageUrl}"</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">5m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">Pulling</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Pulling image "{application.imageUrl}"</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-sm text-green-600 mt-0.5">6m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-green-900 font-mono">Started</p>
+                    <p className="text-xs text-green-700 mt-0.5">Started container {application.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">6m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">Created</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Created container {application.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">15m ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">Scheduled</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Successfully assigned pod to node</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <span className="text-sm text-blue-600 mt-0.5">1h ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-900 font-mono">SuccessfulCreate</p>
+                    <p className="text-xs text-blue-700 mt-0.5">Created pod: {application.name}-{Math.random().toString(36).substring(7)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">2h ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">ScalingReplicaSet</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Scaled up replica set to 2 from 1</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-sm text-green-600 mt-0.5">2h ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-green-900 font-mono">SuccessfulRollout</p>
+                    <p className="text-xs text-green-700 mt-0.5">Deployment has successfully progressed</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-500 mt-0.5">3h ago</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-900 font-mono">BackOff</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Back-off restarting failed container (resolved)</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Integrations Tab Content */}
+      {activeTab === 'integrations' && (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex gap-3">
+              <span className="text-xl">ℹ️</span>
+              <div className="flex-1 text-sm text-blue-900">
+                <p className="font-medium mb-1">External Monitoring Integrations</p>
+                <p>Connect your application to external monitoring and observability platforms. Metrics and logs will be automatically forwarded to your configured endpoints.</p>
               </div>
             </div>
-            <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-2xl">📊</span>
+          </div>
+
+          {/* Datadog Integration */}
+          <div className="border border-slate-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">📊</span>
+              </div>
               <div className="flex-1">
-                <p className="font-medium text-slate-900">Auto-scaling triggered</p>
-                <p className="text-sm text-slate-600">Scaled from 2 to 4 replicas due to high traffic</p>
-                <p className="text-xs text-slate-500 mt-1">45 minutes ago</p>
+                <h3 className="text-lg font-semibold text-slate-900">Datadog</h3>
+                <p className="text-sm text-slate-600">Application performance monitoring and analytics</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+
+            <div className="space-y-4 pl-13">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  API Endpoint URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://api.datadoghq.com"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter your Datadog API key"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono"
+                />
               </div>
             </div>
-            <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-2xl">🔄</span>
+          </div>
+
+          {/* Splunk Integration */}
+          <div className="border border-slate-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">🔍</span>
+              </div>
               <div className="flex-1">
-                <p className="font-medium text-slate-900">Database backup completed</p>
-                <p className="text-sm text-slate-600">Automatic daily backup successful (5.2 GB)</p>
-                <p className="text-xs text-slate-500 mt-1">1 hour ago</p>
+                <h3 className="text-lg font-semibold text-slate-900">Splunk</h3>
+                <p className="text-sm text-slate-600">Log management and security analytics</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+
+            <div className="space-y-4 pl-13">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  HEC Endpoint URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://your-instance.splunkcloud.com:8088"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  HEC Token
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter your Splunk HEC token"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono"
+                />
               </div>
             </div>
-            <div className="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
-              <span className="text-2xl">✅</span>
+          </div>
+
+          {/* Dynatrace Integration */}
+          <div className="border border-slate-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">📈</span>
+              </div>
               <div className="flex-1">
-                <p className="font-medium text-green-900">SSL certificate renewed</p>
-                <p className="text-sm text-green-700">Auto-renewal for HTTPS certificate successful</p>
-                <p className="text-xs text-green-600 mt-1">3 days ago</p>
+                <h3 className="text-lg font-semibold text-slate-900">Dynatrace</h3>
+                <p className="text-sm text-slate-600">Full-stack observability platform</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+
+            <div className="space-y-4 pl-13">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Environment URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://{your-environment-id}.live.dynatrace.com"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  API Token
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter your Dynatrace API token"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono"
+                />
               </div>
             </div>
           </div>
@@ -2833,53 +3218,14 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
 
   // Calculate project total cost
   const calculateProjectCost = () => {
-    let total = 0;
+    let totalCurrent = 0;
+    let totalMax = 0;
     project.environments?.forEach((env: any) => {
-      total += calculateEnvironmentCost(env);
+      const { current, max } = calculateEnvironmentCost(env);
+      totalCurrent += current;
+      totalMax += max;
     });
-    return total;
-  };
-
-  const calculateEnvironmentCost = (env: any) => {
-    let total = 0;
-
-    // Container costs
-    env.containers?.forEach((container: any) => {
-      const cpuCores = parseFloat(container.resources.cpu);
-      const memoryGB = parseFloat(container.resources.memory);
-      const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
-
-      // Simplified cost calculation
-      let costPerInstance = 5;
-      if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
-      if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
-
-      total += costPerInstance * avgReplicas;
-    });
-
-    // Database cost
-    if (env.database) {
-      total += 45; // Base database cost
-    }
-
-    // Cache cost
-    if (env.cache) {
-      total += 15; // Base cache cost
-    }
-
-    return Math.round(total * 1.3); // 30% margin
-  };
-
-  const calculateContainerCost = (container: any) => {
-    const cpuCores = parseFloat(container.resources.cpu);
-    const memoryGB = parseFloat(container.resources.memory);
-    const avgReplicas = (container.resources.replicas.min + container.resources.replicas.max) / 2;
-
-    let costPerInstance = 5;
-    if (cpuCores > 2 || memoryGB > 4) costPerInstance = 10;
-    if (cpuCores > 4 || memoryGB > 8) costPerInstance = 18;
-
-    return Math.round(costPerInstance * avgReplicas * 1.3);
+    return { current: totalCurrent, max: totalMax };
   };
 
   const projectCost = calculateProjectCost();
@@ -2900,7 +3246,11 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold text-purple-600">
-              €{projectCost}/mo
+              €{projectCost.current.toFixed(2)}
+              <span className="text-lg font-normal text-purple-400 ml-2">
+                (Max: €{projectCost.max.toFixed(2)})
+              </span>
+              <span className="text-sm font-normal text-slate-500 ml-1">/mo</span>
             </div>
             <div className="text-xs text-slate-600">Total project cost</div>
           </div>
@@ -2911,7 +3261,7 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
       <div className="space-y-4">
         {project.environments?.map((env: any) => {
           const isExpanded = expandedEnvironments[env.id] !== false;
-          const envCost = calculateEnvironmentCost(env);
+          const { current: envCost, max: envMaxCost } = calculateEnvironmentCost(env);
           const containers = env.containers || [];
           const hasDatabase = !!env.database;
           const hasCache = !!env.cache;
@@ -2942,8 +3292,13 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-slate-900">€{envCost}/mo</div>
-                  <div className="text-xs text-slate-600">Environment cost</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    €{envCost.toFixed(2)}
+                    <span className="text-xs font-normal text-slate-500 ml-1">
+                      (Max: €{envMaxCost.toFixed(2)})
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">Est. cost/mo</div>
                 </div>
               </button>
 
@@ -2960,7 +3315,11 @@ function ProjectEnvironmentOverview({ project, state }: { project: any; state: a
                       <div className="space-y-2">
                         {containers.map((container: any, idx: number) => {
                           const displayName = container.imageUrl.split('/').pop()?.split(':')[0] || `app-${idx + 1}`;
-                          const containerCost = calculateContainerCost(container);
+                          const containerCost = calculateApplicationCost(
+                            container.resources.replicas,
+                            container.resources.cpu,
+                            container.resources.memory
+                          );
                           const hasDbAccess = container.serviceAccess?.database;
                           const hasCacheAccess = container.serviceAccess?.cache;
 

@@ -45,35 +45,35 @@
 
 ## Observability (4-Tier)
 
-**8. Tier 1: K8s Events (Always Visible)**
+**8. Tier 1: K8s Events (Always Visible)** DONE
 - Pod restart count + reasons (OOMKilled, CrashLoopBackOff, Error)
 - Last 10 K8s events per app
 - Current instance status (X/Y instances running)
 - Deploy history (last 5 deployments)
 
-**9. Tier 2: Basic Metrics (Always Visible)**
+**9. Tier 2: Basic Metrics (Always Visible)** DONE
 - Request count (derived from health checks)
 - Error rate percentage
 - CPU/Memory utilization
 - Restart count alerts
 
-**10. Tier 3: Container Logs (On-Demand)**
+**10. Tier 3: Container Logs (On-Demand)** DONE
 - Last 100 lines stdout/stderr
 - Live tail option
 - Filter by container (multi-container apps)
 
-**11. Tier 4: External Integration**
+**11. Tier 4: External Integration** DONE
 - Datadog/external monitoring connection (API key input)
 - Webhook for metrics push
 
 ## Developer Experience
 
-**12. OCI Registry Integration**
+**12. OCI Registry Integration** DONE
 - Connect public/private registries in project settings
 - Auto-populate app config based on image inspection (detect ports, common patterns)
 - Image selection UI with pre-configured defaults
 
-**13. Actions & Operations**
+**13. Actions & Operations** DONE
 - Restart app
 - Scale (adjust resources/replicas)
 - Redeploy (same or new image)
@@ -86,12 +86,12 @@
 - Export project config to YAML
 - CI/CD integration (GitHub Actions, GitLab CI)
 
-## Cost & Billing
+## Cost & Billing 
 
-**15. Cost Transparency**
+**15. Cost Transparency** DONE
 - Real-time cost estimate during configuration
-- Max cost display (HPA max replicas × resource cost)
+- Max cost display (HPA max replicas × resource cost): This is something we must calculate based on the resource configuration of the app. 
 - Cost breakdown per app
-- Monthly estimate per project
-
+- Monthly estimate per environment in the overview
+- Project-level cost visibility: As the higher level logical container, projects should be able to see the cost of all their environments and apps. Initial implementation will be a simple sum of all environments and apps. Users must be able to see the cost of their projects in their billing dashboard. Let's add a tab to the billing dashboard for projects.
 
