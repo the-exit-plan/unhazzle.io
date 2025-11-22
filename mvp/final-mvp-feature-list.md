@@ -33,12 +33,12 @@
 
 ## Data Layer
 
-**6. External Database**
+**6. External Database** DONE
 - Connection string input for external DB managed services (Aiven, Supabase, etc.)
 - Region guidance (recommend same region as project)
 - Connection validation: Make sure the connection string is valid and the database is accessible from unhazzle infrastructure
 
-**7. Cache/Storage**
+**7. Cache/Storage** DONE
 - Deploy cache as standard pod (Redis, Memcached, Valkey)
 - Volume attachment for persistence
 - Standard container configuration (no special treatment)

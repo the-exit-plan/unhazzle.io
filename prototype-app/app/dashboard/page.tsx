@@ -1747,7 +1747,111 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
             />
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-2">Set min=max for fixed scaling. Different values enable auto-scaling.</p>
+      </div>
+
+      {/* Section: Storage (Persistent Volumes) */}
+      {/* Section: Storage (Persistent Volumes) */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-900 mb-3">Storage</h4>
+        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <label className="flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={!!draftApplication.volume}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setDraftApplication({
+                    ...draftApplication,
+                    volume: {
+                      mountPath: '/data',
+                      sizeGB: 10,
+                      autoScale: true,
+                      backupFrequency: 'daily',
+                      deleteWithContainer: false
+                    }
+                  });
+                } else {
+                  const { volume, ...rest } = draftApplication;
+                  setDraftApplication(rest);
+                }
+              }}
+            />
+            <span className="font-medium text-slate-900">Enable Persistent Volume</span>
+          </label>
+
+          {draftApplication.volume && (
+            <div className="ml-6 mt-3 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Mount Path</label>
+                  <input
+                    type="text"
+                    value={draftApplication.volume.mountPath}
+                    onChange={(e) => setDraftApplication({
+                      ...draftApplication,
+                      volume: { ...draftApplication.volume!, mountPath: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                    placeholder="/data"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Size</label>
+                  <select
+                    value={draftApplication.volume.sizeGB}
+                    onChange={(e) => setDraftApplication({
+                      ...draftApplication,
+                      volume: { ...draftApplication.volume!, sizeGB: parseInt(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="1">1 GB</option>
+                    <option value="5">5 GB</option>
+                    <option value="10">10 GB</option>
+                    <option value="20">20 GB</option>
+                    <option value="50">50 GB</option>
+                    <option value="100">100 GB</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Backups</label>
+                  <select
+                    value={draftApplication.volume.backupFrequency}
+                    onChange={(e) => setDraftApplication({
+                      ...draftApplication,
+                      volume: { ...draftApplication.volume!, backupFrequency: e.target.value as any }
+                    })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="disabled">Disabled</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+                <div className="flex items-center pt-5">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={draftApplication.volume.autoScale}
+                      onChange={(e) => setDraftApplication({
+                        ...draftApplication,
+                        volume: { ...draftApplication.volume!, autoScale: e.target.checked }
+                      })}
+                    />
+                    <span className="text-sm text-slate-700">Auto-scale size</span>
+                  </label>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Persistent volumes retain data even if the container crashes or restarts.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Section: Dependencies (formerly Application Access) */}
