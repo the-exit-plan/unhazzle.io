@@ -18,7 +18,7 @@ import ArchitectureDiagram from './ArchitectureDiagram';
 import DeploymentProgress from './DeploymentProgress';
 import type { EnvironmentType } from '@/lib/context/DeploymentContext';
 
-type TabType = 'projects' | 'logs' | 'metrics' | 'events' | 'settings' | 'nextSteps';
+
 
 // Component for creating first environment
 function CreateFirstEnvironment() {
@@ -444,12 +444,10 @@ export default function Dashboard() {
   const router = useRouter();
   const { state, removeDatabase, removeCache, updateApplicationStatus } = useDeployment();
 
-  const [activeTab, setActiveTab] = useState<TabType>('projects');
   const [uptime, setUptime] = useState(99.98);
   const [cpuUsage, setCpuUsage] = useState(42);
   const [memoryUsage, setMemoryUsage] = useState(58);
   const [requestsPerMinute, setRequestsPerMinute] = useState(1240);
-  const [selectedApplication, setSelectedApplication] = useState<string>('all');
   const [mounted, setMounted] = useState(false);
 
   // Scroll to top on mount
@@ -593,405 +591,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          {/* Tab Headers */}
-          <div className="border-b border-slate-200 flex">
-            {(['projects', 'logs', 'metrics', 'events', 'settings', 'nextSteps'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-6 py-4 font-medium transition text-center relative ${tab === 'nextSteps'
-                  ? activeTab === tab
-                    ? 'border-b-2 border-amber-500 text-amber-600 bg-amber-50'
-                    : 'border-b-2 border-transparent text-amber-600 hover:text-amber-700 bg-gradient-to-b from-amber-50 to-transparent'
-                  : activeTab === tab
-                    ? 'border-b-2 border-purple-600 text-purple-600 bg-purple-50'
-                    : 'text-slate-600 hover:text-slate-900'
-                  }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {tab === 'nextSteps' ? (
-                    <>
-                      <span>Next Steps</span>
-                      <span className="animate-pulse text-lg">→</span>
-                      <span className="inline-block px-2 py-0.5 bg-amber-500 text-white text-xs rounded-full font-bold">
-                        IMPORTANT
-                      </span>
-                    </>
-                  ) : (
-                    tab.charAt(0).toUpperCase() + tab.slice(1)
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="p-6">
-            {/* Projects Tab - Hybrid view: left panel (hierarchy) + right panel (editing) */}
-            {activeTab === 'projects' && (
-              <HybridOverview project={state.project} state={state} />
-            )}
-
-            {/* Logs Tab */}
-            {activeTab === 'logs' && (
-              <div>
-                <div className="mb-4 flex items-center gap-3">
-                  <label className="text-sm font-medium text-slate-600">Application:</label>
-                  <select
-                    value={selectedApplication}
-                    onChange={(e) => setSelectedApplication(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  >
-                    <option value="all">All Applications</option>
-                    {state.applications.map((app, index) => {
-                      return (
-                        <option key={app.id} value={app.id}>{app.name}</option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
-                  {(() => {
-                    const allLogs: { application: string; message: string }[] = [];
-
-                    state.applications.forEach((app, index) => {
-                      if (selectedApplication === 'all' || selectedApplication === app.id) {
-                        allLogs.push(
-                          { application: app.name, message: '[2025-11-02 14:32:15] Application started successfully' },
-                          { application: app.name, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${app.port}` },
-                          { application: app.name, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
-                          { application: app.name, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
-                          { application: app.name, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
-                        );
-
-                        if (app.serviceAccess.database) {
-                          allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
-                        }
-                        if (app.serviceAccess.cache) {
-                          allLogs.push({ application: app.name, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
-                        }
-
-                        if (app.exposure === 'public') {
-                          allLogs.push(
-                            { application: app.name, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
-                            { application: app.name, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
-                            { application: app.name, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
-                            { application: app.name, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
-                            { application: app.name, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
-                          );
-                        } else {
-                          allLogs.push(
-                            { application: app.name, message: '[2025-11-02 14:35:42] Processing background job #1234' },
-                            { application: app.name, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
-                            { application: app.name, message: '[2025-11-02 14:35:44] Handling internal API call' }
-                          );
-                        }
-                      }
-                    });
-
-                    return allLogs.map((log, i) => (
-                      <div key={i}>
-                        {selectedApplication === 'all' && (
-                          <span className="text-purple-400">[{log.application}] </span>
-                        )}
-                        {log.message}
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Metrics Tab */}
-            {activeTab === 'metrics' && (
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Performance Metrics</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-slate-600 mb-3">Average Response Time</p>
-                    <div className="text-4xl font-bold text-purple-600">45ms</div>
-                    <p className="text-xs text-slate-500 mt-1">↓ 12% from yesterday</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-3">Error Rate</p>
-                    <div className="text-4xl font-bold text-green-600">0.02%</div>
-                    <p className="text-xs text-slate-500 mt-1">Excellent reliability</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-3">99th Percentile (p99)</p>
-                    <div className="text-4xl font-bold text-blue-600">234ms</div>
-                    <p className="text-xs text-slate-500 mt-1">Well within SLA</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-3">Requests Today</p>
-                    <div className="text-4xl font-bold text-slate-900">1.8M</div>
-                    <p className="text-xs text-slate-500 mt-1">↑ 23% from yesterday</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Events Tab */}
-            {activeTab === 'events' && (
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Recent Events</h3>
-                <div className="space-y-3">
-                  <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <span className="text-2xl">📤</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-blue-900">Deployment Completed</p>
-                      <p className="text-sm text-blue-700">All replicas healthy and serving traffic</p>
-                      <p className="text-xs text-blue-600 mt-1">2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <span className="text-2xl">📊</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900">Auto-scaling triggered</p>
-                      <p className="text-sm text-slate-600">Scaled from 2 to 4 replicas due to high traffic</p>
-                      <p className="text-xs text-slate-500 mt-1">45 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <span className="text-2xl">🔄</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900">Database backup completed</p>
-                      <p className="text-sm text-slate-600">Automatic daily backup successful (5.2 GB)</p>
-                      <p className="text-xs text-slate-500 mt-1">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                    <span className="text-2xl">✅</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-green-900">SSL certificate renewed</p>
-                      <p className="text-sm text-green-700">Auto-renewal for HTTPS certificate successful</p>
-                      <p className="text-xs text-green-600 mt-1">3 days ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings Tab */}
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="bg-purple-50 border border-purple-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Settings moved to Projects</h3>
-                  <p className="text-slate-700 mb-4">
-                    Edit your current deployment configuration in the Projects tab. Use the left sidebar to pick a resource and the right panel to edit. You can preview and apply staged changes.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('projects')}
-                    className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-                  >
-                    Go to Projects
-                  </button>
-                </div>
-                <div className="text-xs text-slate-500">
-                  Looking for advanced settings? We’ll surface them here soon. For now, everything configurable is available in Projects.
-                </div>
-              </div>
-            )}
-
-            {/* Next Steps Tab */}
-            {activeTab === 'nextSteps' && (
-              <div className="space-y-8">
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                    <span>🚀</span>
-                    <span>Enable Continuous Deployment</span>
-                  </h3>
-                  <p className="text-slate-600">
-                    Your application is now live! The next step is to enable automatic deployments from your GitHub repository using the Unhazzle CLI and GitHub Actions.
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <a
-                      href="/unhazzle.io/cli-demo/cli-guide.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-                    >
-                      Experience the Unhazzle CLI
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                    <span className="text-sm text-slate-600">Simulate the same deployment flow directly from your terminal.</span>
-                  </div>
-                </div>
-
-                {/* Step 1: YAML Export */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
-                      1
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900">Export Your Infrastructure Configuration</h4>
-                  </div>
-                  <p className="text-slate-600 ml-11">
-                    Below is your infrastructure configuration in YAML format. This file describes all your resources, environment variables, and settings. Copy it to your repository for version control and CI/CD integration.
-                  </p>
-
-                  <div className="ml-11 space-y-3">
-                    <div className="bg-slate-900 rounded-lg overflow-hidden">
-                      <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
-                        <span className="text-white font-mono text-sm">unhazzle.yaml</span>
-                        <button
-                          onClick={() => {
-                            const yaml = generateYAML(state);
-                            navigator.clipboard.writeText(yaml);
-                            alert('YAML copied to clipboard!');
-                          }}
-                          className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      <pre className="p-4 text-white font-mono text-xs overflow-x-auto max-h-72">
-                        <code>{generateYAML(state)}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 2: Add to Repository */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
-                      2
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900">Add YAML to Your Repository</h4>
-                  </div>
-                  <p className="text-slate-600 ml-11">
-                    Commit the unhazzle.yaml file to the root of your repository:
-                  </p>
-                  <div className="ml-11 bg-slate-100 rounded-lg p-4 font-mono text-sm space-y-1">
-                    <div className="text-slate-700">$ git add unhazzle.yaml</div>
-                    <div className="text-slate-700">$ git commit -m "Add Unhazzle deployment config"</div>
-                    <div className="text-slate-700">$ git push origin main</div>
-                  </div>
-                </div>
-
-                {/* Step 3: GitHub Actions */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
-                      3
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900">Set Up GitHub Actions Workflow</h4>
-                  </div>
-                  <p className="text-slate-600 ml-11">
-                    Create a GitHub Actions workflow to automatically deploy on every push:
-                  </p>
-
-                  <div className="ml-11 space-y-3">
-                    <div className="bg-slate-900 rounded-lg overflow-hidden">
-                      <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
-                        <span className="text-white font-mono text-sm">.github/workflows/deploy.yml</span>
-                        <button
-                          onClick={() => {
-                            const workflow = generateGitHubActions();
-                            navigator.clipboard.writeText(workflow);
-                            alert('Workflow copied to clipboard!');
-                          }}
-                          className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      <pre className="p-4 text-white font-mono text-xs overflow-x-auto max-h-72">
-                        <code>{generateGitHubActions()}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 4: CLI Setup */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
-                      4
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900">Install Unhazzle CLI</h4>
-                  </div>
-                  <p className="text-slate-600 ml-11">
-                    Install the Unhazzle CLI locally for development and debugging:
-                  </p>
-                  <div className="ml-11 bg-slate-100 rounded-lg p-4 font-mono text-sm space-y-1">
-                    <div className="text-slate-700">$ npm install -g @unhazzle/cli</div>
-                    <div className="text-slate-700 mt-3"># Or authenticate with GitHub</div>
-                    <div className="text-slate-700">$ unhazzle auth login</div>
-                  </div>
-                </div>
-
-                {/* Step 5: Deploy on Push */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
-                      5
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900">All Set! Continuous Deployment Enabled</h4>
-                  </div>
-                  <p className="text-slate-600 ml-11">
-                    From now on, every time you push to your main branch:
-                  </p>
-                  <div className="ml-11 space-y-2 text-slate-600">
-                    <div className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold mt-1">•</span>
-                      <span>GitHub Actions picks up the unhazzle.yaml file</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold mt-1">•</span>
-                      <span>Unhazzle CLI automatically deploys your app with the exact configuration</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold mt-1">•</span>
-                      <span>No manual steps, no configuration drift, fully automated</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold mt-1">•</span>
-                      <span>Deployment status is reflected in your GitHub PR</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Useful Commands */}
-                <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 space-y-4">
-                  <h4 className="font-bold text-slate-900">🔧 Useful CLI Commands</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="font-mono text-slate-700 mb-1">$ unhazzle status</p>
-                      <p className="text-slate-600">Check application health and metrics</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-slate-700 mb-1">$ unhazzle logs --follow</p>
-                      <p className="text-slate-600">Stream real-time application logs</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-slate-700 mb-1">$ unhazzle env set KEY=VALUE</p>
-                      <p className="text-slate-600">Update environment variables on the fly</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-slate-700 mb-1">$ unhazzle deploy --config unhazzle.yaml</p>
-                      <p className="text-slate-600">Manual deployment using your YAML config</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Documentation Link */}
-                <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                  <p className="text-slate-600 mb-4">Want to learn more about continuous deployment?</p>
-                  <a
-                    href="https://docs.unhazzle.io/cli"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-                  >
-                    Read the CLI Documentation →
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Main Content - Hybrid view: left panel (hierarchy) + right panel (editing) */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6">
+          <HybridOverview project={state.project} state={state} />
         </div>
       </div>
     </div>
@@ -1547,6 +1149,8 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
     }
   }, [application.status]);
 
+  const [activeTab, setActiveTab] = useState<'configuration' | 'logs' | 'metrics' | 'events'>('configuration');
+
   const handleDeploymentComplete = useCallback(() => {
     // Hide deployment progress after animations complete
     setShowDeploymentProgress(false);
@@ -1640,6 +1244,22 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-slate-200 flex gap-6">
+        {(['configuration', 'logs', 'metrics', 'events'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 text-sm font-medium transition border-b-2 ${activeTab === tab
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Deployment Progress */}
       {showDeploymentProgress && (
         <DeploymentProgress
@@ -1649,706 +1269,829 @@ function ApplicationEditor({ application, environment, draftApplication, setDraf
         />
       )}
 
-      {/* Section: Application Image */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Application Image</h4>
-        <div>
-          <label className="block text-xs text-slate-600 mb-1">Image URL</label>
-          <input
-            type="text"
-            value={draftApplication.imageUrl}
-            onChange={(e) => setDraftApplication({ ...draftApplication, imageUrl: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
-            placeholder="ghcr.io/username/image:tag"
-          />
-        </div>
-      </div>
+      {/* Configuration Tab Content */}
+      {activeTab === 'configuration' && (
+        <div className="space-y-6">
 
-      {/* Section: Resources */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
-        <div className="grid md:grid-cols-4 gap-4">
+          {/* Section: Application Image */}
           <div>
-            <label className="block text-xs text-slate-600 mb-1">CPU</label>
-            <select
-              value={draftApplication.resources.cpu}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                resources: { ...draftApplication.resources, cpu: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="0.25">0.25</option>
-              <option value="0.5">0.5</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Memory</label>
-            <select
-              value={draftApplication.resources.memory}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                resources: { ...draftApplication.resources, memory: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="0.5GB">0.5GB</option>
-              <option value="1GB">1GB</option>
-              <option value="2GB">2GB</option>
-              <option value="4GB">4GB</option>
-              <option value="8GB">8GB</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Replicas (min)</label>
-            <input
-
-              type="number"
-              min={1}
-              value={draftApplication.resources.replicas.min}
-              onChange={(e) => {
-                const newMin = Math.max(1, parseInt(e.target.value) || 1);
-                const currentMax = draftApplication.resources.replicas.max;
-                setDraftApplication({
-                  ...draftApplication,
-                  resources: {
-                    ...draftApplication.resources,
-                    replicas: {
-                      ...draftApplication.resources.replicas,
-                      min: newMin,
-                      max: Math.max(newMin, currentMax)
-                    }
-                  }
-                });
-              }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Replicas (max)</label>
-            <input
-              type="number"
-              min={draftApplication.resources.replicas.min}
-              value={draftApplication.resources.replicas.max}
-              onChange={(e) => {
-                const newMax = Math.max(draftApplication.resources.replicas.min, parseInt(e.target.value) || 1);
-                setDraftApplication({
-                  ...draftApplication,
-                  resources: {
-                    ...draftApplication.resources,
-                    replicas: { ...draftApplication.resources.replicas, max: newMax }
-                  }
-                });
-              }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Section: Storage (Persistent Volumes) */}
-      {/* Section: Storage (Persistent Volumes) */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Storage</h4>
-        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <label className="flex items-center gap-2 mb-2">
-            <input
-              type="checkbox"
-              checked={!!draftApplication.volume}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setDraftApplication({
-                    ...draftApplication,
-                    volume: {
-                      mountPath: '/data',
-                      sizeGB: 10,
-                      autoScale: true,
-                      backupFrequency: 'daily',
-                      deleteWithContainer: false
-                    }
-                  });
-                } else {
-                  const { volume, ...rest } = draftApplication;
-                  setDraftApplication(rest);
-                }
-              }}
-            />
-            <span className="font-medium text-slate-900">Enable Persistent Volume</span>
-          </label>
-
-          {draftApplication.volume && (
-            <div className="ml-6 mt-3 space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">Mount Path</label>
-                  <input
-                    type="text"
-                    value={draftApplication.volume.mountPath}
-                    onChange={(e) => setDraftApplication({
-                      ...draftApplication,
-                      volume: { ...draftApplication.volume!, mountPath: e.target.value }
-                    })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
-                    placeholder="/data"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">Size</label>
-                  <select
-                    value={draftApplication.volume.sizeGB}
-                    onChange={(e) => setDraftApplication({
-                      ...draftApplication,
-                      volume: { ...draftApplication.volume!, sizeGB: parseInt(e.target.value) }
-                    })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  >
-                    <option value="1">1 GB</option>
-                    <option value="5">5 GB</option>
-                    <option value="10">10 GB</option>
-                    <option value="20">20 GB</option>
-                    <option value="50">50 GB</option>
-                    <option value="100">100 GB</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">Backups</label>
-                  <select
-                    value={draftApplication.volume.backupFrequency}
-                    onChange={(e) => setDraftApplication({
-                      ...draftApplication,
-                      volume: { ...draftApplication.volume!, backupFrequency: e.target.value as any }
-                    })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  >
-                    <option value="disabled">Disabled</option>
-                    <option value="hourly">Hourly</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                  </select>
-                </div>
-                <div className="flex items-center pt-5">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={draftApplication.volume.autoScale}
-                      onChange={(e) => setDraftApplication({
-                        ...draftApplication,
-                        volume: { ...draftApplication.volume!, autoScale: e.target.checked }
-                      })}
-                    />
-                    <span className="text-sm text-slate-700">Auto-scale size</span>
-                  </label>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">
-                Persistent volumes retain data even if the container crashes or restarts.
-              </p>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Application Image</h4>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Image URL</label>
+              <input
+                type="text"
+                value={draftApplication.imageUrl}
+                onChange={(e) => setDraftApplication({ ...draftApplication, imageUrl: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                placeholder="ghcr.io/username/image:tag"
+              />
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Section: Dependencies (formerly Application Access) */}
-      {environment?.applications?.length >= 1 && (
-        <div>
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">Dependencies</h4>
-          <div className="space-y-4 text-sm">
-            {/* External Database */}
+          {/* Section: Resources */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Resources</h4>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">CPU</label>
+                <select
+                  value={draftApplication.resources.cpu}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    resources: { ...draftApplication.resources, cpu: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="0.25">0.25</option>
+                  <option value="0.5">0.5</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Memory</label>
+                <select
+                  value={draftApplication.resources.memory}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    resources: { ...draftApplication.resources, memory: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="0.5GB">0.5GB</option>
+                  <option value="1GB">1GB</option>
+                  <option value="2GB">2GB</option>
+                  <option value="4GB">4GB</option>
+                  <option value="8GB">8GB</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Replicas (min)</label>
+                <input
+
+                  type="number"
+                  min={1}
+                  value={draftApplication.resources.replicas.min}
+                  onChange={(e) => {
+                    const newMin = Math.max(1, parseInt(e.target.value) || 1);
+                    const currentMax = draftApplication.resources.replicas.max;
+                    setDraftApplication({
+                      ...draftApplication,
+                      resources: {
+                        ...draftApplication.resources,
+                        replicas: {
+                          ...draftApplication.resources.replicas,
+                          min: newMin,
+                          max: Math.max(newMin, currentMax)
+                        }
+                      }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Replicas (max)</label>
+                <input
+                  type="number"
+                  min={draftApplication.resources.replicas.min}
+                  value={draftApplication.resources.replicas.max}
+                  onChange={(e) => {
+                    const newMax = Math.max(draftApplication.resources.replicas.min, parseInt(e.target.value) || 1);
+                    setDraftApplication({
+                      ...draftApplication,
+                      resources: {
+                        ...draftApplication.resources,
+                        replicas: { ...draftApplication.resources.replicas, max: newMax }
+                      }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Storage (Persistent Volumes) */}
+          {/* Section: Storage (Persistent Volumes) */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Storage</h4>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <label className="flex items-center gap-2 mb-2">
                 <input
                   type="checkbox"
-                  checked={draftApplication.externalDatabase?.enabled || false}
+                  checked={!!draftApplication.volume}
                   onChange={(e) => {
-                    const enabled = e.target.checked;
-                    const envVarKey = 'DATABASE_URL';
-                    let updatedEnvVars = [...draftApplication.environmentVariables];
-
-                    // Remove existing DATABASE_URL if present to avoid duplicates/conflicts
-                    if (!enabled) {
-                      updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                    if (e.target.checked) {
+                      setDraftApplication({
+                        ...draftApplication,
+                        volume: {
+                          mountPath: '/data',
+                          sizeGB: 10,
+                          autoScale: true,
+                          backupFrequency: 'daily',
+                          deleteWithContainer: false
+                        }
+                      });
                     } else {
-                      // If enabling, ensure we don't have a duplicate if it was already there manually
-                      const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                      if (!exists) {
-                        updatedEnvVars.push({
-                          key: envVarKey,
-                          value: draftApplication.externalDatabase?.connectionString || '',
-                          masked: true
-                        });
-                      }
+                      const { volume, ...rest } = draftApplication;
+                      setDraftApplication(rest);
                     }
-
-                    setDraftApplication({
-                      ...draftApplication,
-                      externalDatabase: {
-                        enabled,
-                        connectionString: draftApplication.externalDatabase?.connectionString || ''
-                      },
-                      environmentVariables: updatedEnvVars
-                    });
                   }}
                 />
-                <span className="font-medium text-slate-900">Connect to External Database</span>
+                <span className="font-medium text-slate-900">Enable Persistent Volume</span>
               </label>
 
-              {draftApplication.externalDatabase?.enabled && (
-                <div className="ml-6 mt-2 space-y-2">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Connection String</label>
-                    <input
-                      type="password"
-                      value={draftApplication.externalDatabase.connectionString}
-                      onChange={(e) => {
-                        const newVal = e.target.value;
-                        const envVarKey = 'DATABASE_URL';
+              {draftApplication.volume && (
+                <div className="ml-6 mt-3 space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Mount Path</label>
+                      <input
+                        type="text"
+                        value={draftApplication.volume.mountPath}
+                        onChange={(e) => setDraftApplication({
+                          ...draftApplication,
+                          volume: { ...draftApplication.volume!, mountPath: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                        placeholder="/data"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Size</label>
+                      <select
+                        value={draftApplication.volume.sizeGB}
+                        onChange={(e) => setDraftApplication({
+                          ...draftApplication,
+                          volume: { ...draftApplication.volume!, sizeGB: parseInt(e.target.value) }
+                        })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="1">1 GB</option>
+                        <option value="5">5 GB</option>
+                        <option value="10">10 GB</option>
+                        <option value="20">20 GB</option>
+                        <option value="50">50 GB</option>
+                        <option value="100">100 GB</option>
+                      </select>
+                    </div>
+                  </div>
 
-                        // Update env var in real-time
-                        const updatedEnvVars = draftApplication.environmentVariables.map((v: any) =>
-                          v.key === envVarKey ? { ...v, value: newVal } : v
-                        );
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Backups</label>
+                      <select
+                        value={draftApplication.volume.backupFrequency}
+                        onChange={(e) => setDraftApplication({
+                          ...draftApplication,
+                          volume: { ...draftApplication.volume!, backupFrequency: e.target.value as any }
+                        })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="disabled">Disabled</option>
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center pt-5">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={draftApplication.volume.autoScale}
+                          onChange={(e) => setDraftApplication({
+                            ...draftApplication,
+                            volume: { ...draftApplication.volume!, autoScale: e.target.checked }
+                          })}
+                        />
+                        <span className="text-sm text-slate-700">Auto-scale size</span>
+                      </label>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Persistent volumes retain data even if the container crashes or restarts.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section: Dependencies (formerly Application Access) */}
+          {environment?.applications?.length >= 1 && (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Dependencies</h4>
+              <div className="space-y-4 text-sm">
+                {/* External Database */}
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <label className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={draftApplication.externalDatabase?.enabled || false}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        const envVarKey = 'DATABASE_URL';
+                        let updatedEnvVars = [...draftApplication.environmentVariables];
+
+                        // Remove existing DATABASE_URL if present to avoid duplicates/conflicts
+                        if (!enabled) {
+                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                        } else {
+                          // If enabling, ensure we don't have a duplicate if it was already there manually
+                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                          if (!exists) {
+                            updatedEnvVars.push({
+                              key: envVarKey,
+                              value: draftApplication.externalDatabase?.connectionString || '',
+                              masked: true
+                            });
+                          }
+                        }
 
                         setDraftApplication({
                           ...draftApplication,
                           externalDatabase: {
-                            ...draftApplication.externalDatabase,
-                            connectionString: newVal
+                            enabled,
+                            connectionString: draftApplication.externalDatabase?.connectionString || ''
                           },
                           environmentVariables: updatedEnvVars
                         });
                       }}
-                      placeholder="postgres://user:pass@host:5432/db"
+                    />
+                    <span className="font-medium text-slate-900">Connect to External Database</span>
+                  </label>
+
+                  {draftApplication.externalDatabase?.enabled && (
+                    <div className="ml-6 mt-2 space-y-2">
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">Connection String</label>
+                        <input
+                          type="password"
+                          value={draftApplication.externalDatabase.connectionString}
+                          onChange={(e) => {
+                            const newVal = e.target.value;
+                            const envVarKey = 'DATABASE_URL';
+
+                            // Update env var in real-time
+                            const updatedEnvVars = draftApplication.environmentVariables.map((v: any) =>
+                              v.key === envVarKey ? { ...v, value: newVal } : v
+                            );
+
+                            setDraftApplication({
+                              ...draftApplication,
+                              externalDatabase: {
+                                ...draftApplication.externalDatabase,
+                                connectionString: newVal
+                              },
+                              environmentVariables: updatedEnvVars
+                            });
+                          }}
+                          placeholder="postgres://user:pass@host:5432/db"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Injected as <code>DATABASE_URL</code></p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Platform Resources (if available) */}
+                {(state.resources?.database || state.resources?.cache) && (
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-semibold text-slate-500 uppercase">Platform Resources</h5>
+                    {state.resources?.database && (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={draftApplication.serviceAccess.database}
+                          onChange={(e) => {
+                            const enabled = e.target.checked;
+                            const envVarKey = 'UNHAZZLE_POSTGRES_URL';
+                            let updatedEnvVars = [...draftApplication.environmentVariables];
+
+                            if (enabled) {
+                              const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                              if (!exists) {
+                                updatedEnvVars.push({
+                                  key: envVarKey,
+                                  value: '',
+                                  masked: false
+                                });
+                              }
+                            } else {
+                              updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                            }
+
+                            setDraftApplication({
+                              ...draftApplication,
+                              serviceAccess: { ...draftApplication.serviceAccess, database: enabled },
+                              environmentVariables: updatedEnvVars
+                            });
+                          }}
+                        />
+                        <span className="text-slate-900">Managed PostgreSQL (Platform)</span>
+                      </label>
+                    )}
+                    {state.resources?.cache && (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={draftApplication.serviceAccess.cache}
+                          onChange={(e) => {
+                            const enabled = e.target.checked;
+                            const envVarKey = 'UNHAZZLE_REDIS_URL';
+                            let updatedEnvVars = [...draftApplication.environmentVariables];
+
+                            if (enabled) {
+                              const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                              if (!exists) {
+                                updatedEnvVars.push({
+                                  key: envVarKey,
+                                  value: '',
+                                  masked: false
+                                });
+                              }
+                            } else {
+                              updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                            }
+
+                            setDraftApplication({
+                              ...draftApplication,
+                              serviceAccess: { ...draftApplication.serviceAccess, cache: enabled },
+                              environmentVariables: updatedEnvVars
+                            });
+                          }}
+                        />
+                        <span className="text-slate-900">Managed Redis (Platform)</span>
+                      </label>
+                    )}
+                  </div>
+                )}
+                {/* Internal Applications */}
+                {environment?.applications?.length > 1 && (
+                  <div className="pt-2 mt-2 border-t border-slate-100">
+                    <h5 className="text-xs font-semibold text-slate-500 uppercase mb-2">Internal Applications</h5>
+                    <div className="space-y-2">
+                      {environment.applications
+                        .filter((app: any) => app.id !== application.id)
+                        .map((otherApp: any) => {
+                          const envVarKey = `${otherApp.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}_URL`;
+                          const appName = otherApp.name || otherApp.serviceName || `app-${otherApp.id.substring(0, 8)}`;
+                          const internalUrl = `http://${appName}.${environment.slug || environment.name}`;
+
+                          // Check if this app is in the allowed list
+                          const isConnected = (draftApplication.serviceAccess.applications || []).includes(otherApp.id);
+
+                          return (
+                            <label key={otherApp.id} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isConnected}
+                                onChange={(e) => {
+                                  const enabled = e.target.checked;
+                                  let updatedEnvVars = [...draftApplication.environmentVariables];
+                                  let updatedAllowedApps = [...(draftApplication.serviceAccess.applications || [])];
+
+                                  if (enabled) {
+                                    // Add to allowed list
+                                    if (!updatedAllowedApps.includes(otherApp.id)) {
+                                      updatedAllowedApps.push(otherApp.id);
+                                    }
+
+                                    // Add env var
+                                    const exists = updatedEnvVars.some(v => v.key === envVarKey);
+                                    if (!exists) {
+                                      updatedEnvVars.push({
+                                        key: envVarKey,
+                                        value: internalUrl,
+                                        masked: false
+                                      });
+                                    }
+                                  } else {
+                                    // Remove from allowed list
+                                    updatedAllowedApps = updatedAllowedApps.filter(id => id !== otherApp.id);
+
+                                    // Remove env var
+                                    updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
+                                  }
+
+                                  setDraftApplication({
+                                    ...draftApplication,
+                                    serviceAccess: {
+                                      ...draftApplication.serviceAccess,
+                                      applications: updatedAllowedApps
+                                    },
+                                    environmentVariables: updatedEnvVars
+                                  });
+                                }}
+                              />
+                              <div>
+                                <div className="text-slate-900">{otherApp.name}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Section: Environment Variables (editable) */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Environment Variables</h4>
+            <div className="space-y-3">
+              {draftApplication.environmentVariables.length === 0 && (
+                <div className="text-xs text-slate-500">No variables defined yet.</div>
+              )}
+              {draftApplication.environmentVariables.map((env: any, idx: number) => (
+                <div key={idx} className="grid md:grid-cols-12 gap-3 items-start">
+                  <div className="md:col-span-4">
+                    <label className="block text-xs text-slate-600 mb-1">Key</label>
+                    <input
+                      type="text"
+                      value={env.key}
+                      onChange={(e) => {
+                        const next = [...draftApplication.environmentVariables];
+                        next[idx] = { ...next[idx], key: e.target.value };
+                        setDraftApplication({ ...draftApplication, environmentVariables: next });
+                      }}
+                      placeholder="KEY"
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
                     />
-                    <p className="text-xs text-slate-500 mt-1">Injected as <code>DATABASE_URL</code></p>
+                  </div>
+                  <div className="md:col-span-6">
+                    <label className="block text-xs text-slate-600 mb-1">Value</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type={env.masked === false ? 'text' : 'password'}
+                        value={env.value}
+                        onChange={(e) => {
+                          const next = [...draftApplication.environmentVariables];
+                          next[idx] = { ...next[idx], value: e.target.value };
+                          setDraftApplication({ ...draftApplication, environmentVariables: next });
+                        }}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = [...draftApplication.environmentVariables];
+                          const currentMasked = next[idx].masked !== false;
+                          next[idx] = { ...next[idx], masked: !currentMasked };
+                          setDraftApplication({ ...draftApplication, environmentVariables: next });
+                        }}
+                        className="p-2 rounded-lg border border-slate-300 hover:bg-slate-200 transition text-sm"
+                        aria-label={env.masked === false ? 'Hide value' : 'Show value'}
+                        title={env.masked === false ? 'Hide value' : 'Show value'}
+                      >
+                        {env.masked === false ? (
+                          // Eye-off icon
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <ellipse cx="12" cy="12" rx="9" ry="6" />
+                            <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+                            <line x1="4" y1="20" x2="20" y2="4" />
+                          </svg>
+                        ) : (
+                          // Eye icon
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <ellipse cx="12" cy="12" rx="9" ry="6" />
+                            <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs mb-1 invisible">Action</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = draftApplication.environmentVariables.filter((_: any, i: number) => i !== idx);
+                        setDraftApplication({ ...draftApplication, environmentVariables: next });
+                      }}
+                      className="w-full md:w-auto px-3 py-2 text-xs rounded-lg border border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
+              ))}
 
-            {/* Platform Resources (if available) */}
-            {(state.resources?.database || state.resources?.cache) && (
-              <div className="space-y-2">
-                <h5 className="text-xs font-semibold text-slate-500 uppercase">Platform Resources</h5>
-                {state.resources?.database && (
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={draftApplication.serviceAccess.database}
-                      onChange={(e) => {
-                        const enabled = e.target.checked;
-                        const envVarKey = 'UNHAZZLE_POSTGRES_URL';
-                        let updatedEnvVars = [...draftApplication.environmentVariables];
-
-                        if (enabled) {
-                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                          if (!exists) {
-                            updatedEnvVars.push({
-                              key: envVarKey,
-                              value: '',
-                              masked: false
-                            });
-                          }
-                        } else {
-                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                        }
-
-                        setDraftApplication({
-                          ...draftApplication,
-                          serviceAccess: { ...draftApplication.serviceAccess, database: enabled },
-                          environmentVariables: updatedEnvVars
-                        });
-                      }}
-                    />
-                    <span className="text-slate-900">Managed PostgreSQL (Platform)</span>
-                  </label>
-                )}
-                {state.resources?.cache && (
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={draftApplication.serviceAccess.cache}
-                      onChange={(e) => {
-                        const enabled = e.target.checked;
-                        const envVarKey = 'UNHAZZLE_REDIS_URL';
-                        let updatedEnvVars = [...draftApplication.environmentVariables];
-
-                        if (enabled) {
-                          const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                          if (!exists) {
-                            updatedEnvVars.push({
-                              key: envVarKey,
-                              value: '',
-                              masked: false
-                            });
-                          }
-                        } else {
-                          updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                        }
-
-                        setDraftApplication({
-                          ...draftApplication,
-                          serviceAccess: { ...draftApplication.serviceAccess, cache: enabled },
-                          environmentVariables: updatedEnvVars
-                        });
-                      }}
-                    />
-                    <span className="text-slate-900">Managed Redis (Platform)</span>
-                  </label>
-                )}
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-slate-500 flex items-center gap-2">
+                  <span>🔐</span>
+                  <span>Values are masked by default and stored encrypted.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...draftApplication.environmentVariables,
+                      { key: '', value: '', masked: true },
+                    ];
+                    setDraftApplication({ ...draftApplication, environmentVariables: next });
+                  }}
+                  className="px-3 py-2 text-xs rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
+                >
+                  + Add variable
+                </button>
               </div>
-            )}
-            {/* Internal Applications */}
-            {environment?.applications?.length > 1 && (
-              <div className="pt-2 mt-2 border-t border-slate-100">
-                <h5 className="text-xs font-semibold text-slate-500 uppercase mb-2">Internal Applications</h5>
-                <div className="space-y-2">
-                  {environment.applications
-                    .filter((app: any) => app.id !== application.id)
-                    .map((otherApp: any) => {
-                      const envVarKey = `${otherApp.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}_URL`;
-                      const appName = otherApp.name || otherApp.serviceName || `app-${otherApp.id.substring(0, 8)}`;
-                      const internalUrl = `http://${appName}.${environment.slug || environment.name}`;
+            </div>
+          </div>
 
-                      // Check if this app is in the allowed list
-                      const isConnected = (draftApplication.serviceAccess.applications || []).includes(otherApp.id);
-
-                      return (
-                        <label key={otherApp.id} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={isConnected}
-                            onChange={(e) => {
-                              const enabled = e.target.checked;
-                              let updatedEnvVars = [...draftApplication.environmentVariables];
-                              let updatedAllowedApps = [...(draftApplication.serviceAccess.applications || [])];
-
-                              if (enabled) {
-                                // Add to allowed list
-                                if (!updatedAllowedApps.includes(otherApp.id)) {
-                                  updatedAllowedApps.push(otherApp.id);
-                                }
-
-                                // Add env var
-                                const exists = updatedEnvVars.some(v => v.key === envVarKey);
-                                if (!exists) {
-                                  updatedEnvVars.push({
-                                    key: envVarKey,
-                                    value: internalUrl,
-                                    masked: false
-                                  });
-                                }
-                              } else {
-                                // Remove from allowed list
-                                updatedAllowedApps = updatedAllowedApps.filter(id => id !== otherApp.id);
-
-                                // Remove env var
-                                updatedEnvVars = updatedEnvVars.filter(v => v.key !== envVarKey);
-                              }
-
-                              setDraftApplication({
-                                ...draftApplication,
-                                serviceAccess: {
-                                  ...draftApplication.serviceAccess,
-                                  applications: updatedAllowedApps
-                                },
-                                environmentVariables: updatedEnvVars
-                              });
-                            }}
-                          />
-                          <div>
-                            <div className="text-slate-900">{otherApp.name}</div>
-                          </div>
-                        </label>
-                      );
-                    })}
+          {/* Section: Networking */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Networking</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Visibility</label>
+                <div className="flex items-center gap-4 text-sm">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={draftApplication.exposure === 'public'}
+                      onChange={() => setDraftApplication({ ...draftApplication, exposure: 'public' })}
+                    />
+                    <span className="text-slate-900">Public</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={draftApplication.exposure === 'private'}
+                      onChange={() => setDraftApplication({ ...draftApplication, exposure: 'private' })}
+                    />
+                    <span className="text-slate-900">Private</span>
+                  </label>
                 </div>
               </div>
-            )}
-            <p className="text-xs text-slate-500">Connection strings are auto-injected as environment variables.</p>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Domain</label>
+                <div className="text-sm text-slate-900">
+                  {`http://${draftApplication.name}.${environment.slug || environment.name}`}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Port</label>
+                <div className="text-sm font-mono text-slate-900">{draftApplication.port}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Public Endpoint (if applicable) */}
+          {application.exposure === 'public' && (() => {
+            const displayName = application.imageUrl.split('/').pop()?.split(':')[0] || 'app';
+            const stableId = application.id.substring(0, 6);
+            const domain = `${displayName}-${stableId}.unhazzle.app`;
+
+            return (
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold text-slate-600 uppercase">Public Endpoint</span>
+                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Live</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm text-purple-600 font-mono">
+                        https://{domain}
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://${domain}`);
+                        }}
+                        className="p-1 hover:bg-slate-200 rounded transition text-sm"
+                        title="Copy to clipboard"
+                      >
+                        📋
+                      </button>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Port {application.port} • SSL Enabled • CDN Cached
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Section: Health Check */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 mb-3">Health Check</h4>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Protocol</label>
+                <select
+                  value={draftApplication.healthCheck.protocol}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, protocol: e.target.value as any }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="HTTP">HTTP</option>
+                  <option value="TCP">TCP</option>
+                  <option value="gRPC">gRPC</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Port</label>
+                <input
+                  type="number"
+                  value={draftApplication.healthCheck.port}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, port: parseInt(e.target.value) || draftApplication.port }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs text-slate-600 mb-1">Path</label>
+                <input
+                  type="text"
+                  value={draftApplication.healthCheck.path || ''}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, path: e.target.value }
+                  })}
+                  placeholder="/health"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-4 mt-3">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Interval</label>
+                <input
+                  type="text"
+                  value={draftApplication.healthCheck.interval}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, interval: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Timeout</label>
+                <input
+                  type="text"
+                  value={draftApplication.healthCheck.timeout}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, timeout: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Retries</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draftApplication.healthCheck.retries}
+                  onChange={(e) => setDraftApplication({
+                    ...draftApplication,
+                    healthCheck: { ...draftApplication.healthCheck, retries: Math.max(0, parseInt(e.target.value) || 0) }
+                  })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Using recommended values.</p>
+          </div>
+
+          {/* Changes Preview */}
+          {showChanges && hasChanges && (
+            <ChangesPreview
+              current={application}
+              draft={draftApplication}
+              onClose={() => setShowChanges(false)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Logs Tab Content */}
+      {activeTab === 'logs' && (
+        <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 space-y-1 max-h-96 overflow-y-auto">
+          {(() => {
+            const allLogs: { application: string; message: string }[] = [];
+
+            // Mock logs for the current application
+            allLogs.push(
+              { application: application.name, message: '[2025-11-02 14:32:15] Application started successfully' },
+              { application: application.name, message: `[2025-11-02 14:32:17] → HTTP server listening on port ${application.port}` },
+              { application: application.name, message: '[2025-11-02 14:32:18] ✓ Health check passed' },
+              { application: application.name, message: `[2025-11-02 14:32:19] → Replica 1 reporting healthy` },
+              { application: application.name, message: `[2025-11-02 14:32:20] → Replica 2 reporting healthy` }
+            );
+
+            if (application.serviceAccess?.database) {
+              allLogs.push({ application: application.name, message: '[2025-11-02 14:32:16] ✓ Database connection established' });
+            }
+            if (application.serviceAccess?.cache) {
+              allLogs.push({ application: application.name, message: '[2025-11-02 14:32:16] ✓ Redis cache connected' });
+            }
+
+            if (application.exposure === 'public') {
+              allLogs.push(
+                { application: application.name, message: '[2025-11-02 14:35:42] GET /api/products 200 45ms' },
+                { application: application.name, message: '[2025-11-02 14:35:43] POST /api/cart 201 52ms' },
+                { application: application.name, message: '[2025-11-02 14:35:44] GET /api/checkout 200 38ms' },
+                { application: application.name, message: '[2025-11-02 14:35:45] POST /api/orders 201 127ms' },
+                { application: application.name, message: '[2025-11-02 14:35:46] GET / 200 15ms (cached)' }
+              );
+            } else {
+              allLogs.push(
+                { application: application.name, message: '[2025-11-02 14:35:42] Processing background job #1234' },
+                { application: application.name, message: '[2025-11-02 14:35:43] → Job completed in 89ms' },
+                { application: application.name, message: '[2025-11-02 14:35:44] Handling internal API call' }
+              );
+            }
+
+            return allLogs.map((log, i) => (
+              <div key={i}>
+                {log.message}
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {/* Metrics Tab Content */}
+      {activeTab === 'metrics' && (
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Performance Metrics</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm text-slate-600 mb-3">Average Response Time</p>
+              <div className="text-4xl font-bold text-purple-600">45ms</div>
+              <p className="text-xs text-slate-500 mt-1">↓ 12% from yesterday</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 mb-3">Error Rate</p>
+              <div className="text-4xl font-bold text-green-600">0.02%</div>
+              <p className="text-xs text-slate-500 mt-1">Excellent reliability</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 mb-3">99th Percentile (p99)</p>
+              <div className="text-4xl font-bold text-blue-600">234ms</div>
+              <p className="text-xs text-slate-500 mt-1">Well within SLA</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 mb-3">Requests Today</p>
+              <div className="text-4xl font-bold text-slate-900">1.8M</div>
+              <p className="text-xs text-slate-500 mt-1">↑ 23% from yesterday</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Section: Environment Variables (editable) */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Environment Variables</h4>
-        <div className="space-y-3">
-          {draftApplication.environmentVariables.length === 0 && (
-            <div className="text-xs text-slate-500">No variables defined yet.</div>
-          )}
-          {draftApplication.environmentVariables.map((env: any, idx: number) => (
-            <div key={idx} className="grid md:grid-cols-12 gap-3 items-start">
-              <div className="md:col-span-4">
-                <label className="block text-xs text-slate-600 mb-1">Key</label>
-                <input
-                  type="text"
-                  value={env.key}
-                  onChange={(e) => {
-                    const next = [...draftApplication.environmentVariables];
-                    next[idx] = { ...next[idx], key: e.target.value };
-                    setDraftApplication({ ...draftApplication, environmentVariables: next });
-                  }}
-                  placeholder="KEY"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
-                />
-              </div>
-              <div className="md:col-span-6">
-                <label className="block text-xs text-slate-600 mb-1">Value</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type={env.masked === false ? 'text' : 'password'}
-                    value={env.value}
-                    onChange={(e) => {
-                      const next = [...draftApplication.environmentVariables];
-                      next[idx] = { ...next[idx], value: e.target.value };
-                      setDraftApplication({ ...draftApplication, environmentVariables: next });
-                    }}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = [...draftApplication.environmentVariables];
-                      const currentMasked = next[idx].masked !== false;
-                      next[idx] = { ...next[idx], masked: !currentMasked };
-                      setDraftApplication({ ...draftApplication, environmentVariables: next });
-                    }}
-                    className="p-2 rounded-lg border border-slate-300 hover:bg-slate-200 transition text-sm"
-                    aria-label={env.masked === false ? 'Hide value' : 'Show value'}
-                    title={env.masked === false ? 'Hide value' : 'Show value'}
-                  >
-                    {env.masked === false ? (
-                      // Eye-off icon
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <ellipse cx="12" cy="12" rx="9" ry="6" />
-                        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-                        <line x1="4" y1="20" x2="20" y2="4" />
-                      </svg>
-                    ) : (
-                      // Eye icon
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <ellipse cx="12" cy="12" rx="9" ry="6" />
-                        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs mb-1 invisible">Action</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = draftApplication.environmentVariables.filter((_: any, i: number) => i !== idx);
-                    setDraftApplication({ ...draftApplication, environmentVariables: next });
-                  }}
-                  className="w-full md:w-auto px-3 py-2 text-xs rounded-lg border border-red-300 text-red-700 hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-slate-500 flex items-center gap-2">
-              <span>🔐</span>
-              <span>Values are masked by default and stored encrypted.</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = [
-                  ...draftApplication.environmentVariables,
-                  { key: '', value: '', masked: true },
-                ];
-                setDraftApplication({ ...draftApplication, environmentVariables: next });
-              }}
-              className="px-3 py-2 text-xs rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-900"
-            >
-              + Add variable
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Section: Networking */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Networking</h4>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Visibility</label>
-            <div className="flex items-center gap-4 text-sm">
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={draftApplication.exposure === 'public'}
-                  onChange={() => setDraftApplication({ ...draftApplication, exposure: 'public' })}
-                />
-                <span className="text-slate-900">Public</span>
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={draftApplication.exposure === 'private'}
-                  onChange={() => setDraftApplication({ ...draftApplication, exposure: 'private' })}
-                />
-                <span className="text-slate-900">Private</span>
-              </label>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Domain</label>
-            <div className="text-sm text-slate-900">
-              {`http://${draftApplication.name}.${environment.slug || environment.name}`}
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Port</label>
-            <div className="text-sm font-mono text-slate-900">{draftApplication.port}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Public Endpoint (if applicable) */}
-      {application.exposure === 'public' && (() => {
-        const displayName = application.imageUrl.split('/').pop()?.split(':')[0] || 'app';
-        const stableId = application.id.substring(0, 6);
-        const domain = `${displayName}-${stableId}.unhazzle.app`;
-
-        return (
-          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-            <div className="flex items-center justify-between">
+      {/* Events Tab Content */}
+      {activeTab === 'events' && (
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Recent Events</h3>
+          <div className="space-y-3">
+            <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <span className="text-2xl">📤</span>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold text-slate-600 uppercase">Public Endpoint</span>
-                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Live</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <code className="text-sm text-purple-600 font-mono">
-                    https://{domain}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://${domain}`);
-                    }}
-                    className="p-1 hover:bg-slate-200 rounded transition text-sm"
-                    title="Copy to clipboard"
-                  >
-                    📋
-                  </button>
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Port {application.port} • SSL Enabled • CDN Cached
-                </div>
+                <p className="font-medium text-blue-900">Deployment Completed</p>
+                <p className="text-sm text-blue-700">All replicas healthy and serving traffic</p>
+                <p className="text-xs text-blue-600 mt-1">2 hours ago</p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <span className="text-2xl">📊</span>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900">Auto-scaling triggered</p>
+                <p className="text-sm text-slate-600">Scaled from 2 to 4 replicas due to high traffic</p>
+                <p className="text-xs text-slate-500 mt-1">45 minutes ago</p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <span className="text-2xl">🔄</span>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900">Database backup completed</p>
+                <p className="text-sm text-slate-600">Automatic daily backup successful (5.2 GB)</p>
+                <p className="text-xs text-slate-500 mt-1">1 hour ago</p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <span className="text-2xl">✅</span>
+              <div className="flex-1">
+                <p className="font-medium text-green-900">SSL certificate renewed</p>
+                <p className="text-sm text-green-700">Auto-renewal for HTTPS certificate successful</p>
+                <p className="text-xs text-green-600 mt-1">3 days ago</p>
               </div>
             </div>
           </div>
-        );
-      })()}
-
-      {/* Section: Health Check */}
-      <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-3">Health Check</h4>
-        <div className="grid md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Protocol</label>
-            <select
-              value={draftApplication.healthCheck.protocol}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, protocol: e.target.value as any }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="HTTP">HTTP</option>
-              <option value="TCP">TCP</option>
-              <option value="gRPC">gRPC</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Port</label>
-            <input
-              type="number"
-              value={draftApplication.healthCheck.port}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, port: parseInt(e.target.value) || draftApplication.port }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-600 mb-1">Path</label>
-            <input
-              type="text"
-              value={draftApplication.healthCheck.path || ''}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, path: e.target.value }
-              })}
-              placeholder="/health"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
         </div>
-        <div className="grid md:grid-cols-3 gap-4 mt-3">
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Interval</label>
-            <input
-              type="text"
-              value={draftApplication.healthCheck.interval}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, interval: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Timeout</label>
-            <input
-              type="text"
-              value={draftApplication.healthCheck.timeout}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, timeout: e.target.value }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Retries</label>
-            <input
-              type="number"
-              min={0}
-              value={draftApplication.healthCheck.retries}
-              onChange={(e) => setDraftApplication({
-                ...draftApplication,
-                healthCheck: { ...draftApplication.healthCheck, retries: Math.max(0, parseInt(e.target.value) || 0) }
-              })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </div>
-        </div>
-        <p className="text-xs text-slate-500 mt-2">Using recommended values.</p>
-      </div>
-
-      {/* Changes Preview */}
-      {showChanges && hasChanges && (
-        <ChangesPreview
-          current={application}
-          draft={draftApplication}
-          onClose={() => setShowChanges(false)}
-        />
       )}
     </div>
   );
